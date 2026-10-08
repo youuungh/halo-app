@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Halo" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- 앱 시작 시 시스템 splash를 표시. installSplashScreen() 호출 후 postSplashScreenTheme로 전환된다. -->
+    <style name="Theme.Halo.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="postSplashScreenTheme">@style/Theme.Halo</item>
+    </style>
+</resources>

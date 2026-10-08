@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PlayerView를 TextureView 백엔드로 인플레이트하는 레이아웃. 피드/목록 인라인 재생(VideoPlayer)과
+  전체화면 오버레이(VideoViewerOverlay) 양쪽에서 사용한다.
+  surface_type은 XML(AttributeSet)로만 설정 가능하므로(런타임 setter 없음) 레이아웃으로 분리한다.
+
+  TextureView는 일반 뷰 계층(앱 draw pass) 안에서 합성되므로:
+   - 인라인: 떠 있는 글래스 BottomNavBar의 haze 블러가 재생 중 영상 위에도 적용된다(SurfaceView는 별도
+     윈도우 레이어라 draw pass 밖 → 바 블러가 영상 위에서 투과로 깨졌었음).
+   - 오버레이: 영상 위 버튼/배경 딤·shared-element morph의 클리핑·z-order가 정상 동작한다.
+  (과거 인라인은 SurfaceView(전력/프레임 타이밍 유리)였으나 위 블러 일관성을 위해 TextureView로 전환.
+   저사양/API 30~33에서 스크롤 잼 발생 시 surface_type=surface_view 레이아웃을 만들어 인라인만 되돌리면 됨.)
+  나머지 속성(resize_mode, shutter color 등)은 인플레이트 후 코드에서 설정한다.
+-->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:surface_type="texture_view"
+    app:use_controller="false" />

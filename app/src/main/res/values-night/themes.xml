@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- post-splash 액티비티 창 배경(Compose가 그리기 전/액티비티 재생성 순간에 비치는 밑바탕).
+         values의 Material.Light 그대로면 시스템 다크에서 흰 플래시가 번쩍 → 다크 베이스+다크 배경으로 오버라이드. -->
+    <style name="Theme.Halo" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/dark_background</item>
+    </style>
+
+    <style name="Theme.Halo.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/black</item>
+        <item name="postSplashScreenTheme">@style/Theme.Halo</item>
+    </style>
+</resources>

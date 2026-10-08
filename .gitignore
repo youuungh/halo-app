@@ -1,0 +1,20 @@
+*.iml
+.gradle
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+### Kotlin / Android ###
+.kotlin/
+.android-tmp/
+
+### 서명 ###
+*.jks
+*.keystore
+
+### Python ###
+__pycache__/

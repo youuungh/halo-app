@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   API 30 이하 Auto Backup 규칙 (31+는 data_extraction_rules.xml).
+   인증 토큰·기기 식별자는 백업에서 제외 — 사유는 data_extraction_rules.xml 주석 참고.
+-->
+<full-backup-content>
+    <exclude
+        domain="file"
+        path="datastore/auth_tokens.preferences_pb" />
+    <exclude
+        domain="file"
+        path="datastore/device_id.preferences_pb" />
+</full-backup-content>

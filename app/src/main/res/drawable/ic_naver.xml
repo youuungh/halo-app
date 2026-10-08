@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:height="24dp" android:viewportHeight="20" android:viewportWidth="20" android:width="24dp">
+
+    <!-- 원본 N 패스가 뷰포트(20×20)를 꽉 채워 다른 소셜 로고(내부 여백 ~17%)보다 커 보임.
+         단색 N은 시각적 무게도 커서 수치 동률(0.84)보다 더 줄여야 균형 → 중앙 기준 0.78 스케일 -->
+    <group android:pivotX="10" android:pivotY="10" android:scaleX="0.78" android:scaleY="0.78">
+
+        <clip-path android:pathData="M0,0h20v20h-20z"/>
+
+        <path android:fillColor="#ffffff" android:pathData="M13.561,10.703L6.146,0H0V20H6.439V9.295L13.854,20H20V0H13.561V10.703Z"/>
+
+    </group>
+
+</vector>

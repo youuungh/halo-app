@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   API 31+ 백업/기기이전 규칙.
+   인증 토큰·기기 식별자는 백업에서 제외한다 — 재설치 시 restoreAtInstall이 죽은 세션을
+   부활시키고(hasToken=true → Main 진입 후 401 튕김), 기기 이전 시 토큰/deviceId가
+   새 기기로 복사되는 것을 막는다. (토큰 암호문의 Keystore 키는 같은 기기에서 살아있어
+   복원된 토큰이 실제로 복호화된다 — 제외가 유일한 방어)
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude
+            domain="file"
+            path="datastore/auth_tokens.preferences_pb" />
+        <exclude
+            domain="file"
+            path="datastore/device_id.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude
+            domain="file"
+            path="datastore/auth_tokens.preferences_pb" />
+        <exclude
+            domain="file"
+            path="datastore/device_id.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>
