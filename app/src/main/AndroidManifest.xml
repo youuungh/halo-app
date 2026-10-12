@@ -24,7 +24,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Halo"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -38,23 +38,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- 콘텐츠 딥링크(https App Links) — host는 core.deeplink.DeepLinks.WEB_HOST와 동기화.
-                 autoVerify는 GitHub Pages에 .well-known/assetlinks.json 업로드 후에 통과한다. -->
+            <!-- https 딥링크, host는 DeepLinks.WEB_HOST와 같게 -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data
-                    android:host="youuungh.github.io"
-                    android:scheme="https" />
+                <data android:scheme="https" />
+                <data android:host="haloapp.cc" />
                 <data android:pathPrefix="/post/" />
                 <data android:pathPrefix="/product/" />
                 <data android:pathPrefix="/profile/" />
             </intent-filter>
 
-            <!-- 콘텐츠 딥링크(halo:// 커스텀 스킴) — 도메인 검증 없이 즉시 동작, 바운서 페이지의 앱 점프용 -->
+            <!-- halo:// 딥링크, 바운서 페이지가 앱을 여는 데 쓴다 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 

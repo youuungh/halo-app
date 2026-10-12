@@ -14,13 +14,16 @@ val localProps = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
-// Hub 호스트, 에뮬레이터는 10.0.2.2·실기기는 로컬 IP(192.168.x.x)
+
 val hubHost: String = localProps.getProperty("HUB_HOST") ?: "10.0.2.2:8080"
 
 val tossClientKey: String = localProps.getProperty("TOSS_CLIENT_KEY").orEmpty()
 val kakaoNativeAppKey: String = localProps.getProperty("KAKAO_NATIVE_APP_KEY").orEmpty()
 val naverClientId: String = localProps.getProperty("NAVER_CLIENT_ID").orEmpty()
 val naverClientSecret: String = localProps.getProperty("NAVER_CLIENT_SECRET").orEmpty()
+
+// 릴리즈 서명 키
+val releaseStoreFile: String? = localProps.getProperty("RELEASE_STORE_FILE")
 
 android {
     namespace = "com.ninezero.halo"
@@ -36,9 +39,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        buildConfigField("String", "HUB_BASE_URL", "\"http://$hubHost/\"")
-        buildConfigField("String", "HUB_WS_BASE_URL", "\"ws://$hubHost/\"")
 
         buildConfigField("String", "TOSS_CLIENT_KEY", "\"$tossClientKey\"")
 
@@ -57,8 +57,28 @@ android {
         buildConfigField("String", "NAVER_CLIENT_SECRET", "\"$naverClientSecret\"")
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = localProps.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            buildConfigField("String", "HUB_BASE_URL", "\"http://$hubHost/\"")
+            buildConfigField("String", "HUB_WS_BASE_URL", "\"ws://$hubHost/\"")
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
+            buildConfigField("String", "HUB_BASE_URL", "\"https://api.haloapp.cc/\"")
+            buildConfigField("String", "HUB_WS_BASE_URL", "\"wss://api.haloapp.cc/\"")
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -5,7 +5,7 @@ import android.net.Uri
 object DeepLinks {
     const val SCHEME = "halo"
 
-    const val WEB_HOST = "youuungh.github.io"  // WEB_HOST 변경 시 Manifest host 함께 변경
+    const val WEB_HOST = "haloapp.cc"  // WEB_HOST 변경 시 Manifest host 함께 변경
     const val WEB_BASE = "https://$WEB_HOST"
 
     const val PATH_POST = "post"
