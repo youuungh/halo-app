@@ -7,7 +7,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.ninezero.halo.BuildConfig
 import timber.log.Timber
@@ -19,11 +19,7 @@ sealed interface GoogleIdTokenResult {
 }
 
 suspend fun requestGoogleIdToken(context: Context): GoogleIdTokenResult {
-    val option = GetGoogleIdOption.Builder()
-        .setServerClientId(BuildConfig.GOOGLE_SERVER_CLIENT_ID)
-        // 신규 가입까지 허용해야 하므로 기기의 모든 구글 계정 표시
-        .setFilterByAuthorizedAccounts(false)
-        .build()
+    val option = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_SERVER_CLIENT_ID).build()
 
     val request = GetCredentialRequest.Builder()
         .addCredentialOption(option)
