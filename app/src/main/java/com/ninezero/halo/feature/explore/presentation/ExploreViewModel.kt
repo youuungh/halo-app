@@ -132,7 +132,7 @@ class ExploreViewModel @Inject constructor(
     private fun loadBanners() = intent {
         reduce { state.copy(isBannersLoading = true) }
 
-        getBannersUseCase(limit = 5)
+        getBannersUseCase()
             .onSuccess { banners ->
                 reduce { state.copy(isBannersLoading = false, banners = banners) }
             }
@@ -258,7 +258,7 @@ class ExploreViewModel @Inject constructor(
     private fun refreshCurrentTab() = intent {
         reduce { state.copy(isRefreshing = true) }
 
-        getBannersUseCase(limit = 5)
+        getBannersUseCase()
             .onSuccess { banners ->
                 reduce { state.copy(banners = banners) }
             }

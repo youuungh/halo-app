@@ -199,15 +199,14 @@ fun CommentThreadItem(
                                 text = thread.post.author.displayName ?: thread.post.author.username,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.alignByBaseline()
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             VerifiedBadge(role = thread.post.author.role, size = 14.dp)
                             Text(
                                 text = " · ${thread.post.createdAt.toRelativeTime()}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f).alignByBaseline()
+                                modifier = Modifier.weight(1f)
                             )
                             // 더보기 버튼, 삭제·숨김·잠금 시 숨김
                             if (!isPostUnavailable && !isPostRestricted) {
@@ -389,7 +388,6 @@ fun CommentThreadItem(
             } else null
 
             CommentItem(
-                isPostAuthorReply = comment.replyTo != null && comment.author.id == thread.post.author.id,
                 authorName = comment.author.displayName ?: comment.author.username,
                 authorRole = comment.author.role,
                 authorAvatarUrl = comment.author.avatarThumbUrl ?: comment.author.avatarUrl,

@@ -125,6 +125,7 @@ fun PointSection(
     pointBalance: PointBalance?,
     usedPoints: Int,
     maxUsablePoints: Int,
+    isRateCapped: Boolean,  // 상한이 상품 금액 50%에서 나왔는지, 아니면 결제 금액
     validationMessage: String?,
     numberFormat: NumberFormat,
     onUpdateUsedPoints: (String) -> Unit,
@@ -268,9 +269,17 @@ fun PointSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // 보유량과 상한 중 실제로 막히는 쪽 기준
+        val balance = pointBalance?.totalPoints
+        val hint = when {
+            balance == 0 -> "사용할 수 있는 포인트가 없습니다"
+            balance != null && balance < maxUsablePoints ->
+                "최대 ${numberFormat.format(balance)}P까지 사용할 수 있습니다"
+            isRateCapped -> "상품 금액의 50%인 최대 ${numberFormat.format(maxUsablePoints)}P까지 사용할 수 있습니다"
+            else -> "최대 ${numberFormat.format(maxUsablePoints)}P까지 사용할 수 있습니다"
+        }
         Text(
-            text = validationMessage
-                ?: "최대 ${numberFormat.format(maxUsablePoints)}P까지 사용할 수 있습니다",
+            text = validationMessage ?: hint,
             style = MaterialTheme.typography.labelSmall,
             color = if (validationMessage != null) {
                 MaterialTheme.colorScheme.error
@@ -720,6 +729,7 @@ private fun PointSectionPreview() {
                     pointBalance = PointBalance(totalPoints = 12_500),
                     usedPoints = 5_000,
                     maxUsablePoints = 12_500,
+                    isRateCapped = true,
                     validationMessage = null,
                     numberFormat = rememberKoreanNumberFormat(),
                     onUpdateUsedPoints = {},
@@ -740,6 +750,7 @@ private fun PointSectionValidationPreview() {
                     pointBalance = PointBalance(totalPoints = 12_500),
                     usedPoints = 20_000,
                     maxUsablePoints = 12_500,
+                    isRateCapped = true,
                     validationMessage = "최대 12,500P까지 사용할 수 있습니다",
                     numberFormat = rememberKoreanNumberFormat(),
                     onUpdateUsedPoints = {},

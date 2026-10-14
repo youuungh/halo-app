@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.store.presentation.checkout.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -37,6 +38,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -109,6 +111,7 @@ fun CouponSelectBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val numberFormat = rememberKoreanNumberFormat()
+    val sheetProperties = remember { ModalBottomSheetProperties(shouldDismissOnBackPress = false) }  // 시트 기본 뒤로가기는 예측형 비활성화
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -117,8 +120,10 @@ fun CouponSelectBottomSheet(
         dragHandle = null,
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = { WindowInsets(0) },
+        properties = sheetProperties,
         modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
     ) {
+        BackHandler(onBack = onDismiss)
         CouponSelectContent(
             coupons = coupons,
             orderCreatorIds = orderCreatorIds,

@@ -96,7 +96,7 @@ fun Long.toFormattedDate(pattern: String = "yyyy-MM-dd HH:mm:ss"): String {
     return this.toLocalDateTime().format(formatter)
 }
 
-fun Long.toRelativeTime(): String {  // 6일까지 상대, 1년 미만 MM/dd, 이후 yy/MM/dd
+fun Long.toRelativeTime(): String {  // 6일까지 상대, 그 뒤 같은 해면 MM/dd, 다른 해면 yy/MM/dd
     val now = System.currentTimeMillis()
     val diff = now - this
 
@@ -105,7 +105,8 @@ fun Long.toRelativeTime(): String {  // 6일까지 상대, 1년 미만 MM/dd, �
         diff < 3600_000 -> "${diff / 60_000}분 전"
         diff < 86400_000 -> "${diff / 3600_000}시간 전"
         diff < 604800_000 -> "${diff / 86400_000}일 전"
-        diff < 31536000_000 -> this.toLocalDateTime().format(DateFormatters.MONTH_DAY)
+        this.toLocalDateTime().year == now.toLocalDateTime().year ->
+            this.toLocalDateTime().format(DateFormatters.MONTH_DAY)
         else -> this.toLocalDateTime().format(DateFormatters.SHORT_DATE)
     }
 }

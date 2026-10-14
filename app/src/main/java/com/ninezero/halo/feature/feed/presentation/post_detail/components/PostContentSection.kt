@@ -134,8 +134,7 @@ fun PostContentSection(
                     text = post.author.displayName ?: post.author.username,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.alignByBaseline()
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 VerifiedBadge(role = post.author.role, size = 14.dp)
@@ -143,8 +142,7 @@ fun PostContentSection(
                 Text(
                     text = " · ${post.createdAt.toRelativeTime()}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = OutlineVariant,
-                    modifier = Modifier.alignByBaseline()
+                    color = OutlineVariant
                 )
             }
 

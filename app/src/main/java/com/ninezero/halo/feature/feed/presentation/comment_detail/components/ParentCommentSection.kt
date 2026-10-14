@@ -145,8 +145,7 @@ fun ParentCommentSection(
                         text = comment.author.displayName ?: comment.author.username,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.alignByBaseline()
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     VerifiedBadge(role = comment.author.role, size = 14.dp)
@@ -154,10 +153,9 @@ fun ParentCommentSection(
                     Text(
                         text = " · ${comment.createdAt.toRelativeTime()}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.alignByBaseline()
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
-                    if (isPostAuthorReply) PostAuthorBadge(modifier = Modifier.alignByBaseline())
+                    if (isPostAuthorReply) PostAuthorBadge()
                 }
 
                 Icon(
@@ -243,15 +241,13 @@ private fun ObscuredParentContent(
                         text = comment.author.displayName ?: comment.author.username,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.alignByBaseline()
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     VerifiedBadge(role = comment.author.role, size = 14.dp)
                     Text(
                         text = " · ${comment.createdAt.toRelativeTime()}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.alignByBaseline()
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                 }
 

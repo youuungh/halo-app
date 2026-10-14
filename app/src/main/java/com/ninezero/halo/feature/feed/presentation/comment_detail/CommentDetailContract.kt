@@ -23,7 +23,7 @@ data class CommentDetailState(
 
     // 탭한 댓글, 캐시에서 즉시
     val parentComment: Comment? = null,
-    val isParentLoading: Boolean = false,
+    val isParentLoading: Boolean = true,  // 첫 프레임부터 자리를 잡아야 앵커가 그 칸에 걸린다
 
     // 원본 포스트, 나중에 로드
     val post: Post? = null,

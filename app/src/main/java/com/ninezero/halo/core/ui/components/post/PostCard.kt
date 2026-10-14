@@ -60,7 +60,7 @@ import com.ninezero.halo.core.ui.components.video_player.VideoPlayer
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.util.showToast
-import com.ninezero.halo.core.util.toFormattedDate
+import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
@@ -183,7 +183,7 @@ fun PostCard(
                     )
                     VerifiedBadge(role = post.author.role, size = 14.dp)
                     Text(
-                        text = " · ${post.createdAt.toFormattedDate("yy년 M월 d일")}",
+                        text = " · ${post.createdAt.toRelativeTime()}",
                         style = MaterialTheme.typography.bodySmall,
                         color = OutlineVariant
                     )

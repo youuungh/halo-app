@@ -214,17 +214,15 @@ fun CommentItem(
                             text = authorName,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = authorFontWeight,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.alignByBaseline()
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         VerifiedBadge(role = authorRole, size = 14.dp)
                         Text(
                             text = " · ${createdAt.toRelativeTime()}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.alignByBaseline()
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (isPostAuthorReply && !isBlocked && !isDeleted) PostAuthorBadge(modifier = Modifier.alignByBaseline())
+                        if (isPostAuthorReply && !isBlocked && !isDeleted) PostAuthorBadge()
                         Spacer(modifier = Modifier.weight(1f))
                         if (!isBlocked && !isDeleted) {
                             if (isUploading) {

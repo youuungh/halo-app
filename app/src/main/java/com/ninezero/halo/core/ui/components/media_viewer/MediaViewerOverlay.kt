@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.webkit.MimeTypeMap
 import android.widget.FrameLayout
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
@@ -181,6 +182,8 @@ fun MediaViewerOverlay(  // 안착 페이지만 공유 플레이어 점유
         enter = fadeIn(tween(fadeDuration)),
         exit = fadeOut(tween(fadeDuration))
     ) {
+        // 열릴 때 등록해야 NavHost보다 먼저 받음
+        BackHandler(enabled = state.isVisible) { onDismiss() }
         // AnimatedVisibilityScope, morph 동기화
         MediaViewerContent(
             items = state.items,

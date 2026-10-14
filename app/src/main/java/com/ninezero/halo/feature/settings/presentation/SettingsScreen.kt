@@ -18,12 +18,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.R
 import com.ninezero.halo.core.local.ThemeMode
 import com.ninezero.halo.core.ui.components.bottomsheet.ThemeBottomSheet
@@ -85,7 +89,10 @@ fun SettingsScreen(
         snackbarHostState = snackbarHostState
     )
 
-    if (state.showMyAccountSheet) {
+    var isSheetParked by rememberSaveable { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { isSheetParked = false }
+
+    if (state.showMyAccountSheet && !isSheetParked) {
         MyAccountBottomSheet(
             onDismiss = { viewModel.onIntent(SettingsIntent.DismissMyAccountSheet) },
             onAccountDeleted = {
@@ -93,7 +100,10 @@ fun SettingsScreen(
                 onNavigateToLogin()
             },
             // 시트 상태는 열린 채로 두고 이동, 복귀 시 다시 표시
-            onNavigateToCreatorApplication = onNavigateToCreatorApplication
+            onNavigateToCreatorApplication = {
+                isSheetParked = true
+                onNavigateToCreatorApplication()
+            }
         )
     }
 }

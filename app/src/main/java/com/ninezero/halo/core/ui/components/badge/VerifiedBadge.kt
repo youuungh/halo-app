@@ -1,6 +1,5 @@
 package com.ninezero.halo.core.ui.components.badge
 
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -22,15 +21,13 @@ fun VerifiedBadge(
     role: String?,
     modifier: Modifier = Modifier,
     size: Dp = 14.dp,
-    tint: Color = MaterialTheme.colorScheme.primary,
-    verticalOffset: Dp = 1.dp
+    tint: Color = MaterialTheme.colorScheme.primary
 ) {
     if (isVerifiedRole(role)) {
         Icon(
             painter = painterResource(R.drawable.ic_check_badge_filled),
             contentDescription = "인증된 크리에이터",
             modifier = modifier
-                .offset(y = verticalOffset)
                 .padding(start = 4.dp)
                 .size(size),
             tint = tint

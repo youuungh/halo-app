@@ -68,6 +68,7 @@ import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.core.util.toFormattedPrice
 import com.ninezero.halo.feature.coupon.domain.model.Coupon
 import com.ninezero.halo.feature.store.domain.model.OrderItem
+import com.ninezero.halo.feature.store.domain.model.calcMaxUsablePoints
 import com.ninezero.halo.feature.store.domain.model.calcSingleCouponDiscount
 import com.ninezero.halo.feature.store.domain.model.calcStorePricing
 import com.ninezero.halo.feature.store.domain.model.calcUsablePointsCap
@@ -297,6 +298,7 @@ internal fun CheckoutScreenContent(
     val isFreeOrder = paymentAmount <= 0L  // 포인트·쿠폰으로 전액, 결제수단 없이 주문
     // 정책 상한과 결제 금액 둘 다 상한
     val maxUsablePoints = remember(subtotal, orderTotal) { calcUsablePointsCap(subtotal, orderTotal) }
+    val isRateCapped = maxUsablePoints == calcMaxUsablePoints(subtotal)
     val couponInfoByCreator = remember(orderItems, orderCreatorIds, state.subscribedCreatorIds) {
         val creatorNamesById = orderItems
             .groupBy { it.product.creator.id }
@@ -689,6 +691,7 @@ internal fun CheckoutScreenContent(
                                     pointBalance = state.pointBalance,
                                     usedPoints = state.usedPoints,
                                     maxUsablePoints = maxUsablePoints,
+                                    isRateCapped = isRateCapped,
                                     validationMessage = state.pointValidationMessage,
                                     numberFormat = numberFormat,
                                     onUpdateUsedPoints = onUpdateUsedPoints,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,11 +31,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -80,8 +81,6 @@ import com.ninezero.halo.feature.feed.presentation.components.SortPopupMenu
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -160,7 +159,9 @@ internal fun CommentDetailScreenContent(
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
     val hazeState = remember { HazeState() }
-    val listState = rememberLazyListState()
+    // 탭한 댓글에서 시작, 위쪽은 화면 밖에서 로딩
+    // 조상이 캐시에서 첫 프레임 전에 올 수 있어 그 수만큼 건너뜀
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = 1 + state.parentChain.size)
     val density = LocalDensity.current
     var headerHeight by rememberSaveableDp()
     // 입력바 실측 높이, 스낵바 앵커용
@@ -242,53 +243,19 @@ internal fun CommentDetailScreenContent(
         state.isPostLoading,
         state.isRepliesLoading,
         state.replies.size,
-        state.parentChain.size,
-        headerHeight
+        state.parentChain.size
     ) {
         if (
             !hasAnchoredToParent &&
             !state.isParentLoading &&
             state.parentComment != null &&
             !state.isPostLoading &&
-            !state.isRepliesLoading &&
-            headerHeight > 0.dp
+            !state.isRepliesLoading
         ) {
-            // 헤더·원글·조상 체인·탭한 댓글 순서
-            val parentIndex = 2 + state.parentChain.size
-            val anchorOffsetPx = with(density) { (headerHeight + 16.dp).roundToPx() }
+            // 위치는 처음부터 탭한 댓글 키에 고정돼 있어 여백만 정리
+            withFrameNanos { }  // 최신 콘텐츠가 레이아웃에 반영된 뒤 측정하도록 한 프레임 대기
 
-            // 최신 콘텐츠가 레이아웃에 반영된 뒤 측정하도록 한 프레임 대기
-            withFrameNanos { }
-            val viewportPx =
-                listState.layoutInfo.let { it.viewportEndOffset - it.viewportStartOffset }
-
-            // 1) 하단 여백 먼저 확보
-            anchorBottomFiller = with(density) { viewportPx.toDp().value }
-            withTimeoutOrNull(1000) {
-                snapshotFlow { listState.canScrollForward }.first { it }
-            }
-
-            // 2) 탭한 댓글을 헤더 아래로 앵커
-            // offset이 2프레임 유지될 때까지 재보정
-            var stableFrames = 0
-            var attempts = 0
-            while (attempts < 30 && stableFrames < 2) {
-                listState.scrollToItem(parentIndex, -anchorOffsetPx)
-                withFrameNanos { }
-                val parentItem = listState.layoutInfo.visibleItemsInfo
-                    .firstOrNull { it.index == parentIndex }
-                stableFrames = if (
-                    parentItem != null &&
-                    kotlin.math.abs(parentItem.offset - anchorOffsetPx) <= 2
-                ) {
-                    stableFrames + 1
-                } else {
-                    0
-                }
-                attempts++
-            }
-
-            // 3) 넘치는 여백 축소
+            // 넘치는 여백 축소
             // 안 보이면 = 답글이 충분하니 0으로 되돌림
             val info = listState.layoutInfo
             val fillerItem =
@@ -327,23 +294,22 @@ internal fun CommentDetailScreenContent(
         if (replyIndex < 0) return@LaunchedEffect
         replyHighlightPlayed = true
 
-        // 헤더·원글·조상·탭한 댓글·구분선 3·대기 답글 순서
+        // 원글·조상·탭한 댓글·구분선 3·대기 답글 순서
         replyHighlightItemIndex =
-            6 + state.parentChain.size + state.pendingReplies.size + replyIndex
+            5 + state.parentChain.size + state.pendingReplies.size + replyIndex
     }
     LaunchedEffect(replyHighlightItemIndex) {
         val itemIndex = replyHighlightItemIndex ?: return@LaunchedEffect
-        val anchorOffsetPx = with(density) { (headerHeight + 16.dp).roundToPx() }
-        listState.animateScrollToItem(itemIndex, -anchorOffsetPx)
+        listState.animateScrollToItem(itemIndex)
         // 위 아이템 늦은 실측 대비 안착까지 재보정
         var stableFrames = 0
         var attempts = 0
         while (attempts < 10 && stableFrames < 2) {
             val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == itemIndex }
-            if (item != null && kotlin.math.abs(item.offset - anchorOffsetPx) <= 2) {
+            if (item != null && kotlin.math.abs(item.offset) <= 2) {
                 stableFrames++
             } else {
-                listState.scrollToItem(itemIndex, -anchorOffsetPx)
+                listState.scrollToItem(itemIndex)
                 stableFrames = 0
             }
             withFrameNanos { }
@@ -374,43 +340,45 @@ internal fun CommentDetailScreenContent(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                // 헤더 실측 전 한 프레임은 숨김(여백이 바뀌며 튀지 않게)
+                .graphicsLayer { alpha = if (headerHeight > 0.dp) 1f else 0f }
                 .hazeSource(hazeState)
-                .imePadding()
+                .imePadding(),
+            // 여백 아이템이면 위쪽 로딩이 탭한 댓글을 밀어냄
+            contentPadding = PaddingValues(top = headerHeight + 16.dp)
         ) {
-            // 헤더 spacer
-            item {
-                Spacer(modifier = Modifier.height(headerHeight + 16.dp))
-            }
-
             // 원본 포스트 미리보기
+            // 로딩 중 0 높이면 앵커 기준이 이 칸으로 넘어가 탭한 댓글이 밀림
             item {
-                PostPreviewSection(
-                    post = state.post,
-                    unavailableReason = state.unavailablePost,
-                    onPostClick = { onIntent(CommentDetailIntent.NavigateToPost) },
-                    onProfileClick = { offset ->
-                        state.post?.author?.let { author ->
-                            if (state.myUserId == author.id) {
-                                onIntent(CommentDetailIntent.NavigateToUserProfile(author.id))
-                            } else {
-                                profilePopupState.show(author.id, offset)
+                Box(modifier = Modifier.heightIn(min = 1.dp)) {
+                    PostPreviewSection(
+                        post = state.post,
+                        unavailableReason = state.unavailablePost,
+                        onPostClick = { onIntent(CommentDetailIntent.NavigateToPost) },
+                        onProfileClick = { offset ->
+                            state.post?.author?.let { author ->
+                                if (state.myUserId == author.id) {
+                                    onIntent(CommentDetailIntent.NavigateToUserProfile(author.id))
+                                } else {
+                                    profilePopupState.show(author.id, offset)
+                                }
                             }
-                        }
-                    },
-                    onLikeClick = {
-                        state.post?.let { post ->
-                            if (post.isLiked) {
-                                onIntent(CommentDetailIntent.UnlikePost)
-                            } else {
-                                onIntent(CommentDetailIntent.LikePost)
+                        },
+                        onLikeClick = {
+                            state.post?.let { post ->
+                                if (post.isLiked) {
+                                    onIntent(CommentDetailIntent.UnlikePost)
+                                } else {
+                                    onIntent(CommentDetailIntent.LikePost)
+                                }
                             }
+                        },
+                        onCommentClick = { onIntent(CommentDetailIntent.NavigateToPost) },
+                        onMoreClick = {
+                            onIntent(CommentDetailIntent.ShowPostOptions)
                         }
-                    },
-                    onCommentClick = { onIntent(CommentDetailIntent.NavigateToPost) },
-                    onMoreClick = {
-                        onIntent(CommentDetailIntent.ShowPostOptions)
-                    }
-                )
+                    )
+                }
             }
 
             // 조상 체인
@@ -746,9 +714,15 @@ internal fun CommentDetailScreenContent(
                 Spacer(modifier = Modifier.height(80.dp))
             }
 
-            // 앵커링용 보충 여백
+            // 앵커링용 보충 여백, 로딩 중엔 한 화면 높이
             item {
-                Spacer(modifier = Modifier.height(anchorBottomFiller.dp))
+                Spacer(
+                    modifier = if (hasAnchoredToParent) {
+                        Modifier.height(anchorBottomFiller.dp)
+                    } else {
+                        Modifier.fillParentMaxHeight()
+                    }
+                )
             }
         }
 

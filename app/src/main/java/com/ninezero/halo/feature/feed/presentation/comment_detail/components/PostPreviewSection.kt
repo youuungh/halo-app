@@ -233,15 +233,14 @@ fun PostPreviewSection(
                                 text = currentPost.author.displayName ?: currentPost.author.username,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.alignByBaseline()
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             VerifiedBadge(role = currentPost.author.role, size = 14.dp)
                             Text(
                                 text = " · ${currentPost.createdAt.toRelativeTime()}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f).alignByBaseline()
+                                modifier = Modifier.weight(1f)
                             )
                             if (!isRestricted) {
                                 Icon(

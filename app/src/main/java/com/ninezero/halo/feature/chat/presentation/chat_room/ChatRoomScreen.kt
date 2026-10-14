@@ -387,6 +387,9 @@ internal fun ChatRoomScreenContent(
                 latestMessage?.isFromMe == true -> listState.animateScrollToItem(0)
                 // 상대 메시지인데 위로 스크롤된 상태 → 최신 메시지 바 표시
                 latestMessage != null && showScrollToBottom -> newMessageBarData = latestMessage
+                // 맨 밑에서 보던 중 → 따라 내려감, 목록은 보던 메시지에 붙어 새 메시지가 입력바 뒤로 들어감
+                // 첫 로드는 진입 위치(안 읽은 메시지)를 지키려고 제외
+                latestMessage != null && previousLatestKey.value != null -> listState.animateScrollToItem(0)
             }
         }
         previousLatestKey.value = latestKey

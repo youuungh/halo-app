@@ -169,17 +169,15 @@ fun ParentCommentItem(
                             text = comment.author.displayName ?: comment.author.username,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.alignByBaseline()
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         VerifiedBadge(role = comment.author.role, size = 14.dp)
                         Text(
                             text = " · ${comment.createdAt.toRelativeTime()}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.alignByBaseline()
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (isPostAuthorReply && !isObscured) PostAuthorBadge(modifier = Modifier.alignByBaseline())
+                        if (isPostAuthorReply && !isObscured) PostAuthorBadge()
                         Spacer(modifier = Modifier.weight(1f))
                         if (onMoreClick != null && !isObscured) {
                             Icon(

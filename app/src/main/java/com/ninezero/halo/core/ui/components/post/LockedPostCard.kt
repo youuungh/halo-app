@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -34,8 +35,11 @@ import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayLabelColor
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlaySubLabelColor
 import com.ninezero.halo.core.ui.components.overlay.obscuredOverlayStyle
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.util.toRelativeTime
+import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.Post
+import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -95,90 +99,88 @@ fun LockedPostCard(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.alignByBaseline()
+                        overflow = TextOverflow.Ellipsis
                     )
                     VerifiedBadge(role = post.author.role, size = 14.dp)
                     Text(
                         text = " · ${post.createdAt.toRelativeTime()}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.alignByBaseline()
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                 }
-            }
-        }
 
-        // 콘텐츠 영역
-        val lockShape = RoundedCornerShape(8.dp)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 60.dp, end = 8.dp, top = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(lockShape)
-                    .hazeSource(state = hazeState)
-                    .then(if (!hasMedia) Modifier.padding(vertical = 20.dp) else Modifier)
-            ) {
-                // 가짜 글자 대신 스켈레톤 바
-                val barWidths = remember(post.id, hasMedia) {
-                    val random = Random(post.id)
-                    val lineCount = if (hasMedia) 2 else 3 + random.nextInt(2)
-                    List(lineCount) { index ->
-                        if (index == lineCount - 1) 0.35f + random.nextFloat() * 0.3f
-                        else 0.7f + random.nextFloat() * 0.25f
-                    }
-                }
-                barWidths.forEachIndexed { index, widthFraction ->
-                    if (index > 0) Spacer(modifier = Modifier.height(6.dp))
-                    SkeletonBar(widthFraction = widthFraction)
-                }
-                if (hasMedia && previewUrl != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AsyncImage(
-                        model = previewUrl,
-                        contentDescription = null,
+                // 콘텐츠 영역
+                val lockShape = RoundedCornerShape(8.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
-                            .clip(lockShape),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
+                            .clip(lockShape)
+                            .hazeSource(state = hazeState)
+                            .then(if (!hasMedia) Modifier.padding(vertical = 20.dp) else Modifier)
+                    ) {
+                        // 가짜 글자 대신 스켈레톤 바
+                        val barWidths = remember(post.id, hasMedia) {
+                            val random = Random(post.id)
+                            val lineCount = if (hasMedia) 2 else 3 + random.nextInt(2)
+                            List(lineCount) { index ->
+                                if (index == lineCount - 1) 0.35f + random.nextFloat() * 0.3f
+                                else 0.7f + random.nextFloat() * 0.25f
+                            }
+                        }
+                        barWidths.forEachIndexed { index, widthFraction ->
+                            if (index > 0) Spacer(modifier = Modifier.height(6.dp))
+                            SkeletonBar(widthFraction = widthFraction)
+                        }
+                        if (hasMedia && previewUrl != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            AsyncImage(
+                                model = previewUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .clip(lockShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
 
-            // 블러 오버레이 + 자물쇠 라벨
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(lockShape)
-                    // 이미지 유무 무관 같은 오버레이
-                    .hazeEffect(state = hazeState, style = obscuredOverlayStyle()),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_lock),
-                        contentDescription = null,
-                        tint = labelColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = labelColor
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = subLabelColor
-                    )
+                    // 블러 오버레이 + 자물쇠 라벨
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(lockShape)
+                            // 이미지 유무 무관 같은 오버레이
+                            .hazeEffect(state = hazeState, style = obscuredOverlayStyle()),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_lock),
+                                contentDescription = null,
+                                tint = labelColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = labelColor
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = subLabelColor
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -231,4 +233,25 @@ private fun SkeletonBar(widthFraction: Float) {
             .clip(RoundedCornerShape(4.dp))
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f))
     )
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun LockedPostCardPreview() {
+    val author = Author(id = 1, username = "creator1", displayName = "크리에이터", avatarUrl = null, role = "CREATOR")
+    val createdAt = System.currentTimeMillis() - 3 * 60 * 60 * 1000L
+    HaloTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column {
+                LockedPostCard(
+                    post = Post(id = 1, content = "", author = author, requiredTier = "TIER1", canAccess = false, createdAt = createdAt),
+                    onClick = {}
+                )
+                LockedPostCard(
+                    post = Post(id = 2, content = "", author = author, isSecret = true, canAccess = false, createdAt = createdAt),
+                    onClick = {}
+                )
+            }
+        }
+    }
 }
