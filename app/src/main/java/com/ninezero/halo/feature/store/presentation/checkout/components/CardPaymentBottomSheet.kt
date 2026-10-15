@@ -36,6 +36,7 @@ import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
 import com.ninezero.halo.core.ui.components.button.SheetActionButton
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.feature.store.domain.model.BillingCard
 import com.ninezero.halo.feature.store.presentation.components.cardLabel
 import com.ninezero.halo.feature.store.presentation.components.cardLogoRes
@@ -45,9 +46,11 @@ fun CardPaymentBottomSheet(
     savedCard: BillingCard?,
     isLoading: Boolean,
     draftSelection: String?,
+    error: String?,
     onSelectOption: (String) -> Unit,
     onAddCard: () -> Unit,
     onConfirm: () -> Unit,
+    onErrorDismiss: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -58,61 +61,76 @@ fun CardPaymentBottomSheet(
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = { BottomSheetDragHandle() }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "신용 · 체크카드",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // 저장카드 선택행 또는 카드 추가
-            when {
-                isLoading -> Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 58.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    LoadingIndicator(size = LoadingIndicatorSize.Medium)
-                }
-
-                savedCard != null -> SheetOptionRow(
-                    title = cardLabel(savedCard),
-                    subtitle = null,
-                    isSelected = draftSelection == "TOSS_BILLING",
-                    onClick = { onSelectOption("TOSS_BILLING") },
-                    leading = { CardLogo(savedCard) }
+        Box {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "신용 · 체크카드",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                else -> SheetActionRow(
-                    title = "카드 추가하기",
-                    leadingIcon = R.drawable.ic_plus,
-                    onClick = onAddCard
+                // 저장카드 선택행 또는 카드 추가
+                when {
+                    isLoading -> Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 58.dp)
+                            .border(
+                                width = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(10.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator(size = LoadingIndicatorSize.Medium)
+                    }
+
+                    savedCard != null -> SheetOptionRow(
+                        title = cardLabel(savedCard),
+                        subtitle = null,
+                        isSelected = draftSelection == "TOSS_BILLING",
+                        onClick = { onSelectOption("TOSS_BILLING") },
+                        leading = { CardLogo(savedCard) }
+                    )
+
+                    else -> SheetActionRow(
+                        title = "카드 추가하기",
+                        leadingIcon = R.drawable.ic_plus,
+                        onClick = onAddCard
+                    )
+                }
+
+                // 하단: 카드 일반결제
+                SheetOptionRow(
+                    title = "카드 일반결제",
+                    subtitle = "결제 시마다 카드 정보 입력",
+                    isSelected = draftSelection == "TOSS_CARD",
+                    onClick = { onSelectOption("TOSS_CARD") }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SheetActionButton(
+                    text = "선택 완료",
+                    onClick = onConfirm,
+                    enabled = draftSelection != null
                 )
             }
 
-            // 하단: 카드 일반결제
-            SheetOptionRow(
-                title = "카드 일반결제",
-                subtitle = "결제 시마다 카드 정보 입력",
-                isSelected = draftSelection == "TOSS_CARD",
-                onClick = { onSelectOption("TOSS_CARD") }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            SheetActionButton(
-                text = "선택 완료",
-                onClick = onConfirm,
-                enabled = draftSelection != null
+            // 시트 window에 가려지지 않게 시트 안에서 표시
+            CenterToast(
+                visible = error != null,
+                message = error.orEmpty(),
+                modifier = Modifier.matchParentSize(),  // 시트 높이를 바꾸지 않음
+                onDismiss = onErrorDismiss
             )
         }
     }

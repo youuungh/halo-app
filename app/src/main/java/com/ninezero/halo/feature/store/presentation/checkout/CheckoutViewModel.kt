@@ -20,6 +20,8 @@ import com.ninezero.halo.feature.store.domain.model.CartItem
 import com.ninezero.halo.feature.store.domain.model.CreateDirectOrderRequest
 import com.ninezero.halo.feature.store.domain.model.CreateOrderRequest
 import com.ninezero.halo.feature.store.domain.model.OrderLine
+import com.ninezero.halo.feature.store.domain.model.billingAuthFailMessage
+import com.ninezero.halo.feature.store.domain.model.isBillingAuthCanceled
 import com.ninezero.halo.feature.store.domain.model.PaymentStatus
 import com.ninezero.halo.feature.store.domain.model.calcCouponDiscount
 import com.ninezero.halo.feature.store.domain.model.calcStorePricing
@@ -138,8 +140,10 @@ class CheckoutViewModel @Inject constructor(
             is CheckoutIntent.DismissCardSheet -> dismissCardSheet()
             is CheckoutIntent.SelectCardSheetOption -> selectCardSheetOption(intent.key)
             is CheckoutIntent.ConfirmCardSheet -> confirmCardSheet()
+            is CheckoutIntent.DismissCardSheetError -> dismissCardSheetError()
             is CheckoutIntent.AddSavedCard -> addSavedCard()
             is CheckoutIntent.SavedCardAuthReturned -> savedCardAuthReturned(intent.authKey)
+            is CheckoutIntent.SavedCardAuthFailed -> savedCardAuthFailed(intent.code, intent.message)
             is CheckoutIntent.SavedCardRegisterDismissed -> savedCardRegisterDismissed()
         }
     }
@@ -356,13 +360,21 @@ class CheckoutViewModel @Inject constructor(
 
     private fun showCardSheet() = intent {
         val draft = state.selectedPaymentProvider.takeIf { it == "TOSS_BILLING" || it == "TOSS_CARD" }
-        reduce { state.copy(showCardSheet = true, cardSheetDraft = draft) }
+        reduce { state.copy(showCardSheet = true, cardSheetDraft = draft, cardSheetError = null) }
         loadSavedCard(openRegisterIfNone = false)
     }
 
     private fun dismissCardSheet() = intent {
-        reduce { state.copy(showCardSheet = false) }
+        reduce { state.copy(showCardSheet = false, cardSheetError = null) }
     }
+
+    private fun dismissCardSheetError() = intent {
+        reduce { state.copy(cardSheetError = null) }
+    }
+
+    // 카드 시트가 열려 있으면 시트 안 토스트, 아니면 스낵바
+    private fun CheckoutState.withCardError(message: String) =
+        if (showCardSheet) copy(cardSheetError = message) else copy(snackbarState = SnackbarState(message))
 
     private fun selectCardSheetOption(key: String) = intent {
         reduce { state.copy(cardSheetDraft = key) }
@@ -370,7 +382,7 @@ class CheckoutViewModel @Inject constructor(
 
     private fun confirmCardSheet() = intent {
         val draft = state.cardSheetDraft ?: return@intent
-        reduce { state.copy(selectedPaymentProvider = draft, showCardSheet = false) }
+        reduce { state.copy(selectedPaymentProvider = draft, showCardSheet = false, cardSheetError = null) }
         persistPaymentProvider(draft)
     }
 
@@ -405,17 +417,15 @@ class CheckoutViewModel @Inject constructor(
             }
             .onFailure { e ->
                 reduce {
-                    state.copy(
-                        isSavedCardLoading = false,
-                        snackbarState = SnackbarState(e.message ?: "결제수단을 불러오지 못했습니다")
-                    )
+                    state.copy(isSavedCardLoading = false)
+                        .withCardError(e.message ?: "결제수단을 불러오지 못했습니다")
                 }
             }
     }
 
     private fun addSavedCard() = intent {
         val customerKey = billingRepository.getCustomerKey().getOrElse { e ->
-            reduce { state.copy(snackbarState = SnackbarState(e.message ?: "결제 준비에 실패했습니다")) }
+            reduce { state.withCardError(e.message ?: "결제 준비에 실패했습니다") }
             return@intent
         }
         reduce {
@@ -429,19 +439,31 @@ class CheckoutViewModel @Inject constructor(
     private fun savedCardAuthReturned(authKey: String?) = intent {
         reduce { state.copy(showSavedCardRegister = false) }
         if (authKey == null) return@intent
+        reduce { state.copy(isSavedCardLoading = true) }  // 발급 대기 중 시트의 카드 칸에 로딩
         billingRepository.issueBillingKey(authKey)
             .onSuccess { card ->
                 // 등록 성공 시 시트에서 저장카드를 자동 선택 상태로
                 reduce {
                     state.copy(
+                        isSavedCardLoading = false,
                         savedCard = card.takeIf { it.registered },
                         cardSheetDraft = if (card.registered) "TOSS_BILLING" else state.cardSheetDraft
                     )
                 }
             }
             .onFailure { e ->
-                reduce { state.copy(snackbarState = SnackbarState(e.message ?: "카드 등록에 실패했습니다")) }
+                reduce {
+                    state.copy(isSavedCardLoading = false)
+                        .withCardError(e.message ?: "카드 등록에 실패했습니다")
+                }
             }
+    }
+
+    // 토스 등록 창 실패, 사용자가 닫은 게 아니면 사유 안내
+    private fun savedCardAuthFailed(code: String?, message: String?) = intent {
+        reduce { state.copy(showSavedCardRegister = false) }
+        if (isBillingAuthCanceled(code)) return@intent
+        reduce { state.withCardError(billingAuthFailMessage(message)) }
     }
 
     private fun savedCardRegisterDismissed() = intent {

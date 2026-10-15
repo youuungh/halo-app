@@ -166,6 +166,7 @@ fun MainScreen(
                             }
                             TabSlot(visible = state.selectedTab == MainTab.EXPLORE) {
                                 ExploreTabContent(
+                                    isVisible = state.selectedTab == MainTab.EXPLORE,
                                     onNavigateToPostDetail = onNavigateToPostDetail,
                                     onNavigateToProfile = onTabProfileClick,
                                     onNavigateToEditPost = onNavigateToEditPost,
@@ -316,6 +317,7 @@ private fun FeedTabContent(
 
 @Composable
 private fun ExploreTabContent(
+    isVisible: Boolean,
     onNavigateToPostDetail: (Int) -> Unit,
     onNavigateToProfile: (Int) -> Unit,
     onNavigateToEditPost: (Int) -> Unit,
@@ -323,6 +325,7 @@ private fun ExploreTabContent(
     tabReselectFlow: Flow<Unit>
 ) {
     ExploreContainer(
+        isVisible = isVisible,
         onNavigateToPostDetail = onNavigateToPostDetail,
         onNavigateToProfile = onNavigateToProfile,
         onNavigateToEditPost = onNavigateToEditPost,

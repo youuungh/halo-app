@@ -30,9 +30,11 @@ data class SalesManageState(
     // 송장 입력 시트
     val showShippingSheet: Boolean = false,
     val shippingOrderId: Int? = null,
+    val isEditingShipping: Boolean = false,
     val selectedCarrier: String = "",
     val trackingNumber: String = "",
     val isSavingShipping: Boolean = false,
+    val shippingError: String? = null,
 
     val toastMessage: String? = null,
     val snackbarState: SnackbarState? = null
@@ -63,6 +65,7 @@ sealed interface SalesManageIntent {
     data class SelectCarrier(val carrier: String) : SalesManageIntent
     data class UpdateTrackingNumber(val trackingNumber: String) : SalesManageIntent
     data object SaveShippingInfo : SalesManageIntent
+    data object DismissShippingError : SalesManageIntent
 
     data object DismissToast : SalesManageIntent
     data object SnackbarDismissed : SalesManageIntent
@@ -71,5 +74,4 @@ sealed interface SalesManageIntent {
 sealed interface SalesManageSideEffect {
     data object NavigateBack : SalesManageSideEffect
     data object NavigateToSalesStats : SalesManageSideEffect
-    data class ShowToast(val message: String) : SalesManageSideEffect
 }

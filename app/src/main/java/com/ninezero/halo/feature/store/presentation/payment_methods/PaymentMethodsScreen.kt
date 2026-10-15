@@ -112,6 +112,7 @@ internal fun PaymentMethodsScreenContent(
                         )
                     } else {
                         AddPaymentCardPlaceholder(
+                            isLoading = state.isRegistering,
                             onClick = { onIntent(PaymentMethodsIntent.AddCard) }
                         )
                     }
@@ -143,7 +144,9 @@ internal fun PaymentMethodsScreenContent(
                 if (authKey != null) {
                     onIntent(PaymentMethodsIntent.RegisterReturned(authKey))
                 } else {
-                    onIntent(PaymentMethodsIntent.RegisterDismissed)
+                    onIntent(
+                        PaymentMethodsIntent.RegisterFailed(uri.getQueryParameter("code"), uri.getQueryParameter("message"))
+                    )
                 }
             },
             onDismiss = { onIntent(PaymentMethodsIntent.RegisterDismissed) }

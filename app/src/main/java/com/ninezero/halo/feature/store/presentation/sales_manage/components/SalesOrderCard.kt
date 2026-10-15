@@ -1,6 +1,10 @@
 package com.ninezero.halo.feature.store.presentation.sales_manage.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,14 +30,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -57,6 +64,7 @@ fun SalesOrderCard(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     onRegisterShipping: () -> Unit,
+    onEditShipping: () -> Unit,
     onToggleExpand: () -> Unit,
     modifier: Modifier = Modifier,
     isStatusUpdating: Boolean = false,
@@ -75,6 +83,10 @@ fun SalesOrderCard(
     val sellerOrderAmount = remember(sellerSubtotal, sellerShippingFee) {
         sellerSubtotal + sellerShippingFee
     }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (isExpanded) 0f else -90f,
+        label = "recipient_chevron"
+    )
 
     Column(
         modifier = modifier
@@ -172,12 +184,11 @@ fun SalesOrderCard(
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Icon(
-                    painter = painterResource(
-                        if (isExpanded) R.drawable.ic_chevron_up
-                        else R.drawable.ic_chevron_down
-                    ),
+                    painter = painterResource(R.drawable.ic_chevron_down),
                     contentDescription = if (isExpanded) "접기" else "펼치기",
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier
+                        .size(14.dp)
+                        .rotate(chevronRotation),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -192,8 +203,16 @@ fun SalesOrderCard(
         // 수령인 상세 정보
         AnimatedVisibility(
             visible = isExpanded,
-            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+            enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + expandVertically(
+                spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold),
+                expandFrom = Alignment.Top,
+                clip = false
+            ),
+            exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + shrinkVertically(
+                spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold),
+                shrinkTowards = Alignment.Top,
+                clip = false
+            )
         ) {
             Column(
                 modifier = Modifier
@@ -330,8 +349,22 @@ fun SalesOrderCard(
                 Text(
                     text = order.trackingNumber,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    modifier = Modifier.weight(1f)
                 )
+                // 택배사 기록 전(SHIPPED)까지만 수정
+                if (order.shippingStatus == ShippingStatus.SHIPPED && order.status != OrderStatus.CANCELLED) {
+                    Text(
+                        text = "수정",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable(enabled = !isStatusUpdating, onClick = onEditShipping)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
         }
     }
@@ -411,6 +444,7 @@ private fun SalesOrderCardPendingPreview() {
                     onConfirm = {},
                     onCancel = {},
                     onRegisterShipping = {},
+                    onEditShipping = {},
                     onToggleExpand = {}
                 )
             }
@@ -430,6 +464,7 @@ private fun SalesOrderCardAwaitingShippingPreview() {
                     onConfirm = {},
                     onCancel = {},
                     onRegisterShipping = {},
+                    onEditShipping = {},
                     onToggleExpand = {}
                 )
             }
@@ -454,6 +489,7 @@ private fun SalesOrderCardShippingPreview() {
                     onConfirm = {},
                     onCancel = {},
                     onRegisterShipping = {},
+                    onEditShipping = {},
                     onToggleExpand = {}
                 )
             }
@@ -473,6 +509,7 @@ private fun SalesOrderCardUpdatingPreview() {
                     onConfirm = {},
                     onCancel = {},
                     onRegisterShipping = {},
+                    onEditShipping = {},
                     onToggleExpand = {},
                     isStatusUpdating = true
                 )

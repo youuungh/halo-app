@@ -33,6 +33,7 @@ sealed interface SubscriptionSheetIntent {
     // 빌링 등록 결과
     data class BillingAuthReturned(val authKey: String) : SubscriptionSheetIntent
     data object BillingAuthDismissed : SubscriptionSheetIntent
+    data class BillingAuthFailed(val code: String?, val message: String?) : SubscriptionSheetIntent
 }
 
 sealed interface SubscriptionSheetSideEffect {

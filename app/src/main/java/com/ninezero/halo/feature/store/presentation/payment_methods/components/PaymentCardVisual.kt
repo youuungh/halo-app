@@ -43,6 +43,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
+import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.store.presentation.components.cardIssuerName
 import com.ninezero.halo.feature.store.presentation.components.cardLogoRes
@@ -168,6 +170,7 @@ fun RegisteredPaymentCard(
 
 @Composable
 fun AddPaymentCardPlaceholder(
+    isLoading: Boolean,  // 발급 대기 중 로딩, 다시 누르기 막음
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -187,22 +190,26 @@ fun AddPaymentCardPlaceholder(
                     cornerRadius = CornerRadius(16.dp.toPx())
                 )
             }
-            .clickable(onClick = onClick),
+            .clickable(enabled = !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                painter = painterResource(R.drawable.ic_plus),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "카드 추가하기",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        if (isLoading) {
+            LoadingIndicator(size = LoadingIndicatorSize.Medium)
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_plus),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "카드 추가하기",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -245,7 +252,7 @@ private fun AddPaymentCardPlaceholderPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.padding(16.dp)) {
-                AddPaymentCardPlaceholder(onClick = {})
+                AddPaymentCardPlaceholder(isLoading = false, onClick = {})
             }
         }
     }

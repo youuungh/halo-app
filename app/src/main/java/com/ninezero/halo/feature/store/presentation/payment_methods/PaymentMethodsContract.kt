@@ -12,6 +12,7 @@ data class PaymentMethodsState(
     // 카드 등록 WebView
     val showRegisterWebView: Boolean = false,
     val registerWebViewUrl: String? = null,
+    val isRegistering: Boolean = false,  // 웹뷰 뒤 카드 발급 대기
     val snackbarState: SnackbarState? = null
 )
 
@@ -21,6 +22,7 @@ sealed interface PaymentMethodsIntent {
     data object NavigateBack : PaymentMethodsIntent
     data object AddCard : PaymentMethodsIntent
     data class RegisterReturned(val authKey: String) : PaymentMethodsIntent
+    data class RegisterFailed(val code: String?, val message: String?) : PaymentMethodsIntent
     data object RegisterDismissed : PaymentMethodsIntent
     data object ShowDeleteDialog : PaymentMethodsIntent
     data object DismissDeleteDialog : PaymentMethodsIntent

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.feature.store.domain.model.BillingCard
+import com.ninezero.halo.feature.store.domain.model.billingAuthFailMessage
+import com.ninezero.halo.feature.store.domain.model.isBillingAuthCanceled
 import com.ninezero.halo.feature.store.domain.repository.BillingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.OrbitContainer
@@ -30,6 +32,7 @@ class PaymentMethodsViewModel @Inject constructor(
             is PaymentMethodsIntent.NavigateBack -> intent { postSideEffect(PaymentMethodsSideEffect.NavigateBack) }
             is PaymentMethodsIntent.AddCard -> addCard()
             is PaymentMethodsIntent.RegisterReturned -> registerReturned(intent.authKey)
+            is PaymentMethodsIntent.RegisterFailed -> registerFailed(intent.code, intent.message)
             is PaymentMethodsIntent.RegisterDismissed -> intent {
                 reduce {
                     state.copy(
@@ -110,16 +113,31 @@ class PaymentMethodsViewModel @Inject constructor(
     }
 
     private fun registerReturned(authKey: String) = intent {
-        reduce { state.copy(showRegisterWebView = false) }
+        reduce { state.copy(showRegisterWebView = false, isRegistering = true) }
         billingRepository.issueBillingKey(authKey)
             .onSuccess { card ->
                 reduce {
-                    state.copy(billingCard = card, snackbarState = SnackbarState("결제수단이 등록되었습니다"))
+                    state.copy(
+                        isRegistering = false,
+                        billingCard = card,
+                        snackbarState = SnackbarState("결제수단이 등록되었습니다")
+                    )
                 }
             }
             .onFailure { e ->
-                reduce { state.copy(snackbarState = SnackbarState(e.message ?: "카드 등록에 실패했습니다")) }
+                reduce {
+                    state.copy(
+                        isRegistering = false,
+                        snackbarState = SnackbarState(e.message ?: "카드 등록에 실패했습니다")
+                    )
+                }
             }
+    }
+
+    private fun registerFailed(code: String?, message: String?) = intent {
+        reduce { state.copy(showRegisterWebView = false) }
+        if (isBillingAuthCanceled(code)) return@intent
+        reduce { state.copy(snackbarState = SnackbarState(billingAuthFailMessage(message))) }
     }
 
     private fun confirmDelete() = intent {

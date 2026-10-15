@@ -1,5 +1,6 @@
 package com.ninezero.halo.core.ui.components.profile_image_viewer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
@@ -72,6 +73,8 @@ fun ProfileImageViewerOverlay(
         enter = fadeIn(tween(250)),
         exit = fadeOut(tween(200))
     ) {
+        // 열릴 때 등록해야 NavHost보다 먼저 받음
+        BackHandler(enabled = state.isVisible) { onDismiss() }
         // AnimatedVisibilityScope, morph 동기화
         ProfileImageViewerContent(
             imageUrl = state.imageUrl,

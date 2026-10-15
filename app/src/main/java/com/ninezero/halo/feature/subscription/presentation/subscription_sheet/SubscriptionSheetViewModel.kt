@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.ninezero.halo.core.network.ApiException
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.feature.feed.domain.event.SubscriptionEventBus
+import com.ninezero.halo.feature.store.domain.model.billingAuthFailMessage
+import com.ninezero.halo.feature.store.domain.model.isBillingAuthCanceled
 import com.ninezero.halo.feature.store.domain.repository.BillingRepository
 import com.ninezero.halo.feature.subscription.domain.repository.SubscriptionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +35,7 @@ class SubscriptionSheetViewModel @Inject constructor(
             is SubscriptionSheetIntent.Dismiss -> dismiss()
             is SubscriptionSheetIntent.BillingAuthReturned -> onBillingAuthReturned(intent.authKey)
             is SubscriptionSheetIntent.BillingAuthDismissed -> onBillingAuthDismissed()
+            is SubscriptionSheetIntent.BillingAuthFailed -> onBillingAuthFailed(intent.code, intent.message)
         }
     }
 
@@ -154,6 +157,12 @@ class SubscriptionSheetViewModel @Inject constructor(
 
     private fun onBillingAuthDismissed() = intent {
         reduce { state.copy(showBillingWebView = false, subscribingPlanId = null, pendingPlanId = null) }
+    }
+
+    private fun onBillingAuthFailed(code: String?, message: String?) = intent {
+        reduce { state.copy(showBillingWebView = false, subscribingPlanId = null, pendingPlanId = null) }
+        if (isBillingAuthCanceled(code)) return@intent
+        postSideEffect(SubscriptionSheetSideEffect.ShowToast(billingAuthFailMessage(message)))
     }
 
     private fun confirmPayment() = intent {  // 실제 청구

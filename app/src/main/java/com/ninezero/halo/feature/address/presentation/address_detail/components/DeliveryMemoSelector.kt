@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,19 +35,25 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
@@ -155,6 +163,25 @@ fun DeliveryMemoBottomSheet(
     }
     var customText by remember { mutableStateOf(if (initialIsCustom) currentMemo else "") }
 
+    val customFieldRequester = remember { BringIntoViewRequester() }
+    var customFieldSize by remember { mutableStateOf(IntSize.Zero) }
+    var isCustomFocused by remember { mutableStateOf(false) }
+    var viewportHeight by remember { mutableIntStateOf(0) }
+
+    // 키보드만큼 시트가 줄면 스크롤은 필드를 바텀바 밑까지만 올림, 줄 때마다 바텀바 위로 재요청
+    LaunchedEffect(isCustomFocused, customFieldSize, bottomBarHeight, viewportHeight) {
+        if (!isCustomFocused || customFieldSize == IntSize.Zero) return@LaunchedEffect
+        val reservedPx = with(density) { (bottomBarHeight + 8.dp).toPx() }
+        customFieldRequester.bringIntoView(
+            Rect(
+                left = 0f,
+                top = 0f,
+                right = customFieldSize.width.toFloat(),
+                bottom = customFieldSize.height.toFloat() + reservedPx
+            )
+        )
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -171,6 +198,7 @@ fun DeliveryMemoBottomSheet(
                     .fillMaxWidth()
                     .hazeSource(hazeState)
                     .blockSheetFling()
+                    .onSizeChanged { viewportHeight = it.height }
                     .verticalScroll(rememberScrollState(), overscrollEffect = null)
                     .padding(top = headerHeight, bottom = bottomBarHeight)
                     .padding(horizontal = 16.dp)
@@ -212,7 +240,11 @@ fun DeliveryMemoBottomSheet(
                             placeholder = "배송 시 요청사항을 입력해주세요",
                             maxLength = MEMO_MAX_LENGTH,
                             showCounter = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewRequester(customFieldRequester)
+                                .onSizeChanged { customFieldSize = it }
+                                .onFocusChanged { isCustomFocused = it.hasFocus }
                         )
                     }
                 }

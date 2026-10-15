@@ -220,9 +220,11 @@ fun CheckoutScreen(
             savedCard = state.savedCard,
             isLoading = state.isSavedCardLoading,
             draftSelection = state.cardSheetDraft,
+            error = state.cardSheetError,
             onSelectOption = { viewModel.onIntent(CheckoutIntent.SelectCardSheetOption(it)) },
             onAddCard = { viewModel.onIntent(CheckoutIntent.AddSavedCard) },
             onConfirm = { viewModel.onIntent(CheckoutIntent.ConfirmCardSheet) },
+            onErrorDismiss = { viewModel.onIntent(CheckoutIntent.DismissCardSheetError) },
             onDismiss = { viewModel.onIntent(CheckoutIntent.DismissCardSheet) }
         )
     }
@@ -239,7 +241,14 @@ fun CheckoutScreen(
             ),
             returnScheme = "haloapp",
             onReturn = { uri ->
-                viewModel.onIntent(CheckoutIntent.SavedCardAuthReturned(uri.getQueryParameter("authKey")))
+                val authKey = uri.getQueryParameter("authKey")
+                if (authKey != null) {
+                    viewModel.onIntent(CheckoutIntent.SavedCardAuthReturned(authKey))
+                } else {
+                    viewModel.onIntent(
+                        CheckoutIntent.SavedCardAuthFailed(uri.getQueryParameter("code"), uri.getQueryParameter("message"))
+                    )
+                }
             },
             onDismiss = { viewModel.onIntent(CheckoutIntent.SavedCardRegisterDismissed) }
         )

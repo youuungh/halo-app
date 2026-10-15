@@ -54,6 +54,7 @@ class SalesManageViewModel @Inject constructor(
             is SalesManageIntent.SelectCarrier -> selectCarrier(intent.carrier)
             is SalesManageIntent.UpdateTrackingNumber -> updateTrackingNumber(intent.trackingNumber)
             is SalesManageIntent.SaveShippingInfo -> saveShippingInfo()
+            is SalesManageIntent.DismissShippingError -> dismissShippingError()
             is SalesManageIntent.DismissToast -> dismissToast()
             is SalesManageIntent.SnackbarDismissed -> dismissSnackbar()
         }
@@ -282,12 +283,16 @@ class SalesManageViewModel @Inject constructor(
     }
 
     private fun showShippingSheet(orderId: Int) = intent {
+        // 등록된 송장이면 현재 값으로 채운 수정 시트
+        val order = state.orders.find { it.id == orderId }
         reduce {
             state.copy(
                 showShippingSheet = true,
                 shippingOrderId = orderId,
-                selectedCarrier = "",
-                trackingNumber = ""
+                isEditingShipping = order?.trackingNumber != null,
+                selectedCarrier = order?.carrier.orEmpty(),
+                trackingNumber = order?.trackingNumber.orEmpty(),
+                shippingError = null
             )
         }
     }
@@ -297,8 +302,10 @@ class SalesManageViewModel @Inject constructor(
             state.copy(
                 showShippingSheet = false,
                 shippingOrderId = null,
+                isEditingShipping = false,
                 selectedCarrier = "",
-                trackingNumber = ""
+                trackingNumber = "",
+                shippingError = null
             )
         }
     }
@@ -314,7 +321,15 @@ class SalesManageViewModel @Inject constructor(
     private fun saveShippingInfo() = intent {
         val orderId = state.shippingOrderId ?: return@intent
         if (state.selectedCarrier.isBlank() || state.trackingNumber.isBlank()) {
-            postSideEffect(SalesManageSideEffect.ShowToast("택배사와 운송장번호를 입력해주세요"))
+            reduce { state.copy(shippingError = "택배사와 운송장번호를 입력해주세요") }
+            return@intent
+        }
+        val isEditing = state.isEditingShipping
+        val current = state.orders.find { it.id == orderId }
+        val unchanged = current?.carrier == state.selectedCarrier &&
+            current.trackingNumber == state.trackingNumber.trim()
+        if (isEditing && unchanged) {
+            dismissShippingSheet()  // 바뀐 게 없으면 요청 없이 닫기
             return@intent
         }
 
@@ -330,17 +345,29 @@ class SalesManageViewModel @Inject constructor(
                     isSavingShipping = false,
                     showShippingSheet = false,
                     shippingOrderId = null,
+                    isEditingShipping = false,
                     selectedCarrier = "",
                     trackingNumber = "",
+                    shippingError = null,
                     orders = state.orders.map { if (it.id == orderId) updated else it }
-                        .applyActiveFilter(state.selectedFilter)
+                        .applyActiveFilter(state.selectedFilter),
+                    snackbarState = SnackbarState(
+                        message = if (isEditing) "송장번호가 수정되었습니다" else "송장번호가 등록되었습니다"
+                    )
                 )
             }
-            postSideEffect(SalesManageSideEffect.ShowToast("송장번호가 등록되었습니다"))
         }.onFailure { error ->
-            reduce { state.copy(isSavingShipping = false) }
-            postSideEffect(SalesManageSideEffect.ShowToast(error.message ?: "송장번호 등록에 실패했습니다"))
+            reduce {
+                state.copy(
+                    isSavingShipping = false,
+                    shippingError = error.message ?: "송장번호 등록에 실패했습니다"
+                )
+            }
         }
+    }
+
+    private fun dismissShippingError() = intent {
+        reduce { state.copy(shippingError = null) }
     }
 
     private fun navigateBack() = intent {

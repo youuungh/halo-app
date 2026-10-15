@@ -76,7 +76,9 @@ fun SubscriptionSheetHost(
                 if (authKey != null) {
                     viewModel.onIntent(SubscriptionSheetIntent.BillingAuthReturned(authKey))
                 } else {
-                    viewModel.onIntent(SubscriptionSheetIntent.BillingAuthDismissed)
+                    viewModel.onIntent(
+                        SubscriptionSheetIntent.BillingAuthFailed(uri.getQueryParameter("code"), uri.getQueryParameter("message"))
+                    )
                 }
             },
             onDismiss = { viewModel.onIntent(SubscriptionSheetIntent.BillingAuthDismissed) }

@@ -56,6 +56,7 @@ data class CheckoutState(
     // 신용·체크카드 시트
     val showCardSheet: Boolean = false,
     val cardSheetDraft: String? = null,  // TOSS_BILLING 저장카드·TOSS_CARD 일반결제
+    val cardSheetError: String? = null,
     // 포인트
     val pointBalance: PointBalance? = null,
     val usedPoints: Int = 0,
@@ -98,9 +99,11 @@ sealed interface CheckoutIntent {
     data object DismissCardSheet : CheckoutIntent
     data class SelectCardSheetOption(val key: String) : CheckoutIntent
     data object ConfirmCardSheet : CheckoutIntent
+    data object DismissCardSheetError : CheckoutIntent
     // 저장카드 등록
     data object AddSavedCard : CheckoutIntent
     data class SavedCardAuthReturned(val authKey: String?) : CheckoutIntent
+    data class SavedCardAuthFailed(val code: String?, val message: String?) : CheckoutIntent
     data object SavedCardRegisterDismissed : CheckoutIntent
 }
 

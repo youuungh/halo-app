@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ExploreContainer(
+    isVisible: Boolean,  // 숨은 탭도 살아 있어 뒤로가기 가로채기 판단용
     onNavigateToPostDetail: (Int) -> Unit,
     onNavigateToProfile: (Int) -> Unit,
     onNavigateToEditPost: (Int) -> Unit,
@@ -44,6 +45,7 @@ fun ExploreContainer(
                 tabReselectFlow = exploreReselectFlow
             )
             1 -> SearchScreen(
+                isActive = isVisible && pagerState.currentPage == 1,
                 onNavigateToProfile = onNavigateToProfile,
                 onBackPressed = { scope.launch { pagerState.animateScrollToPage(0) } }
             )

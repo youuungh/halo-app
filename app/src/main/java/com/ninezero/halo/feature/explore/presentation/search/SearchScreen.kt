@@ -1,6 +1,7 @@
 
 package com.ninezero.halo.feature.explore.presentation.search
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
@@ -62,12 +63,20 @@ import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun SearchScreen(
+    isActive: Boolean,
     onNavigateToProfile: (Int) -> Unit,
     onBackPressed: () -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val state by viewModel.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
+
+    BackHandler(enabled = isActive && state.isSearchFocused) {
+        focusManager.clearFocus()
+        viewModel.onIntent(SearchIntent.ClearSearch)
+        onBackPressed()
+    }
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
