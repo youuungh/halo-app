@@ -77,7 +77,6 @@ fun SearchBar(
         }
     }
 
-    // haloBlur 블록은 컴포저블 아님
     val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
 
     Box(

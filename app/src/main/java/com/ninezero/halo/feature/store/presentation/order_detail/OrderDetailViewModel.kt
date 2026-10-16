@@ -172,7 +172,6 @@ class OrderDetailViewModel @Inject constructor(
             }
     }
 
-    // 판매종료·볼 수 없는 상품은 들어가지 않고 안내
     private fun openProduct(item: OrderItem) = intent {
         val blockedMessage = when {
             !item.isProductActive -> "판매가 종료된 상품입니다"

@@ -65,7 +65,6 @@ fun ProfileTabRow(
     // pager 실제 위치 따라 대칭 전환
     val indicatorOffset = with(density) { (tabSize.value.width * scrollFraction).toDp() }
 
-    // haloBlur 블록은 컴포저블 아님
     val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     val indicatorGlassTint = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
 
