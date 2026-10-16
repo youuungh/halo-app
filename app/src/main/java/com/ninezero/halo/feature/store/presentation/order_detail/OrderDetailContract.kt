@@ -9,6 +9,7 @@ data class OrderDetailState(
     val isLoading: Boolean = true,
     val order: Order? = null,
     val shippingStatus: ShippingStatusResponse? = null,
+    val isShippingStatusLoading: Boolean = false,
     val showCancelConfirm: Boolean = false,
     val cancelConfirmCreatorId: Int? = null,
     val isCancelling: Boolean = false,
@@ -41,6 +42,9 @@ sealed interface OrderDetailIntent {
     // 장바구니
     data class AddToCart(val item: OrderItem) : OrderDetailIntent
 
+    // 상품 이미지
+    data class OpenProduct(val item: OrderItem) : OrderDetailIntent
+
     // 배송조회
     data class ShowShippingSheet(val item: OrderItem) : OrderDetailIntent
     data object DismissShippingSheet : OrderDetailIntent
@@ -59,6 +63,7 @@ enum class CancelReason(val label: String) {
 sealed interface OrderDetailSideEffect {
     data object NavigateBack : OrderDetailSideEffect
     data object NavigateToCart : OrderDetailSideEffect
+    data class NavigateToProductDetail(val productId: Int) : OrderDetailSideEffect
     data class NavigateToCreateReview(
         val productId: Int,
         val orderId: Int,

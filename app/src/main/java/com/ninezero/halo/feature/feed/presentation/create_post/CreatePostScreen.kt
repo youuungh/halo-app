@@ -86,6 +86,9 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.media.MediaDisplayPolicy
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.util.MediaUtils
@@ -99,9 +102,6 @@ import com.ninezero.halo.feature.feed.presentation.create_post.components.Select
 import com.ninezero.halo.feature.tag.presentation.TagBottomSheet
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -578,10 +578,10 @@ internal fun CreatePostScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor),
+                        tint = HaloBlurTint(backgroundColor),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(
@@ -785,12 +785,12 @@ internal fun CreatePostScreenContent(
         PostDraftBottomSheet(
             drafts = state.drafts,
             isLoading = state.isDraftLoading,
-            showDeletedToast = state.showDraftDeletedToast,
+            showDeletedSnackbar = state.showDraftDeletedSnackbar,
             sheetState = draftSheetState,
             onDraftClick = { draft -> onIntent(CreatePostIntent.LoadDraft(draft)) },
             onDeleteDraft = { draft -> onIntent(CreatePostIntent.DeleteDraft(draft)) },
             onDismiss = { onIntent(CreatePostIntent.CloseDraftBottomSheet) },
-            onToastDismiss = { onIntent(CreatePostIntent.DismissDraftDeletedToast) }
+            onSnackbarDismiss = { onIntent(CreatePostIntent.DismissDraftDeletedSnackbar) }
         )
     }
 
@@ -802,8 +802,6 @@ internal fun CreatePostScreenContent(
             sectionTags = state.sectionTags,
             selectedSectionTagId = state.tempSectionTagId,
             isLoadingSectionTags = state.isLoadingSectionTags,
-            showToast = state.showTagToast,
-            toastMessage = state.tagToastMessage,
             onAddTag = { tag -> onIntent(CreatePostIntent.AddTag(tag)) },
             onRemoveTag = { tag -> onIntent(CreatePostIntent.RemoveTag(tag)) },
             onSelectSectionTag = { tagId -> onIntent(CreatePostIntent.SelectSectionTag(tagId)) },
@@ -812,7 +810,8 @@ internal fun CreatePostScreenContent(
             onDeleteSectionTag = { tagId -> onIntent(CreatePostIntent.DeleteSectionTag(tagId)) },
             onConfirm = { onIntent(CreatePostIntent.ConfirmTagChanges) },
             onDismiss = { onIntent(CreatePostIntent.CloseTagBottomSheet) },
-            onToastDismiss = { onIntent(CreatePostIntent.DismissTagToast) }
+            snackbarMessage = state.tagSnackbarMessage,
+            onSnackbarDismiss = { onIntent(CreatePostIntent.DismissTagSnackbar) }
         )
     }
 

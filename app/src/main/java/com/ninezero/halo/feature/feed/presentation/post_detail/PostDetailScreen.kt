@@ -78,8 +78,11 @@ import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.media.rememberAutoplayTarget
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.LocalActiveViewerMediaKey
 import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransitionScope
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.modifiers.statusBarsPaddingIgnoringVisibility
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
@@ -107,9 +110,6 @@ import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.delay
 import org.orbitmvi.orbit.compose.collectAsState
@@ -405,7 +405,7 @@ internal fun PostDetailScreenContent(
                 }
             }
 
-            // 댓글이 있거나 로딩 중이면 구분선 + 정렬 표시
+            // 댓글이 있거나 로딩 중이면 구분선, 정렬은 댓글이 있거나 정렬을 바꾸는 중일 때만
             if (allComments.isNotEmpty() || state.isCommentsLoading) {
                 // 구분선
                 item {
@@ -415,20 +415,22 @@ internal fun PostDetailScreenContent(
                     )
                 }
 
-                // 정렬 드롭다운
-                item {
-                    SortPopupMenu(
-                        currentSort = state.commentSortBy,
-                        onSortChange = { onIntent(PostDetailIntent.ChangeSortType(it)) }
-                    )
-                }
+                if (allComments.isNotEmpty() || state.isChangingSort) {
+                    // 정렬 드롭다운
+                    item {
+                        SortPopupMenu(
+                            currentSort = state.commentSortBy,
+                            onSortChange = { onIntent(PostDetailIntent.ChangeSortType(it)) }
+                        )
+                    }
 
-                // 정렬 밑 구분선
-                item {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    // 정렬 밑 구분선
+                    item {
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
 
@@ -567,10 +569,10 @@ internal fun PostDetailScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor),
+                        tint = HaloBlurTint(backgroundColor),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(
@@ -708,7 +710,7 @@ internal fun PostDetailScreenContent(
         }
 
         // 댓글 입력창, 로드 성공 시에만
-        if (!state.isCommentsLoading && state.commentsError == null) {
+        if (!(state.isCommentsLoading && state.comments.isEmpty() && !state.isChangingSort) && state.commentsError == null) {
             // 잠금 글: 댓글 열람은 열어두되 작성은 구독자 전용
             val subscribeRequester = LocalSubscribeRequester.current
             CommentInputBar(

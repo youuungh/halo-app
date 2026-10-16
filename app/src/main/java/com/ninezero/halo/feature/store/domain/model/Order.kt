@@ -62,7 +62,9 @@ data class OrderItem(
     val creatorName: String? = null,
     val creatorAvatarUrl: String? = null,
     val hasReview: Boolean = false,
-    val isProductActive: Boolean = true
+    val isProductActive: Boolean = true,
+    val requiredTier: String = "FREE",
+    val canAccess: Boolean = true
 )
 
 // 배송 추적 시각 3개는 외부 API

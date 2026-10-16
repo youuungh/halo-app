@@ -46,6 +46,9 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
@@ -54,9 +57,6 @@ import com.ninezero.halo.feature.profile.presentation.follow_list.components.Fol
 import com.ninezero.halo.feature.profile.presentation.follow_list.components.FollowTabSpec
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.compose.collectAsState
@@ -297,10 +297,10 @@ internal fun FollowListScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor.copy(alpha = 0.85f)),
+                        tint = HaloBlurTint(backgroundColor.copy(alpha = 0.85f)),
                         blurRadius = 25.dp,
                         noiseFactor = 0f
                     )

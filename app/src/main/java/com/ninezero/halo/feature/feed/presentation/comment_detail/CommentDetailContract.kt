@@ -39,6 +39,7 @@ data class CommentDetailState(
     val repliesHasMore: Boolean = true,
     val isRefreshing: Boolean = false,
     val repliesSortBy: CommentSortType = CommentSortType.POPULAR,
+    val isChangingSort: Boolean = false,  // 정렬 바꿔 다시 받는 중, 정렬·입력창 유지
 
     // 댓글 시트
     val showCommentOptionsSheet: Boolean = false,

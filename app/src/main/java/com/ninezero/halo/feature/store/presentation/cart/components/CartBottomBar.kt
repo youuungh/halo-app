@@ -52,16 +52,16 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassActionButton
 import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.ui.theme.HaloTheme
 import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import java.text.NumberFormat
 
 @Composable
@@ -100,10 +100,10 @@ fun CartBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = backgroundColor,
-                    tint = HazeTint(bottomTintColor),
+                    tint = HaloBlurTint(bottomTintColor),
                     blurRadius = 25.dp,
                     noiseFactor = 0f
                 )
@@ -163,10 +163,10 @@ fun CartBottomBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .hazeEffect(state = hazeState) {
-                            style = HazeStyle(
+                        .haloBlur(state = hazeState) {
+                            style = HaloBlurStyle(
                                 backgroundColor = backgroundColor,
-                                tint = HazeTint(expandedBoxTintColor),
+                                tint = HaloBlurTint(expandedBoxTintColor),
                                 blurRadius = 40.dp,
                                 noiseFactor = 0f
                             )

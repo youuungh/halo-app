@@ -46,12 +46,12 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -126,10 +126,10 @@ private fun ProfileImageViewerContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = Color.Black,
-                        tint = HazeTint(Color.Transparent),
+                        tint = HaloBlurTint(Color.Transparent),
                         blurRadius = 24.dp,
                         noiseFactor = 0f
                     )

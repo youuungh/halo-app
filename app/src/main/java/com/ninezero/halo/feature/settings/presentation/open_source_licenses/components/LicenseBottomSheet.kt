@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.settings.presentation.open_source_licenses.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +44,13 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.launch
 
 @Composable
 fun LicenseBottomSheet(
@@ -54,6 +58,7 @@ fun LicenseBottomSheet(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
     val surfaceColor = MaterialTheme.colorScheme.surface
     val hazeState = remember { HazeState() }
     val density = LocalDensity.current
@@ -82,6 +87,13 @@ fun LicenseBottomSheet(
         dragHandle = null,
         contentWindowInsets = { WindowInsets(0) }
     ) {
+        // 펼친 상태는 뒤로가기 시 바로 접음
+        BackHandler(
+            enabled = sheetState.currentValue == SheetValue.Expanded && sheetState.hasPartiallyExpandedState
+        ) {
+            scope.launch { sheetState.partialExpand() }
+        }
+
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
@@ -129,10 +141,10 @@ fun LicenseBottomSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = surfaceColor,
-                            tint = HazeTint(surfaceColor),
+                            tint = HaloBlurTint(surfaceColor),
                             noiseFactor = 0f
                         )
                         progressive = HazeProgressive.verticalGradient(

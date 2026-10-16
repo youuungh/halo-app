@@ -17,11 +17,11 @@ data class MembershipManageState(
     val showPlanBottomSheet: Boolean = false,
     val editingPlan: SubscriptionPlan? = null,  // null이면 새로 생성, 있으면 수정
     val isSaving: Boolean = false,
+    val saveError: String? = null,
     // 삭제 다이얼로그
     val showDeleteDialog: Boolean = false,
     val deletingPlan: SubscriptionPlan? = null,
     val error: String? = null,
-    val toastMessage: String? = null,
     val snackbarState: SnackbarState? = null
 )
 
@@ -49,7 +49,7 @@ sealed interface MembershipManageIntent {
     data object ConfirmDeletePlan : MembershipManageIntent
     // 플랜 활성/비활성 토글
     data class TogglePlanActive(val plan: SubscriptionPlan) : MembershipManageIntent
-    data object DismissToast : MembershipManageIntent
+    data object DismissSaveError : MembershipManageIntent
     data object SnackbarDismissed : MembershipManageIntent
 }
 

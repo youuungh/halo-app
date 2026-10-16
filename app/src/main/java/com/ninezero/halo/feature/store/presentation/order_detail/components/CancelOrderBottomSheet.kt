@@ -50,7 +50,10 @@ import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.input.FormTextField
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.store.domain.model.Order
@@ -62,9 +65,6 @@ import com.ninezero.halo.feature.store.presentation.order_detail.CancelReason
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import java.text.NumberFormat
 
@@ -271,10 +271,10 @@ private fun CancelOrderContent(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = surface,
-                        tint = HazeTint(surface),
+                        tint = HaloBlurTint(surface),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(
@@ -315,10 +315,10 @@ private fun CancelOrderContent(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = surface,
-                            tint = HazeTint(surface),
+                            tint = HaloBlurTint(surface),
                             noiseFactor = 0f
                         )
                         progressive = HazeProgressive.verticalGradient(

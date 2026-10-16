@@ -53,15 +53,15 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.chat.presentation.chat_room.AttachmentState
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 @Composable
 fun MessageInputBar(
@@ -95,10 +95,10 @@ fun MessageInputBar(
             .fillMaxWidth()
             .then(
                 if (hazeState != null) {
-                    Modifier.hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    Modifier.haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = backgroundColor,
-                            tint = HazeTint(backgroundColor),
+                            tint = HaloBlurTint(backgroundColor),
                             noiseFactor = 0f
                         )
                         progressive = HazeProgressive.verticalGradient(
@@ -216,10 +216,10 @@ private fun MessageInputContent(
                 .clip(RoundedCornerShape(20.dp))
                 .then(
                     if (hazeState != null) {
-                        Modifier.hazeEffect(state = hazeState) {
-                            style = HazeStyle(
+                        Modifier.haloBlur(state = hazeState) {
+                            style = HaloBlurStyle(
                                 backgroundColor = backgroundColor,
-                                tint = HazeTint(fieldGlassTint),
+                                tint = HaloBlurTint(fieldGlassTint),
                                 blurRadius = 20.dp,
                                 noiseFactor = 0f
                             )
@@ -396,10 +396,10 @@ private fun AttachmentTypeButton(
             .clip(RoundedCornerShape(12.dp))
             .then(
                 if (hazeState != null) {
-                    Modifier.hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    Modifier.haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = backgroundColor,
-                            tint = HazeTint(glassTint),
+                            tint = HaloBlurTint(glassTint),
                             blurRadius = 20.dp,
                             noiseFactor = 0f
                         )

@@ -28,15 +28,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.ui.theme.HaloTheme
 import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 import com.ninezero.halo.ui.theme.Primary
 import com.ninezero.halo.ui.theme.Success
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 @Composable
@@ -82,10 +82,10 @@ fun GlassCard(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .hazeEffect(state = haze) {
-                    style = HazeStyle(
+                .haloBlur(state = haze) {
+                    style = HaloBlurStyle(
                         backgroundColor = tintColor,
-                        tint = HazeTint(tintColor.copy(alpha = if (isDark) 0.30f else 0.40f)),
+                        tint = HaloBlurTint(tintColor.copy(alpha = if (isDark) 0.30f else 0.40f)),
                         noiseFactor = 0.05f
                     )
                 }

@@ -238,18 +238,21 @@ internal fun ReviewListScreenContent(
                             )
                         }
 
-                        item(key = "sort") {
-                            ReviewSortPopupMenu(
-                                currentSort = state.sortBy,
-                                onSortChange = onSortChange
-                            )
-                        }
+                        // 정렬은 리뷰가 있을 때만
+                        if (state.reviews.isNotEmpty()) {
+                            item(key = "sort") {
+                                ReviewSortPopupMenu(
+                                    currentSort = state.sortBy,
+                                    onSortChange = onSortChange
+                                )
+                            }
 
-                        item(key = "sort_divider_bottom") {
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
+                            item(key = "sort_divider_bottom") {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
                         }
 
                         items(

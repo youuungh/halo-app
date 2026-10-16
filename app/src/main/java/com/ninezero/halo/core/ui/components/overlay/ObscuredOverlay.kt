@@ -19,8 +19,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 
 /** 가림 오버레이, hazeSource를 둔 Box 안에서 호출 */
 @Composable
@@ -35,7 +35,7 @@ fun BoxScope.ObscuredOverlay(
         modifier = Modifier
             .matchParentSize()
             .clip(RoundedCornerShape(8.dp))
-            .hazeEffect(
+            .haloBlur(
                 state = hazeState,
                 style = obscuredOverlayStyle()
             )

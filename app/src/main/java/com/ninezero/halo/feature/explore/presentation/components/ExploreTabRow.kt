@@ -29,12 +29,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.feature.explore.presentation.ExploreTab
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import kotlin.math.roundToInt
 
 val ExploreTabRowHeight = 56.dp
@@ -56,7 +56,7 @@ fun ExploreTabRow(
     // pager 실제 위치를 따라 양방향 전환 대칭
     val indicatorOffset = with(density) { (tabSize.value.width * scrollFraction).toDp() }
 
-    // hazeEffect 블록은 draw 단계 호출
+    // haloBlur 블록은 컴포저블 아님
     val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     val indicatorGlassTint = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
 
@@ -73,10 +73,10 @@ fun ExploreTabRow(
                 .clip(CircleShape)
                 .then(
                     if (hazeState != null) {
-                        Modifier.hazeEffect(state = hazeState) {
-                            style = HazeStyle(
+                        Modifier.haloBlur(state = hazeState) {
+                            style = HaloBlurStyle(
                                 backgroundColor = hazeBackgroundColor,
-                                tint = HazeTint(glassTint),
+                                tint = HaloBlurTint(glassTint),
                                 blurRadius = 20.dp,
                                 noiseFactor = 0f
                             )
@@ -96,10 +96,10 @@ fun ExploreTabRow(
                     .clip(CircleShape)
                     .then(
                         if (hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) {
-                                style = HazeStyle(
+                            Modifier.haloBlur(state = hazeState) {
+                                style = HaloBlurStyle(
                                     backgroundColor = hazeBackgroundColor,
-                                    tint = HazeTint(indicatorGlassTint),
+                                    tint = HaloBlurTint(indicatorGlassTint),
                                     blurRadius = 20.dp,
                                     noiseFactor = 0f
                                 )

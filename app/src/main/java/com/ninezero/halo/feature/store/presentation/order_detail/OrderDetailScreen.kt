@@ -74,6 +74,7 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun OrderDetailScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToProductDetail: (productId: Int) -> Unit,
     onNavigateToCart: () -> Unit = {},
     onNavigateToCreateReview: (productId: Int, orderId: Int, productName: String, productImageUrl: String?) -> Unit = { _, _, _, _ -> },
     viewModel: OrderDetailViewModel = hiltViewModel()
@@ -96,6 +97,7 @@ fun OrderDetailScreen(
         when (sideEffect) {
             is OrderDetailSideEffect.NavigateBack -> onNavigateBack()
             is OrderDetailSideEffect.NavigateToCart -> onNavigateToCart()
+            is OrderDetailSideEffect.NavigateToProductDetail -> onNavigateToProductDetail(sideEffect.productId)
             is OrderDetailSideEffect.NavigateToCreateReview -> onNavigateToCreateReview(
                 sideEffect.productId,
                 sideEffect.orderId,
@@ -135,6 +137,7 @@ fun OrderDetailScreen(
         onWriteReview = { item -> viewModel.onIntent(OrderDetailIntent.WriteReview(item)) },
         onShippingInquiry = { item -> viewModel.onIntent(OrderDetailIntent.ShowShippingSheet(item)) },
         onAddToCart = { item -> viewModel.onIntent(OrderDetailIntent.AddToCart(item)) },
+        onProductImageClick = { item -> viewModel.onIntent(OrderDetailIntent.OpenProduct(item)) },
         onDismissShippingSheet = { viewModel.onIntent(OrderDetailIntent.DismissShippingSheet) }
     )
 }
@@ -155,6 +158,7 @@ internal fun OrderDetailScreenContent(
     onWriteReview: (OrderItem) -> Unit = {},
     onShippingInquiry: (OrderItem) -> Unit = {},
     onAddToCart: (OrderItem) -> Unit = {},
+    onProductImageClick: (OrderItem) -> Unit = {},
     onDismissShippingSheet: () -> Unit = {}
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
@@ -319,7 +323,8 @@ internal fun OrderDetailScreenContent(
                                             showLineTotal = true,
                                             onWriteReview = { onWriteReview(item) },
                                             onShippingInquiry = { onShippingInquiry(item) },
-                                            onAddToCart = { onAddToCart(item) }
+                                            onAddToCart = { onAddToCart(item) },
+                                            onImageClick = { onProductImageClick(item) }
                                         )
                                         if (index < group.items.lastIndex) {
                                             HorizontalDivider(
@@ -586,6 +591,7 @@ internal fun OrderDetailScreenContent(
         ShippingTrackingBottomSheet(
             group = selectedGroup,
             shippingStatus = state.shippingStatus,
+            isLoading = state.isShippingStatusLoading,
             onDismiss = onDismissShippingSheet
         )
     }

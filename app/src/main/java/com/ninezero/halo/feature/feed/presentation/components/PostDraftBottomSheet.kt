@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -62,7 +63,11 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.util.MediaUtils
 import com.ninezero.halo.core.util.toRelativeTime
@@ -70,25 +75,23 @@ import com.ninezero.halo.feature.feed.domain.model.PostDraft
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 @Composable
 fun PostDraftBottomSheet(
     drafts: List<PostDraft>,
     isLoading: Boolean,
-    showDeletedToast: Boolean,
+    showDeletedSnackbar: Boolean,
     sheetState: SheetState,
     onDraftClick: (PostDraft) -> Unit,
     onDeleteDraft: (PostDraft) -> Unit,
     onDismiss: () -> Unit,
-    onToastDismiss: () -> Unit,
+    onSnackbarDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val hazeState = remember { HazeState() }
+    val snackbarHostState = remember { SnackbarHostState() }
     val density = LocalDensity.current
     var headerHeight by remember { mutableStateOf(0.dp) }
 
@@ -180,10 +183,10 @@ fun PostDraftBottomSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = surfaceColor,
-                            tint = HazeTint(surfaceColor),
+                            tint = HaloBlurTint(surfaceColor),
                             noiseFactor = 0f
                         )
                         progressive = HazeProgressive.verticalGradient(
@@ -223,13 +226,18 @@ fun PostDraftBottomSheet(
                 }
             }
 
-            CenterToast(
-                visible = showDeletedToast,
-                message = "삭제됨",
-                onDismiss = onToastDismiss
+            DefaultSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
     }
+
+    SnackbarHandler(
+        message = "삭제됨".takeIf { showDeletedSnackbar },
+        hostState = snackbarHostState,
+        onDismiss = onSnackbarDismiss
+    )
 }
 
 @Composable
@@ -438,12 +446,12 @@ private fun PostDraftBottomSheetPreview() {
                 )
             ),
             isLoading = false,
-            showDeletedToast = false,
+            showDeletedSnackbar = false,
             sheetState = sheetState,
             onDraftClick = {},
             onDeleteDraft = {},
             onDismiss = {},
-            onToastDismiss = {}
+            onSnackbarDismiss = {}
         )
     }
 }
@@ -456,12 +464,12 @@ private fun PostDraftBottomSheetLoadingPreview() {
         PostDraftBottomSheet(
             drafts = emptyList(),
             isLoading = true,
-            showDeletedToast = false,
+            showDeletedSnackbar = false,
             sheetState = sheetState,
             onDraftClick = {},
             onDeleteDraft = {},
             onDismiss = {},
-            onToastDismiss = {}
+            onSnackbarDismiss = {}
         )
     }
 }
@@ -474,12 +482,12 @@ private fun PostDraftBottomSheetEmptyPreview() {
         PostDraftBottomSheet(
             drafts = emptyList(),
             isLoading = false,
-            showDeletedToast = false,
+            showDeletedSnackbar = false,
             sheetState = sheetState,
             onDraftClick = {},
             onDeleteDraft = {},
             onDismiss = {},
-            onToastDismiss = {}
+            onSnackbarDismiss = {}
         )
     }
 }

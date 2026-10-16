@@ -66,7 +66,10 @@ import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.components.util.CommaVisualTransformation
@@ -84,9 +87,6 @@ import com.ninezero.halo.feature.store.presentation.create_product.components.Ti
 import com.ninezero.halo.feature.tag.presentation.TagBottomSheet
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -580,10 +580,10 @@ internal fun CreateProductScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor),
+                        tint = HaloBlurTint(backgroundColor),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(
@@ -700,8 +700,6 @@ internal fun CreateProductScreenContent(
             sectionTags = state.sectionTags,
             selectedSectionTagId = state.pendingSectionTagId,
             isLoadingSectionTags = state.isLoadingSectionTags,
-            showToast = state.showTagToast,
-            toastMessage = state.tagToastMessage,
             onAddTag = { tag -> onIntent(CreateProductIntent.AddTag(tag)) },
             onRemoveTag = { tag -> onIntent(CreateProductIntent.RemoveTag(tag)) },
             onSelectSectionTag = { tagId -> onIntent(CreateProductIntent.SelectSectionTag(tagId)) },
@@ -710,7 +708,8 @@ internal fun CreateProductScreenContent(
             onDeleteSectionTag = { tagId -> onIntent(CreateProductIntent.DeleteSectionTag(tagId)) },
             onConfirm = { onIntent(CreateProductIntent.ConfirmTagChanges) },
             onDismiss = { onIntent(CreateProductIntent.CloseTagBottomSheet) },
-            onToastDismiss = { onIntent(CreateProductIntent.DismissTagToast) }
+            snackbarMessage = state.tagSnackbarMessage,
+            onSnackbarDismiss = { onIntent(CreateProductIntent.DismissTagSnackbar) }
         )
     }
 }

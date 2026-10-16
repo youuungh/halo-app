@@ -34,15 +34,15 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.feature.store.domain.model.RichTextAlignment
 import com.ninezero.halo.feature.store.domain.model.RichTextBlockStyle
 import com.ninezero.halo.feature.store.presentation.create_product.CharFormat
 import com.ninezero.halo.feature.store.presentation.create_product.EditorBlock
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 @Composable
 fun RichTextActionBar(
@@ -72,10 +72,10 @@ fun RichTextActionBar(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = backgroundColor.copy(alpha = 0.84f),
-                    tint = HazeTint(backgroundColor.copy(alpha = 0.88f)),
+                    tint = HaloBlurTint(backgroundColor.copy(alpha = 0.88f)),
                     noiseFactor = 0f
                 )
                 progressive = HazeProgressive.verticalGradient(

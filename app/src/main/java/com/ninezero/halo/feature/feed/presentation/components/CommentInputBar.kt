@@ -18,15 +18,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.feed.domain.model.Comment
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 @Composable
 fun CommentInputBar(
@@ -46,10 +46,10 @@ fun CommentInputBar(
             .pointerInput(Unit) {
                 detectTapGestures { /* 터치 이벤트 소비 */ }
             }
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = backgroundColor,
-                    tint = HazeTint(backgroundColor),
+                    tint = HaloBlurTint(backgroundColor),
                     noiseFactor = 0f
                 )
                 progressive = HazeProgressive.verticalGradient(
@@ -74,10 +74,10 @@ fun CommentInputBar(
                         onClick = onInputClick
                     )
                     .clip(RoundedCornerShape(20.dp))
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = backgroundColor,
-                            tint = HazeTint(fieldGlassTint),
+                            tint = HaloBlurTint(fieldGlassTint),
                             blurRadius = 20.dp,
                             noiseFactor = 0f
                         )

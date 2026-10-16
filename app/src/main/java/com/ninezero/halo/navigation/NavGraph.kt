@@ -877,6 +877,9 @@ fun HaloNavGraph(
             ) {
                 OrderDetailScreen(
                     onNavigateBack = dropUnlessStarted { navController.popBackStack() },
+                    onNavigateToProductDetail = { productId ->
+                        navController.navigateUnlessOnTop(Screen.ProductDetail(productId))
+                    },
                     onNavigateToCart = {
                         navController.navigateUnlessOnTop(Screen.Cart)
                     },

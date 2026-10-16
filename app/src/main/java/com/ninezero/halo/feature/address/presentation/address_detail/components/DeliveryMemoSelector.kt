@@ -61,11 +61,11 @@ import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.button.SheetActionButton
 import com.ninezero.halo.core.ui.components.input.FormTextField
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 internal val DELIVERY_MEMO_PRESETS = listOf(
@@ -257,10 +257,10 @@ fun DeliveryMemoBottomSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = surface,
-                            tint = HazeTint(surface),
+                            tint = HaloBlurTint(surface),
                             noiseFactor = 0f
                         )
                         progressive = HazeProgressive.verticalGradient(
@@ -301,10 +301,10 @@ fun DeliveryMemoBottomSheet(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .hazeEffect(state = hazeState) {
-                            style = HazeStyle(
+                        .haloBlur(state = hazeState) {
+                            style = HaloBlurStyle(
                                 backgroundColor = surface,
-                                tint = HazeTint(surface),
+                                tint = HaloBlurTint(surface),
                                 noiseFactor = 0f
                             )
                             progressive = HazeProgressive.verticalGradient(

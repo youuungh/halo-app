@@ -39,12 +39,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 @Composable
 fun SearchBar(
@@ -77,7 +77,7 @@ fun SearchBar(
         }
     }
 
-    // hazeEffect 블록은 draw 단계 호출
+    // haloBlur 블록은 컴포저블 아님
     val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
 
     Box(
@@ -87,10 +87,10 @@ fun SearchBar(
             .clip(RoundedCornerShape(12.dp))
             .then(
                 if (hazeState != null) {
-                    Modifier.hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    Modifier.haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = hazeBackgroundColor,
-                            tint = HazeTint(glassTint),
+                            tint = HaloBlurTint(glassTint),
                             blurRadius = 20.dp,
                             noiseFactor = 0f
                         )

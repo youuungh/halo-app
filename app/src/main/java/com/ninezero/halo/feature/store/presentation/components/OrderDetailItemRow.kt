@@ -2,6 +2,7 @@ package com.ninezero.halo.feature.store.presentation.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ fun OrderDetailItemRow(
     showActionButtons: Boolean = true,
     showPrice: Boolean = true,
     showLineTotal: Boolean = false,
+    onImageClick: (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -66,7 +68,8 @@ fun OrderDetailItemRow(
                 contentDescription = item.productName,
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(8.dp))
+                    .then(if (onImageClick != null) Modifier.clickable(onClick = onImageClick) else Modifier),
                 contentScale = ContentScale.Crop,
                 placeholder = painterResource(R.drawable.ic_img_placeholder),
                 error = painterResource(R.drawable.ic_img_placeholder),

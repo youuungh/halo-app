@@ -18,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -38,7 +39,8 @@ import com.ninezero.halo.core.ui.components.input.FormTextField
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
@@ -106,6 +108,7 @@ private fun ShippingInputContent(
     onDismiss: () -> Unit = {}
 ) {
     val hazeState = remember { HazeState() }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Box {
         Column(
@@ -239,13 +242,18 @@ private fun ShippingInputContent(
         }
 
         // 시트 window에 가려지지 않게 시트 안에서 표시
-        CenterToast(
-            visible = shippingError != null,
-            message = shippingError.orEmpty(),
-            modifier = Modifier.matchParentSize(),  // 시트 높이를 바꾸지 않음
-            onDismiss = onShippingErrorDismiss
+        DefaultSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            bottomBarPadding = 56.dp  // 등록 버튼 48 + 하단 여백 8
         )
     }
+
+    SnackbarHandler(
+        message = shippingError,
+        hostState = snackbarHostState,
+        onDismiss = onShippingErrorDismiss
+    )
 }
 
 @HaloLightDarkPreview

@@ -24,7 +24,6 @@ data class CouponManageState(
     // 삭제 확인 다이얼로그
     val showDeleteDialog: Boolean = false,
     val deletingCoupon: CreatorCoupon? = null,
-    val toastMessage: String? = null,
     val snackbarState: SnackbarState? = null
 )
 
@@ -84,8 +83,7 @@ sealed interface CouponManageIntent {
     data class ShowDeleteDialog(val coupon: CreatorCoupon) : CouponManageIntent
     data object DismissDeleteDialog : CouponManageIntent
     data object ConfirmDelete : CouponManageIntent
-    data object DismissToast : CouponManageIntent
-    // 저장 실패 토스트, 시트 안 표시
+    // 저장 실패, 시트 안 스낵바
     data object DismissSaveError : CouponManageIntent
     data object SnackbarDismissed : CouponManageIntent
 }

@@ -152,7 +152,7 @@ class CreatePostViewModel @Inject constructor(
             is CreatePostIntent.SaveDraft -> saveDraft(intent.exitAfterSave, intent.openDraftsAfterSave)
             is CreatePostIntent.LoadDraft -> loadDraft(intent.draft)
             is CreatePostIntent.DeleteDraft -> deleteDraft(intent.draft)
-            is CreatePostIntent.DismissDraftDeletedToast -> dismissDraftDeletedToast()
+            is CreatePostIntent.DismissDraftDeletedSnackbar -> dismissDraftDeletedSnackbar()
             // 태그 관련
             is CreatePostIntent.OpenTagBottomSheet -> openTagBottomSheet()
             is CreatePostIntent.CloseTagBottomSheet -> closeTagBottomSheet()
@@ -163,7 +163,7 @@ class CreatePostViewModel @Inject constructor(
             is CreatePostIntent.CreateSectionTag -> createSectionTag(intent.name)
             is CreatePostIntent.UpdateSectionTag -> updateSectionTag(intent.tagId, intent.name)
             is CreatePostIntent.DeleteSectionTag -> deleteSectionTag(intent.tagId)
-            is CreatePostIntent.DismissTagToast -> dismissTagToast()
+            is CreatePostIntent.DismissTagSnackbar -> dismissTagSnackbar()
             // 상세설정 관련
             is CreatePostIntent.OpenSettingsBottomSheet -> openSettingsBottomSheet()
             is CreatePostIntent.CloseSettingsBottomSheet -> closeSettingsBottomSheet()
@@ -493,11 +493,11 @@ class CreatePostViewModel @Inject constructor(
 
     private fun deleteDraft(draft: PostDraft) = intent {
         postDraftRepository.deleteDraft(draft.id)
-        reduce { state.copy(showDraftDeletedToast = true) }
+        reduce { state.copy(showDraftDeletedSnackbar = true) }
     }
 
-    private fun dismissDraftDeletedToast() = intent {
-        reduce { state.copy(showDraftDeletedToast = false) }
+    private fun dismissDraftDeletedSnackbar() = intent {
+        reduce { state.copy(showDraftDeletedSnackbar = false) }
     }
 
     // 태그 관련
@@ -540,8 +540,7 @@ class CreatePostViewModel @Inject constructor(
         if (state.pendingTags.size >= MAX_TAGS) {
             reduce {
                 state.copy(
-                    showTagToast = true,
-                    tagToastMessage = "태그는 최대 ${MAX_TAGS}개까지 추가할 수 있습니다"
+                    tagSnackbarMessage = "태그는 최대 ${MAX_TAGS}개까지 추가할 수 있습니다"
                 )
             }
             return@intent
@@ -550,8 +549,7 @@ class CreatePostViewModel @Inject constructor(
         if (state.pendingTags.any { it.equals(trimmedTag, ignoreCase = true) }) {
             reduce {
                 state.copy(
-                    showTagToast = true,
-                    tagToastMessage = "이미 추가된 태그입니다"
+                    tagSnackbarMessage = "이미 추가된 태그입니다"
                 )
             }
             return@intent
@@ -586,8 +584,7 @@ class CreatePostViewModel @Inject constructor(
         if (state.sectionTags.size >= MAX_SECTION_TAGS) {
             reduce {
                 state.copy(
-                    showTagToast = true,
-                    tagToastMessage = "섹션 태그는 최대 ${MAX_SECTION_TAGS}개까지 추가할 수 있습니다"
+                    tagSnackbarMessage = "섹션 태그는 최대 ${MAX_SECTION_TAGS}개까지 추가할 수 있습니다"
                 )
             }
             return@intent
@@ -604,16 +601,14 @@ class CreatePostViewModel @Inject constructor(
                 state.copy(
                     sectionTags = state.sectionTags + newTag,
                     isLoadingSectionTags = false,
-                    showTagToast = true,
-                    tagToastMessage = "섹션 태그가 추가되었습니다"
+                    tagSnackbarMessage = "섹션 태그가 추가되었습니다"
                 )
             }
         }.onFailure { error ->
             reduce {
                 state.copy(
                     isLoadingSectionTags = false,
-                    showTagToast = true,
-                    tagToastMessage = error.message ?: "섹션 태그 추가 실패"
+                    tagSnackbarMessage = error.message ?: "섹션 태그 추가 실패"
                 )
             }
         }
@@ -634,16 +629,14 @@ class CreatePostViewModel @Inject constructor(
                 state.copy(
                     sectionTags = state.sectionTags.map { if (it.id == tagId) updatedTag else it },
                     isLoadingSectionTags = false,
-                    showTagToast = true,
-                    tagToastMessage = "섹션 태그가 수정되었습니다"
+                    tagSnackbarMessage = "섹션 태그가 수정되었습니다"
                 )
             }
         }.onFailure { error ->
             reduce {
                 state.copy(
                     isLoadingSectionTags = false,
-                    showTagToast = true,
-                    tagToastMessage = error.message ?: "섹션 태그 수정 실패"
+                    tagSnackbarMessage = error.message ?: "섹션 태그 수정 실패"
                 )
             }
         }
@@ -661,23 +654,21 @@ class CreatePostViewModel @Inject constructor(
                     // 시트에서 고른 채 지운 태그로 게시되는 것 방지
                     tempSectionTagId = if (state.tempSectionTagId == tagId) null else state.tempSectionTagId,
                     isLoadingSectionTags = false,
-                    showTagToast = true,
-                    tagToastMessage = "섹션 태그가 삭제되었습니다"
+                    tagSnackbarMessage = "섹션 태그가 삭제되었습니다"
                 )
             }
         }.onFailure { error ->
             reduce {
                 state.copy(
                     isLoadingSectionTags = false,
-                    showTagToast = true,
-                    tagToastMessage = error.message ?: "섹션 태그 삭제 실패"
+                    tagSnackbarMessage = error.message ?: "섹션 태그 삭제 실패"
                 )
             }
         }
     }
 
-    private fun dismissTagToast() = intent {
-        reduce { state.copy(showTagToast = false, tagToastMessage = "") }
+    private fun dismissTagSnackbar() = intent {
+        reduce { state.copy(tagSnackbarMessage = null) }
     }
 
     // 플랜 없는 등급은 서버가 게시를 거절해 선택지에서 뺌

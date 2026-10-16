@@ -21,11 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 /** 글래스 액션 버튼 */
 @Composable
@@ -50,10 +50,10 @@ fun GlassActionButton(
                 .then(if (enabled) Modifier.bounceClick() else Modifier)
                 .height(40.dp)
                 .clip(shape)
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = activeColor.copy(alpha = 0.7f),
-                        tint = HazeTint(activeColor.copy(alpha = 0.4f)),
+                        tint = HaloBlurTint(activeColor.copy(alpha = 0.4f)),
                         blurRadius = 20.dp,
                         noiseFactor = 0f
                     )

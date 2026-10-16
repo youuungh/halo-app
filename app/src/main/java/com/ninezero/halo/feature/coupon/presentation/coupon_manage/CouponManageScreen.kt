@@ -22,7 +22,6 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.coupon.domain.model.CouponStatus
 import com.ninezero.halo.feature.coupon.presentation.coupon_manage.components.CouponFormBottomSheet
@@ -116,12 +115,6 @@ internal fun CouponManageScreenContent(
             }
         }
     }
-
-    CenterToast(
-        visible = state.toastMessage != null,
-        message = state.toastMessage ?: "",
-        onDismiss = { onIntent(CouponManageIntent.DismissToast) }
-    )
 
     state.optionSheetCoupon?.let { coupon ->
         EditDeleteOptionBottomSheet(

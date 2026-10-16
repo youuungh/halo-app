@@ -45,13 +45,13 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 @Composable
 fun ChatRoomTopBar(
@@ -165,10 +165,10 @@ fun ChatRoomTopBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color.Transparent
         ),
-        modifier = modifier.hazeEffect(state = hazeState) {
-            style = HazeStyle(
+        modifier = modifier.haloBlur(state = hazeState) {
+            style = HaloBlurStyle(
                 backgroundColor = backgroundColor,
-                tint = HazeTint(backgroundColor),
+                tint = HaloBlurTint(backgroundColor),
                 noiseFactor = 0f
             )
             progressive = HazeProgressive.verticalGradient(
@@ -196,10 +196,10 @@ private fun ChatRoomSearchBar(
         modifier = modifier
             .height(40.dp)
             .clip(RoundedCornerShape(12.dp))
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = backgroundColor,
-                    tint = HazeTint(glassTint),
+                    tint = HaloBlurTint(glassTint),
                     blurRadius = 20.dp,
                     noiseFactor = 0f
                 )
@@ -287,10 +287,10 @@ private fun GlassPillButtons(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = backgroundColor.copy(alpha = 0.7f),
-                    tint = HazeTint(backgroundColor.copy(alpha = 0.4f)),
+                    tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
                     blurRadius = 20.dp,
                     noiseFactor = 0f
                 )

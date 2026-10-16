@@ -26,12 +26,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 @Composable
 fun NewMessageBar(
@@ -61,10 +61,10 @@ fun NewMessageBar(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
                 .fillMaxWidth()
                 .clip(shape)
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor.copy(alpha = 0.7f),
-                        tint = HazeTint(hazeTintColor),
+                        tint = HaloBlurTint(hazeTintColor),
                         blurRadius = 20.dp,
                         noiseFactor = 0f
                     )

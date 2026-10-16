@@ -26,6 +26,7 @@ data class PostDetailState(
     val commentsPage: Int = 1,
     val commentsHasMore: Boolean = true,
     val commentSortBy: CommentSortType = CommentSortType.POPULAR,
+    val isChangingSort: Boolean = false,  // 정렬 바꿔 다시 받는 중, 정렬·입력창 유지
     // 확장된 답글
     val expandedCommentReplies: Map<Int, List<Comment>> = emptyMap(),
     val loadingRepliesCommentIds: Set<Int> = emptySet(),

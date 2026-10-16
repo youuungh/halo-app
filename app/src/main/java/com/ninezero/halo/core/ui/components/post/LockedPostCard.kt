@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayLabelColor
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlaySubLabelColor
 import com.ninezero.halo.core.ui.components.overlay.obscuredOverlayStyle
@@ -41,7 +42,6 @@ import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlin.random.Random
 
@@ -156,7 +156,7 @@ fun LockedPostCard(
                             .matchParentSize()
                             .clip(lockShape)
                             // 이미지 유무 무관 같은 오버레이
-                            .hazeEffect(state = hazeState, style = obscuredOverlayStyle()),
+                            .haloBlur(state = hazeState, style = obscuredOverlayStyle()),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {

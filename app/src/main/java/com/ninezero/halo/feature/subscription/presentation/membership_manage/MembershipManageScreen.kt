@@ -26,7 +26,6 @@ import com.ninezero.halo.core.ui.components.bottomsheet.EditDeleteOptionBottomSh
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.subscription.presentation.components.SubscriptionPlanBottomSheet
 import com.ninezero.halo.feature.subscription.presentation.membership_manage.components.PlanItem
@@ -157,12 +156,6 @@ internal fun MembershipManageScreenContent(
         }
     }
 
-    CenterToast(
-        visible = state.toastMessage != null,
-        message = state.toastMessage ?: "",
-        onDismiss = { onIntent(MembershipManageIntent.DismissToast) }
-    )
-
     state.optionSheetPlan?.let { plan ->
         EditDeleteOptionBottomSheet(
             isActive = plan.isActive,
@@ -182,8 +175,8 @@ internal fun MembershipManageScreenContent(
             onSave = { name, tier, description, price, benefits ->
                 onIntent(MembershipManageIntent.SavePlan(name, tier, description, price, benefits))
             },
-            toastMessage = state.toastMessage,
-            onToastDismiss = { onIntent(MembershipManageIntent.DismissToast) }
+            saveError = state.saveError,
+            onSaveErrorDismiss = { onIntent(MembershipManageIntent.DismissSaveError) }
         )
     }
 

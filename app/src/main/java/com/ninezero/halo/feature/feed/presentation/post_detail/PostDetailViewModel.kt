@@ -505,6 +505,7 @@ class PostDetailViewModel @Inject constructor(
                     state.copy(
                         comments = comments,
                         isCommentsLoading = false,
+                        isChangingSort = false,
                         commentsError = null,
                         commentsPage = 1,
                         commentsHasMore = comments.size >= 20
@@ -584,6 +585,7 @@ class PostDetailViewModel @Inject constructor(
         reduce {
             state.copy(
                 commentSortBy = sortType,
+                isChangingSort = true,
                 comments = emptyList(),
                 commentsPage = 1,
                 commentsHasMore = true,

@@ -48,7 +48,10 @@ import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayLabelColor
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
@@ -59,9 +62,6 @@ import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.ui.theme.Like
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 /** 댓글 아이템 */
@@ -463,10 +463,10 @@ private fun BlindRevealToggle(
             .padding(end = 6.dp, bottom = 6.dp)
             .clip(CircleShape)
             // 오버레이보다 옅은 틴트
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = surfaceColor,
-                    tint = HazeTint(Color.Black.copy(alpha = 0.25f)),
+                    tint = HaloBlurTint(Color.Black.copy(alpha = 0.25f)),
                     blurRadius = 14.dp,
                     noiseFactor = 0f
                 )

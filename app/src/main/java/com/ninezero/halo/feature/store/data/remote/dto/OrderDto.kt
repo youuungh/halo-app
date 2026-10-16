@@ -84,7 +84,9 @@ data class OrderItemDto(
     val creatorAvatarUrl: String? = null,
     val hasReview: Boolean = false,
     val reviewId: Int? = null,
-    val isProductActive: Boolean = true  // 판매 가능 여부
+    val isProductActive: Boolean = true,  // 판매 가능 여부
+    val requiredTier: String = "FREE",
+    val canAccess: Boolean = true  // 구매자 현재 구독 기준
 )
 
 @Serializable
@@ -207,7 +209,9 @@ fun OrderItemDto.toDomain(): OrderItem = OrderItem(
     creatorName = creatorName,
     creatorAvatarUrl = creatorAvatarUrl,
     hasReview = hasReview,
-    isProductActive = isProductActive
+    isProductActive = isProductActive,
+    requiredTier = requiredTier,
+    canAccess = canAccess
 )
 
 fun ShippingStatusResponseDto.toDomain(): ShippingStatusResponse =

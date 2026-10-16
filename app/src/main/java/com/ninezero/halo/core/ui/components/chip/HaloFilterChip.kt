@@ -17,11 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 /** 필터 칩 */
 @Composable
@@ -43,10 +43,10 @@ fun HaloFilterChip(
                     .matchParentSize()
                     .padding(vertical = 8.dp)
                     .clip(RoundedCornerShape(50))
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = hazeBackgroundColor,
-                            tint = HazeTint(glassTint),
+                            tint = HaloBlurTint(glassTint),
                             blurRadius = 20.dp,
                             noiseFactor = 0f
                         )

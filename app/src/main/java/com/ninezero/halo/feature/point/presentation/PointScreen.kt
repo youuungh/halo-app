@@ -39,7 +39,10 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.MonthPickerBottomSheet
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.picker.MonthNavigationBar
 import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
 import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
@@ -51,9 +54,6 @@ import com.ninezero.halo.feature.point.presentation.components.PointFilterChips
 import com.ninezero.halo.feature.point.presentation.components.PointHistoryItem
 import com.ninezero.halo.feature.point.presentation.components.PointHistoryItemSkeleton
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -252,10 +252,10 @@ internal fun PointScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor.copy(alpha = 0.4f)),
+                        tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
                         blurRadius = 20.dp,
                         noiseFactor = 0f
                     )
@@ -305,10 +305,10 @@ internal fun PointScreenContent(
                         val y = slot?.let { it.offset - info.viewportStartOffset } ?: headerPx
                         IntOffset(0, y.coerceAtLeast(headerPx))
                     }
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = backgroundColor,
-                            tint = HazeTint(backgroundColor.copy(alpha = 0.4f)),
+                            tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
                             blurRadius = 20.dp,
                             noiseFactor = 0f
                         )

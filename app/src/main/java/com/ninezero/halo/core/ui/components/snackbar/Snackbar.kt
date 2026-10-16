@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -226,4 +227,18 @@ fun SnackbarHandler(
             }
         }
     }
+}
+
+/** 메시지 변경 시 표시, 시트 안 피드백용 */
+@Composable
+fun SnackbarHandler(
+    message: String?,
+    hostState: SnackbarHostState,
+    onDismiss: () -> Unit
+) {
+    SnackbarHandler(
+        snackbarState = remember(message) { message?.let { SnackbarState(it) } },
+        hostState = hostState,
+        onDismiss = onDismiss
+    )
 }

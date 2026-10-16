@@ -95,8 +95,7 @@ data class CreateProductState(
     val selectedSectionTagId: Int? = null,
     val pendingSectionTagId: Int? = null,
     val isLoadingSectionTags: Boolean = false,
-    val showTagToast: Boolean = false,
-    val tagToastMessage: String = "",
+    val tagSnackbarMessage: String? = null,
     // 검증
     val nameError: String? = null,
     val descriptionError: String? = null,
@@ -153,7 +152,7 @@ sealed interface CreateProductIntent {
     data class CreateSectionTag(val name: String) : CreateProductIntent
     data class UpdateSectionTag(val tagId: Int, val name: String) : CreateProductIntent
     data class DeleteSectionTag(val tagId: Int) : CreateProductIntent
-    data object DismissTagToast : CreateProductIntent
+    data object DismissTagSnackbar : CreateProductIntent
     // 섹션 접기
     data class ToggleSectionCollapse(val section: String) : CreateProductIntent
     data object Retry : CreateProductIntent

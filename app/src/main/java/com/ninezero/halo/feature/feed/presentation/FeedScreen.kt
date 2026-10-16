@@ -53,7 +53,10 @@ import com.ninezero.halo.core.ui.components.media.PrefetchUpcomingPostImages
 import com.ninezero.halo.core.ui.components.media.rememberSettledVideoPostId
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
@@ -80,9 +83,6 @@ import com.ninezero.halo.feature.share.presentation.ShareSheetHost
 import com.ninezero.halo.ui.theme.GodoRounded
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.flow.Flow
 import org.orbitmvi.orbit.compose.collectAsState
@@ -269,10 +269,10 @@ internal fun FeedScreenContent(
                     .pointerInput(Unit) {
                         detectTapGestures { /* 터치 이벤트 소비 */ }
                     }
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = topBarBlurColor,
-                            tint = HazeTint(topBarBlurColor),
+                            tint = HaloBlurTint(topBarBlurColor),
                             noiseFactor = 0f
                         )
                         progressive = HazeProgressive.verticalGradient(

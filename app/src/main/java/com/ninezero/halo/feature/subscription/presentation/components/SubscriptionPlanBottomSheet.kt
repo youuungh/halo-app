@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -60,16 +61,17 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.input.FormSection
 import com.ninezero.halo.core.ui.components.input.FormTextField
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlan
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 @Composable
@@ -78,10 +80,11 @@ fun SubscriptionPlanBottomSheet(
     isSaving: Boolean,
     onDismiss: () -> Unit,
     onSave: (name: String, tier: SubscriptionPlanTier, description: String, price: String, benefits: List<String>) -> Unit,
-    toastMessage: String? = null,
-    onToastDismiss: () -> Unit = {}
+    saveError: String? = null,
+    onSaveErrorDismiss: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var name by remember { mutableStateOf(plan?.name ?: "") }
     var selectedTier by remember { mutableStateOf(plan?.tier ?: SubscriptionPlanTier.TIER1) }
@@ -135,14 +138,19 @@ fun SubscriptionPlanBottomSheet(
                 onSave = { onSave(name, selectedTier, description, price, benefits) }
             )
 
-            // 토스트는 시트 window에 가려지므로 시트 안에서 표시
-            CenterToast(
-                visible = toastMessage != null,
-                message = toastMessage ?: "",
-                onDismiss = onToastDismiss
+            // 시트 window에 가려지지 않게 시트 안에서 표시
+            DefaultSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
     }
+
+    SnackbarHandler(
+        message = saveError,
+        hostState = snackbarHostState,
+        onDismiss = onSaveErrorDismiss
+    )
 }
 
 @Composable
@@ -293,10 +301,10 @@ private fun SubscriptionPlanBottomSheetContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor),
+                        tint = HaloBlurTint(backgroundColor),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(

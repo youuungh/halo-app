@@ -130,7 +130,7 @@ private fun SectionHeaderSkeleton() {
 }
 
 @Composable
-private fun InfoRowSkeleton() {
+internal fun InfoRowSkeleton() {
     Row(
         modifier = Modifier
             .fillMaxWidth()

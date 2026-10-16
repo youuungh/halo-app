@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +51,8 @@ import com.ninezero.halo.core.ui.components.chip.TagChipGroup
 import com.ninezero.halo.core.ui.components.input.TagInputField
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.tag.domain.model.Tag
 import com.ninezero.halo.ui.theme.HaloTheme
@@ -74,10 +76,11 @@ fun TagBottomSheet(
     onDeleteSectionTag: (Int) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    showToast: Boolean = false,
-    toastMessage: String = "",
-    onToastDismiss: () -> Unit = {}
+    snackbarMessage: String? = null,
+    onSnackbarDismiss: () -> Unit = {}
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -149,14 +152,18 @@ fun TagBottomSheet(
                 )
             }
 
-            CenterToast(
-                visible = showToast,
-                message = toastMessage,
-                onDismiss = onToastDismiss,
-                modifier = Modifier.align(Alignment.Center)
+            DefaultSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
     }
+
+    SnackbarHandler(
+        message = snackbarMessage,
+        hostState = snackbarHostState,
+        onDismiss = onSnackbarDismiss
+    )
 }
 
 @Composable

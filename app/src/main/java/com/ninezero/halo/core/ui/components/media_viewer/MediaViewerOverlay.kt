@@ -85,8 +85,11 @@ import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.ViewerBottomSheet
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.ImageThumbnailInfoStore
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.modifiers.mediaSharedKey
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.video_player.VideoMuteController
@@ -95,9 +98,6 @@ import com.ninezero.halo.core.util.toVideoDuration
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -468,10 +468,10 @@ private fun MediaViewerContent(
                         .bounceClick()
                         .size(36.dp)
                         .clip(CircleShape)
-                        .hazeEffect(state = hazeState) {
-                            style = HazeStyle(
+                        .haloBlur(state = hazeState) {
+                            style = HaloBlurStyle(
                                 backgroundColor = Color.Black,
-                                tint = HazeTint(Color.White.copy(alpha = 0.1f)),
+                                tint = HaloBlurTint(Color.White.copy(alpha = 0.1f)),
                                 blurRadius = 16.dp,
                                 noiseFactor = 0f
                             )
@@ -495,10 +495,10 @@ private fun MediaViewerContent(
                         modifier = Modifier
                             .height(36.dp)
                             .clip(RoundedCornerShape(18.dp))
-                            .hazeEffect(state = hazeState) {
-                                style = HazeStyle(
+                            .haloBlur(state = hazeState) {
+                                style = HaloBlurStyle(
                                     backgroundColor = Color.Black,
-                                    tint = HazeTint(Color.White.copy(alpha = 0.1f)),
+                                    tint = HaloBlurTint(Color.White.copy(alpha = 0.1f)),
                                     blurRadius = 16.dp,
                                     noiseFactor = 0f
                                 )
@@ -523,10 +523,10 @@ private fun MediaViewerContent(
                             .bounceClick()
                             .size(36.dp)
                             .clip(CircleShape)
-                            .hazeEffect(state = hazeState) {
-                                style = HazeStyle(
+                            .haloBlur(state = hazeState) {
+                                style = HaloBlurStyle(
                                     backgroundColor = Color.Black,
-                                    tint = HazeTint(Color.White.copy(alpha = 0.1f)),
+                                    tint = HaloBlurTint(Color.White.copy(alpha = 0.1f)),
                                     blurRadius = 16.dp,
                                     noiseFactor = 0f
                                 )
@@ -561,10 +561,10 @@ private fun MediaViewerContent(
                         .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility)
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .hazeEffect(state = hazeState) {
-                            style = HazeStyle(
+                        .haloBlur(state = hazeState) {
+                            style = HaloBlurStyle(
                                 backgroundColor = Color.Black,
-                                tint = HazeTint(Color.White.copy(alpha = 0.1f)),
+                                tint = HaloBlurTint(Color.White.copy(alpha = 0.1f)),
                                 blurRadius = 16.dp,
                                 noiseFactor = 0f
                             )

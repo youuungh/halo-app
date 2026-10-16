@@ -5,11 +5,20 @@ import coil3.memory.MemoryCache
 
 /** 목록 썸네일 캐시 키·비율 저장소 */
 object ImageThumbnailInfoStore {  // 뷰어 placeholder와 비율 박스용
-    data class Info(val cacheKey: MemoryCache.Key?, val aspectRatio: Float?, val thumbnailUrl: String? = null)
+    data class Info(
+        val cacheKey: MemoryCache.Key?,
+        val aspectRatio: Float?,
+        val thumbnailUrl: String? = null
+    )
 
     private val map = mutableMapOf<String, Info>()
 
-    fun put(url: String, cacheKey: MemoryCache.Key?, aspectRatio: Float?, thumbnailUrl: String? = null) {
+    fun put(
+        url: String,
+        cacheKey: MemoryCache.Key?,
+        aspectRatio: Float?,
+        thumbnailUrl: String? = null
+    ) {
         map[url] = Info(cacheKey, aspectRatio, thumbnailUrl)
     }
 

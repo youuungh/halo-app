@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.store.presentation.order_detail.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -26,10 +29,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -41,6 +46,10 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.modifiers.shimmer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.store.domain.model.Order
 import com.ninezero.halo.feature.store.domain.model.OrderCreatorGroup
@@ -52,10 +61,8 @@ import com.ninezero.halo.feature.store.domain.model.creatorGroupsOrFallback
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -67,10 +74,12 @@ import java.time.format.DateTimeFormatterBuilder
 fun ShippingTrackingBottomSheet(
     group: OrderCreatorGroup?,
     shippingStatus: ShippingStatusResponse?,
+    isLoading: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val statusBarPx = WindowInsets.statusBars.getTop(density)
     // 상단이 이 거리 안이면 모프 시작, 0px에서 완성
@@ -95,9 +104,17 @@ fun ShippingTrackingBottomSheet(
         contentWindowInsets = { WindowInsets(0) },
         modifier = modifier
     ) {
+        // 펼친 상태는 뒤로가기 시 바로 접음
+        BackHandler(
+            enabled = sheetState.currentValue == SheetValue.Expanded && sheetState.hasPartiallyExpandedState
+        ) {
+            scope.launch { sheetState.partialExpand() }
+        }
+
         ShippingTrackingContent(
             group = group,
             shippingStatus = shippingStatus,
+            isLoading = isLoading,
             morphProgress = morphProgress,
             onDismiss = onDismiss
         )
@@ -108,6 +125,7 @@ fun ShippingTrackingBottomSheet(
 private fun ShippingTrackingContent(
     group: OrderCreatorGroup?,
     shippingStatus: ShippingStatusResponse?,
+    isLoading: Boolean,
     morphProgress: Float = 0f,
     onDismiss: () -> Unit = {}
 ) {
@@ -126,6 +144,8 @@ private fun ShippingTrackingContent(
     val progresses = shippingStatus?.progresses
         ?.sortedByDescending { it.dateTime?.toTrackingDateTime() }
         .orEmpty()
+    // 운송장이 있어야 조회 결과(상태·내역)가 더해짐
+    val isTracePending = isLoading && resolvedCarrier != null && resolvedTrackingNumber != null
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -174,6 +194,11 @@ private fun ShippingTrackingContent(
                 if (!queriedAt.isNullOrBlank()) {
                     InfoRow("조회 시각", queriedAt)
                 }
+                if (isTracePending) {
+                    repeat(3) {
+                        InfoRowSkeleton()
+                    }
+                }
                 if (resolvedCarrier == null && resolvedTrackingNumber == null) {
                     Text(
                         text = "배송 정보가 아직 등록되지 않았습니다",
@@ -201,7 +226,20 @@ private fun ShippingTrackingContent(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
 
-            if (progresses.isEmpty()) {
+            if (isTracePending) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    repeat(3) { index ->
+                        TrackingProgressItemSkeleton()
+
+                        if (index < 2) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            )
+                        }
+                    }
+                }
+            } else if (progresses.isEmpty()) {
                 Text(
                     text = "배송 추적 내역이 아직 없습니다",
                     style = MaterialTheme.typography.bodySmall,
@@ -231,10 +269,10 @@ private fun ShippingTrackingContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = surfaceColor,
-                        tint = HazeTint(surfaceColor),
+                        tint = HaloBlurTint(surfaceColor),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(
@@ -330,6 +368,38 @@ private fun TrackingProgressItem(progress: ShippingProgress) {
     }
 }
 
+@Composable
+private fun TrackingProgressItemSkeleton() {
+    Column(modifier = Modifier.padding(vertical = 10.dp)) {
+        // 상태
+        Box(
+            modifier = Modifier
+                .width(80.dp)
+                .height(14.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .shimmer()
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        // 위치
+        Box(
+            modifier = Modifier
+                .width(140.dp)
+                .height(12.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .shimmer()
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        // 시각
+        Box(
+            modifier = Modifier
+                .width(60.dp)
+                .height(10.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .shimmer()
+        )
+    }
+}
+
 // 외부 배송 API 시각
 private val trackingLocalFormatter: DateTimeFormatter = DateTimeFormatterBuilder()
     .append(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -406,7 +476,20 @@ private fun ShippingTrackingContentPreview() {
                         description = "배송 지점으로 이동 중입니다."
                     )
                 )
-            )
+            ),
+            isLoading = false
+        )
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun ShippingTrackingContentLoadingPreview() {
+    HaloTheme {
+        ShippingTrackingContent(
+            group = previewGroup,
+            shippingStatus = null,
+            isLoading = true
         )
     }
 }
@@ -417,7 +500,8 @@ private fun ShippingTrackingContentNoTrackingPreview() {
     HaloTheme {
         ShippingTrackingContent(
             group = previewOrderNoTracking.creatorGroupsOrFallback().firstOrNull(),
-            shippingStatus = null
+            shippingStatus = null,
+            isLoading = false
         )
     }
 }

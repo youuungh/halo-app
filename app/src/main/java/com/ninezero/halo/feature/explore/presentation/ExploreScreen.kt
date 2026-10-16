@@ -43,7 +43,10 @@ import com.ninezero.halo.core.deeplink.DeepLinks
 import com.ninezero.halo.core.model.ReportTargetType
 import com.ninezero.halo.core.ui.components.bottomsheet.PostOptionBottomSheet
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupData
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupHost
@@ -63,9 +66,6 @@ import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.compose.collectAsState
@@ -260,7 +260,7 @@ internal fun ExploreScreenContent(
                     .pointerInput(Unit) {
                         detectTapGestures { /* 터치 이벤트 소비 */ }
                     }
-                    .hazeEffect(state = hazeState) {
+                    .haloBlur(state = hazeState) {
                         // 배너 접힐수록 블러 강화
                         val h = bannerHeight.floatValue
                         val collapse = if (h > 0f) {
@@ -268,9 +268,9 @@ internal fun ExploreScreenContent(
                         } else {
                             0f
                         }
-                        style = HazeStyle(
+                        style = HaloBlurStyle(
                             backgroundColor = topBarBlurColor,
-                            tint = HazeTint(topBarBlurColor),
+                            tint = HaloBlurTint(topBarBlurColor),
                             blurRadius = (30f + 50f * collapse).dp,
                             noiseFactor = 0f
                         )

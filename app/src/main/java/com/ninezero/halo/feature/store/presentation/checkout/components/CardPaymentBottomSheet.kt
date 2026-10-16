@@ -19,9 +19,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +38,8 @@ import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
 import com.ninezero.halo.core.ui.components.button.SheetActionButton
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.store.domain.model.BillingCard
 import com.ninezero.halo.feature.store.presentation.components.cardLabel
 import com.ninezero.halo.feature.store.presentation.components.cardLogoRes
@@ -54,6 +57,7 @@ fun CardPaymentBottomSheet(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -126,14 +130,19 @@ fun CardPaymentBottomSheet(
             }
 
             // 시트 window에 가려지지 않게 시트 안에서 표시
-            CenterToast(
-                visible = error != null,
-                message = error.orEmpty(),
-                modifier = Modifier.matchParentSize(),  // 시트 높이를 바꾸지 않음
-                onDismiss = onErrorDismiss
+            DefaultSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                bottomBarPadding = 56.dp  // 선택 완료 버튼 48 + 하단 여백 8
             )
         }
     }
+
+    SnackbarHandler(
+        message = error,
+        hostState = snackbarHostState,
+        onDismiss = onErrorDismiss
+    )
 }
 
 @Composable

@@ -175,6 +175,7 @@ dependencies {
 
     // Haze
     implementation(libs.haze)
+    implementation(libs.haze.blur)
 
     // Kyant AndroidLiquidGlass
     implementation(libs.kyant.backdrop)

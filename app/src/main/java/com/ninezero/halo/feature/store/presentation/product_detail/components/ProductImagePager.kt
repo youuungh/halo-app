@@ -35,13 +35,13 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 @Composable
@@ -101,10 +101,10 @@ fun ProductImagePager(
                     bottom = if (imageUrls.size > 1) 25.dp else 12.dp
                 )
                 .clip(RoundedCornerShape(12.dp))
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = glassBackground.copy(alpha = 0.7f),
-                        tint = HazeTint(glassBackground.copy(alpha = 0.4f)),
+                        tint = HaloBlurTint(glassBackground.copy(alpha = 0.4f)),
                         blurRadius = 20.dp,
                         noiseFactor = 0f
                     )

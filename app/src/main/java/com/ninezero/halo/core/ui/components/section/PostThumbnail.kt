@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.post.LocalSubscribeRequester
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
@@ -46,9 +49,6 @@ import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlin.random.Random
 
@@ -133,10 +133,10 @@ private fun PostTextCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = surfaceVariant,
-                            tint = HazeTint(surfaceVariant.copy(alpha = 0.35f)),
+                            tint = HaloBlurTint(surfaceVariant.copy(alpha = 0.35f)),
                             blurRadius = 16.dp,
                             noiseFactor = 0f
                         )
@@ -299,10 +299,10 @@ private fun LockedPostThumbnail(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = surfaceColor,
-                        tint = HazeTint(Color.Black.copy(alpha = 0.5f)),
+                        tint = HaloBlurTint(Color.Black.copy(alpha = 0.5f)),
                         blurRadius = 14.dp,
                         noiseFactor = 0f
                     )

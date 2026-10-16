@@ -19,7 +19,7 @@ data class CreatePostState(
     val drafts: List<PostDraft> = emptyList(),
     val isDraftLoading: Boolean = false,
     val showDraftBottomSheet: Boolean = false,
-    val showDraftDeletedToast: Boolean = false,
+    val showDraftDeletedSnackbar: Boolean = false,
 
     // 수정 모드 관련
     val isEditMode: Boolean = false,
@@ -39,8 +39,7 @@ data class CreatePostState(
     val selectedSectionTagId: Int? = null,
     val tempSectionTagId: Int? = null,                          // 바텀시트에서 선택 중인 임시 섹션 태그 ID
     val isLoadingSectionTags: Boolean = false,
-    val showTagToast: Boolean = false,
-    val tagToastMessage: String = "",
+    val tagSnackbarMessage: String? = null,
 
     // 상세설정 관련
     val showSettingsBottomSheet: Boolean = false,
@@ -65,7 +64,7 @@ sealed interface CreatePostIntent {
     data class SaveDraft(val exitAfterSave: Boolean = false, val openDraftsAfterSave: Boolean = false) : CreatePostIntent
     data class LoadDraft(val draft: PostDraft) : CreatePostIntent
     data class DeleteDraft(val draft: PostDraft) : CreatePostIntent
-    data object DismissDraftDeletedToast : CreatePostIntent
+    data object DismissDraftDeletedSnackbar : CreatePostIntent
 
     // 태그 관련
     data object OpenTagBottomSheet : CreatePostIntent
@@ -77,7 +76,7 @@ sealed interface CreatePostIntent {
     data class CreateSectionTag(val name: String) : CreatePostIntent
     data class UpdateSectionTag(val tagId: Int, val name: String) : CreatePostIntent
     data class DeleteSectionTag(val tagId: Int) : CreatePostIntent
-    data object DismissTagToast : CreatePostIntent
+    data object DismissTagSnackbar : CreatePostIntent
 
     // 상세설정 관련
     data object OpenSettingsBottomSheet : CreatePostIntent

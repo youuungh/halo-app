@@ -34,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -64,7 +65,8 @@ import com.ninezero.halo.core.ui.components.button.SheetActionButton
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.feature.share.domain.model.ShareResult
 import com.ninezero.halo.feature.share.presentation.components.SelectableUserItem
@@ -98,6 +100,7 @@ fun ShareBottomSheet(
 
     // 실패는 시트 안에서, 고른 사람·메시지는 유지
     var shareError by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
         viewModel.onIntent(ShareIntent.LoadFollowing)
@@ -142,14 +145,19 @@ fun ShareBottomSheet(
                     modifier = modifier
                 )
             }
-            CenterToast(
-                visible = shareError != null,
-                message = shareError.orEmpty(),
-                modifier = Modifier.matchParentSize(),  // 시트 높이를 바꾸지 않음
-                onDismiss = { shareError = null }
+            DefaultSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                bottomBarPadding = 56.dp  // 보내기 버튼 48 + 하단 여백 8
             )
         }
     }
+
+    SnackbarHandler(
+        message = shareError,
+        hostState = snackbarHostState,
+        onDismiss = { shareError = null }
+    )
 }
 
 @Composable

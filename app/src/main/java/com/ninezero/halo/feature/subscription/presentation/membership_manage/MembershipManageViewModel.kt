@@ -47,7 +47,7 @@ class MembershipManageViewModel @Inject constructor(
             is MembershipManageIntent.DismissDeleteDialog -> dismissDeleteDialog()
             is MembershipManageIntent.ConfirmDeletePlan -> confirmDeletePlan()
             is MembershipManageIntent.TogglePlanActive -> togglePlanActive(intent.plan)
-            is MembershipManageIntent.DismissToast -> dismissToast()
+            is MembershipManageIntent.DismissSaveError -> dismissSaveError()
             is MembershipManageIntent.SnackbarDismissed -> dismissSnackbar()
         }
     }
@@ -94,7 +94,7 @@ class MembershipManageViewModel @Inject constructor(
             reduce {
                 state.copy(
                     isRefreshing = false,
-                    toastMessage = error.message ?: "새로고침 실패"
+                    snackbarState = SnackbarState(error.message ?: "새로고침 실패")
                 )
             }
         }
@@ -157,7 +157,7 @@ class MembershipManageViewModel @Inject constructor(
         price: String,
         benefits: List<String>
     ) = intent {
-        reduce { state.copy(isSaving = true) }
+        reduce { state.copy(isSaving = true, saveError = null) }
 
         val editingPlan = state.editingPlan
 
@@ -195,14 +195,14 @@ class MembershipManageViewModel @Inject constructor(
                     editingPlan = null,
                     plans = updatedPlans,
                     totalSubscribers = totalSubscribers,
-                    toastMessage = if (editingPlan != null) "플랜이 수정되었습니다" else "플랜이 생성되었습니다"
+                    snackbarState = SnackbarState(if (editingPlan != null) "플랜이 수정되었습니다" else "플랜이 생성되었습니다")
                 )
             }
         }.onFailure { error ->
             reduce {
                 state.copy(
                     isSaving = false,
-                    toastMessage = error.message ?: "저장에 실패했습니다"
+                    saveError = error.message ?: "저장에 실패했습니다"
                 )
             }
         }
@@ -229,11 +229,11 @@ class MembershipManageViewModel @Inject constructor(
                 state.copy(
                     plans = updatedPlans,
                     totalSubscribers = totalSubscribers,
-                    toastMessage = "플랜이 삭제되었습니다"
+                    snackbarState = SnackbarState("플랜이 삭제되었습니다")
                 )
             }
         }.onFailure { error ->
-            reduce { state.copy(toastMessage = error.message ?: "삭제에 실패했습니다") }
+            reduce { state.copy(snackbarState = SnackbarState(error.message ?: "삭제에 실패했습니다")) }
         }
     }
 
@@ -253,18 +253,18 @@ class MembershipManageViewModel @Inject constructor(
                 state.copy(
                     plans = updatedPlans,
                     totalSubscribers = totalSubscribers,
-                    toastMessage = if (newActive) "플랜이 활성화되었습니다" else "플랜이 비활성화되었습니다"
+                    snackbarState = SnackbarState(if (newActive) "플랜이 활성화되었습니다" else "플랜이 비활성화되었습니다")
                 )
             }
         }.onFailure { error ->
             reduce {
-                state.copy(toastMessage = error.message ?: "상태 변경에 실패했습니다")
+                state.copy(snackbarState = SnackbarState(error.message ?: "상태 변경에 실패했습니다"))
             }
         }
     }
 
-    private fun dismissToast() = intent {
-        reduce { state.copy(toastMessage = null) }
+    private fun dismissSaveError() = intent {
+        reduce { state.copy(saveError = null) }
     }
 
     private fun dismissSnackbar() = intent {

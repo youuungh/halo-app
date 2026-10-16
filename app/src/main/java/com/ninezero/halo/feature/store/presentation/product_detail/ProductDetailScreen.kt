@@ -56,6 +56,9 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerOverlay
 import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerState
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.modifiers.navigationBarsPaddingIgnoringVisibility
 import com.ninezero.halo.core.ui.components.modifiers.statusBarsPaddingIgnoringVisibility
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
@@ -84,9 +87,6 @@ import com.ninezero.halo.ui.theme.HaloGradient
 import com.ninezero.halo.ui.theme.Like
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -241,10 +241,10 @@ private fun BoxScope.ProductDetailTopOverlay(  // 스크롤 읽기를 여기 가
             .fillMaxWidth()
             .height(statusBarHeight + 80.dp)
             .graphicsLayer { alpha = topAppBarAlpha }
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = Color.Transparent,
-                    tint = HazeTint(backgroundColor.copy(alpha = 0.7f)),
+                    tint = HaloBlurTint(backgroundColor.copy(alpha = 0.7f)),
                     noiseFactor = 0f
                 )
                 progressive = HazeProgressive.verticalGradient(
@@ -651,10 +651,10 @@ internal fun ProductDetailScreenContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor),
+                        tint = HaloBlurTint(backgroundColor),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(

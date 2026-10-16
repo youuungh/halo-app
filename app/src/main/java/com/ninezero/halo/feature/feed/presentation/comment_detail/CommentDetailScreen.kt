@@ -467,7 +467,7 @@ internal fun CommentDetailScreenContent(
             // 답글
             val hasReplies = state.pendingReplies.isNotEmpty() || state.replies.isNotEmpty()
 
-            // 답글이 있거나 로딩 중이면 구분선 + 정렬 표시
+            // 답글이 있거나 로딩 중이면 구분선, 정렬은 답글이 있거나 정렬을 바꾸는 중일 때만
             if (hasReplies || state.isRepliesLoading) {
                 // 구분선
                 item {
@@ -477,20 +477,22 @@ internal fun CommentDetailScreenContent(
                     )
                 }
 
-                // 정렬 드롭다운
-                item {
-                    SortPopupMenu(
-                        currentSort = state.repliesSortBy,
-                        onSortChange = { onIntent(CommentDetailIntent.ChangeSortType(it)) }
-                    )
-                }
+                if (hasReplies || state.isChangingSort) {
+                    // 정렬 드롭다운
+                    item {
+                        SortPopupMenu(
+                            currentSort = state.repliesSortBy,
+                            onSortChange = { onIntent(CommentDetailIntent.ChangeSortType(it)) }
+                        )
+                    }
 
-                // 정렬 밑 구분선
-                item {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    // 정렬 밑 구분선
+                    item {
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
 
@@ -744,7 +746,7 @@ internal fun CommentDetailScreenContent(
         // 답글 입력창, 로드 성공 시에만
         val isPostObscured = state.post?.isBlocked == true || state.unavailablePost != null  // 못 보는 원글엔 답글 불가
         val isParentCommentObscured = state.parentComment?.let { it.isBlocked || it.isDeleted } == true  // 삭제 자리엔 답글 불가
-        if (!state.isRepliesLoading && state.repliesError == null && state.parentComment != null && !isPostObscured && !isParentCommentObscured) {
+        if (!(state.isRepliesLoading && state.replies.isEmpty() && !state.isChangingSort) && state.repliesError == null && state.parentComment != null && !isPostObscured && !isParentCommentObscured) {
             CommentInputBar(
                 targetAuthorName = state.parentComment.author.displayName
                     ?: state.parentComment.author.username,

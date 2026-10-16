@@ -69,7 +69,10 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.button.SheetActionButton
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.util.Constants
@@ -84,9 +87,6 @@ import com.ninezero.halo.ui.theme.HaloTheme
 import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import java.text.NumberFormat
 
@@ -328,10 +328,10 @@ private fun CouponSelectContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(backgroundColor),
+                        tint = HaloBlurTint(backgroundColor),
                         noiseFactor = 0f
                     )
                     progressive = HazeProgressive.verticalGradient(
@@ -397,10 +397,10 @@ private fun CouponSelectContent(
                         topEnd = if (isExpanded) 20.dp else 0.dp
                     )
                 )
-                .hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                .haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HazeTint(bottomTintColor),
+                        tint = HaloBlurTint(bottomTintColor),
                         blurRadius = 25.dp,
                         noiseFactor = 0f
                     )
@@ -448,10 +448,10 @@ private fun CouponSelectContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .hazeEffect(state = hazeState) {
-                                style = HazeStyle(
+                            .haloBlur(state = hazeState) {
+                                style = HaloBlurStyle(
                                     backgroundColor = backgroundColor,
-                                    tint = HazeTint(expandedBoxTintColor),
+                                    tint = HaloBlurTint(expandedBoxTintColor),
                                     blurRadius = 40.dp,
                                     noiseFactor = 0f
                                 )

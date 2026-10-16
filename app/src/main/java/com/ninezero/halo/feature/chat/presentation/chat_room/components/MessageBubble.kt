@@ -53,7 +53,10 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.post.LocalSubscribeRequester
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
@@ -69,9 +72,6 @@ import com.ninezero.halo.feature.chat.domain.model.ProductMessageInfo
 import com.ninezero.halo.feature.chat.presentation.chat_room.AttachmentUploadStatus
 import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 private const val CHAT_SINGLE_MEDIA_MIN_RATIO = 3f / 4f
@@ -1221,10 +1221,10 @@ private fun ProductMessageContent(
             val barGlass = if (isPreview) {
                 Modifier.background(Color.Black.copy(alpha = 0.45f))
             } else {
-                Modifier.hazeEffect(state = hazeState) {
-                    style = HazeStyle(
+                Modifier.haloBlur(state = hazeState) {
+                    style = HaloBlurStyle(
                         backgroundColor = variantColor,
-                        tint = HazeTint(Color.Black.copy(alpha = 0.35f)),
+                        tint = HaloBlurTint(Color.Black.copy(alpha = 0.35f)),
                         blurRadius = 20.dp,
                         noiseFactor = 0f
                     )
@@ -1297,10 +1297,10 @@ private fun LinkStatusOverlay(
     val overlayModifier = if (isPreview) {
         Modifier.background(Color.Black.copy(alpha = 0.55f))
     } else {
-        Modifier.hazeEffect(state = hazeState) {
-            style = HazeStyle(
+        Modifier.haloBlur(state = hazeState) {
+            style = HaloBlurStyle(
                 backgroundColor = surfaceColor,
-                tint = HazeTint(Color.Black.copy(alpha = 0.55f)),
+                tint = HaloBlurTint(Color.Black.copy(alpha = 0.55f)),
                 blurRadius = 14.dp,
                 noiseFactor = 0f
             )

@@ -34,7 +34,7 @@ coil = "3.6.0"
 palette = "1.0.0"
 
 # Utilities
-haze = "1.7.3"
+haze = "2.0.1"
 
 # Liquid Glass (하단바)
 kyantBackdrop = "2.0.1"
@@ -137,6 +137,7 @@ palette = { group = "androidx.palette", name = "palette-ktx", version.ref = "pal
 
 # Haze
 haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
+haze-blur = { group = "dev.chrisbanes.haze", name = "haze-blur", version.ref = "haze" }
 
 # Liquid Glass
 kyant-backdrop = { group = "io.github.kyant0", name = "backdrop", version.ref = "kyantBackdrop" }

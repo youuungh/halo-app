@@ -57,7 +57,6 @@ class CouponManageViewModel @Inject constructor(
             is CouponManageIntent.ShowDeleteDialog -> showDeleteDialog(intent.coupon)
             is CouponManageIntent.DismissDeleteDialog -> dismissDeleteDialog()
             is CouponManageIntent.ConfirmDelete -> confirmDelete()
-            is CouponManageIntent.DismissToast -> dismissToast()
             is CouponManageIntent.DismissSaveError -> dismissSaveError()
             is CouponManageIntent.SnackbarDismissed -> dismissSnackbar()
         }
@@ -281,7 +280,7 @@ class CouponManageViewModel @Inject constructor(
                             editingCoupon = null,
                             couponFormState = CouponFormState(),
                             coupons = state.coupons.map { if (it.id == updatedCoupon.id) updatedCoupon else it },
-                            toastMessage = "쿠폰이 수정되었습니다"
+                            snackbarState = SnackbarState("쿠폰이 수정되었습니다")
                         )
                     }
                 }
@@ -317,7 +316,7 @@ class CouponManageViewModel @Inject constructor(
                             showCouponBottomSheet = false,
                             couponFormState = CouponFormState(),
                             coupons = listOf(newCoupon) + state.coupons,
-                            toastMessage = "쿠폰이 생성되었습니다"
+                            snackbarState = SnackbarState("쿠폰이 생성되었습니다")
                         )
                     }
                 }
@@ -350,7 +349,7 @@ class CouponManageViewModel @Inject constructor(
                 reduce {
                     state.copy(
                         coupons = state.coupons.map { if (it.id == updatedCoupon.id) updatedCoupon else it },
-                        toastMessage = if (updatedCoupon.isActive) "쿠폰이 활성화되었습니다" else "쿠폰이 비활성화되었습니다"
+                        snackbarState = SnackbarState(if (updatedCoupon.isActive) "쿠폰이 활성화되었습니다" else "쿠폰이 비활성화되었습니다")
                     )
                 }
             }
@@ -379,17 +378,13 @@ class CouponManageViewModel @Inject constructor(
                 reduce {
                     state.copy(
                         coupons = state.coupons.filter { it.id != coupon.id },
-                        toastMessage = "쿠폰이 삭제되었습니다"
+                        snackbarState = SnackbarState("쿠폰이 삭제되었습니다")
                     )
                 }
             }
             .onFailure { e ->
                 reduce { state.copy(snackbarState = SnackbarState(e.message ?: "쿠폰 삭제에 실패했습니다")) }
             }
-    }
-
-    private fun dismissToast() = intent {
-        reduce { state.copy(toastMessage = null) }
     }
 
     private fun dismissSaveError() = intent {

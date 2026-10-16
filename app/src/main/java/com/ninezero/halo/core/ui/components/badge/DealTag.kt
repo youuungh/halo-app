@@ -21,12 +21,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.util.format
 import com.ninezero.halo.core.ui.components.util.rememberCountdown
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 
 /** 타임딜 태그 */
 @Composable
@@ -100,10 +100,10 @@ fun DealCountdownImageOverlay(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .hazeEffect(state = hazeState) {
-                style = HazeStyle(
+            .haloBlur(state = hazeState) {
+                style = HaloBlurStyle(
                     backgroundColor = Color.Black,
-                    tint = HazeTint(Color.Black.copy(alpha = 0.35f)),
+                    tint = HaloBlurTint(Color.Black.copy(alpha = 0.35f)),
                     blurRadius = 10.dp,
                     noiseFactor = 0f
                 )

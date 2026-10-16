@@ -43,7 +43,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
 import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
 import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
@@ -55,9 +58,6 @@ import com.ninezero.halo.feature.explore.presentation.search.components.SearchHi
 import com.ninezero.halo.feature.explore.presentation.search.components.SearchResultsSection
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -181,10 +181,10 @@ internal fun SearchScreenContent(
                     .pointerInput(Unit) {
                         detectTapGestures { /* 터치 이벤트 소비 */ }
                     }
-                    .hazeEffect(state = hazeState) {
-                        style = HazeStyle(
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
                             backgroundColor = topBarBlurColor,
-                            tint = HazeTint(topBarBlurColor),
+                            tint = HaloBlurTint(topBarBlurColor),
                             noiseFactor = 0f
                         )
                         progressive = HazeProgressive.verticalGradient(

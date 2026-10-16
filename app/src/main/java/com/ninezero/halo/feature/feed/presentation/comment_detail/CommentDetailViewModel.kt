@@ -341,6 +341,7 @@ class CommentDetailViewModel @Inject constructor(
                     state.copy(
                         replies = replies,
                         isRepliesLoading = false,
+                        isChangingSort = false,
                         isRefreshing = false,
                         repliesError = null,
                         repliesHasMore = replies.size >= 20
@@ -354,6 +355,7 @@ class CommentDetailViewModel @Inject constructor(
                 reduce {
                     state.copy(
                         isRepliesLoading = false,
+                        isChangingSort = false,
                         isRefreshing = false,
                         repliesError = errorMessage,
                         snackbarState = SnackbarState(errorMessage)
@@ -419,6 +421,7 @@ class CommentDetailViewModel @Inject constructor(
         reduce {
             state.copy(
                 repliesSortBy = sortType,
+                isChangingSort = true,
                 replies = emptyList(),
                 isRepliesLoading = true,
                 repliesPage = 1,

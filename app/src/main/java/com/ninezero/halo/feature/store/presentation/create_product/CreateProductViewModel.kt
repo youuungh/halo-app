@@ -112,7 +112,7 @@ class CreateProductViewModel @Inject constructor(
             is CreateProductIntent.CreateSectionTag -> createSectionTag(intent.name)
             is CreateProductIntent.UpdateSectionTag -> updateSectionTag(intent.tagId, intent.name)
             is CreateProductIntent.DeleteSectionTag -> deleteSectionTag(intent.tagId)
-            is CreateProductIntent.DismissTagToast -> dismissTagToast()
+            is CreateProductIntent.DismissTagSnackbar -> dismissTagSnackbar()
             is CreateProductIntent.ToggleSectionCollapse -> toggleSectionCollapse(intent.section)
             is CreateProductIntent.Retry -> productId?.let { loadProduct(it) }
         }
@@ -937,12 +937,12 @@ class CreateProductViewModel @Inject constructor(
         if (trimmedTag.isBlank()) return@intent
 
         if (state.pendingTags.size >= MAX_TAGS) {
-            postSideEffect(CreateProductSideEffect.ShowToast("태그는 최대 ${MAX_TAGS}개까지 추가할 수 있습니다"))
+            reduce { state.copy(tagSnackbarMessage = "태그는 최대 ${MAX_TAGS}개까지 추가할 수 있습니다") }
             return@intent
         }
 
         if (state.pendingTags.any { it.equals(trimmedTag, ignoreCase = true) }) {
-            postSideEffect(CreateProductSideEffect.ShowToast("이미 추가된 태그입니다"))
+            reduce { state.copy(tagSnackbarMessage = "이미 추가된 태그입니다") }
             return@intent
         }
 
@@ -970,7 +970,7 @@ class CreateProductViewModel @Inject constructor(
         if (state.isLoadingSectionTags) return@intent
 
         if (state.sectionTags.size >= MAX_SECTION_TAGS) {
-            postSideEffect(CreateProductSideEffect.ShowToast("섹션 태그는 최대 ${MAX_SECTION_TAGS}개까지 추가할 수 있습니다"))
+            reduce { state.copy(tagSnackbarMessage = "섹션 태그는 최대 ${MAX_SECTION_TAGS}개까지 추가할 수 있습니다") }
             return@intent
         }
 
@@ -984,13 +984,17 @@ class CreateProductViewModel @Inject constructor(
             reduce {
                 state.copy(
                     sectionTags = state.sectionTags + newTag,
-                    isLoadingSectionTags = false
+                    isLoadingSectionTags = false,
+                    tagSnackbarMessage = "섹션 태그가 추가되었습니다"
                 )
             }
-            postSideEffect(CreateProductSideEffect.ShowToast("섹션 태그가 추가되었습니다"))
         }.onFailure { error ->
-            reduce { state.copy(isLoadingSectionTags = false) }
-            postSideEffect(CreateProductSideEffect.ShowToast(error.message ?: "섹션 태그 추가 실패"))
+            reduce {
+                state.copy(
+                    isLoadingSectionTags = false,
+                    tagSnackbarMessage = error.message ?: "섹션 태그 추가 실패"
+                )
+            }
         }
     }
 
@@ -1008,13 +1012,17 @@ class CreateProductViewModel @Inject constructor(
             reduce {
                 state.copy(
                     sectionTags = state.sectionTags.map { if (it.id == tagId) updatedTag else it },
-                    isLoadingSectionTags = false
+                    isLoadingSectionTags = false,
+                    tagSnackbarMessage = "섹션 태그가 수정되었습니다"
                 )
             }
-            postSideEffect(CreateProductSideEffect.ShowToast("섹션 태그가 수정되었습니다"))
         }.onFailure { error ->
-            reduce { state.copy(isLoadingSectionTags = false) }
-            postSideEffect(CreateProductSideEffect.ShowToast(error.message ?: "섹션 태그 수정 실패"))
+            reduce {
+                state.copy(
+                    isLoadingSectionTags = false,
+                    tagSnackbarMessage = error.message ?: "섹션 태그 수정 실패"
+                )
+            }
         }
     }
 
@@ -1028,18 +1036,22 @@ class CreateProductViewModel @Inject constructor(
                     sectionTags = state.sectionTags.filter { it.id != tagId },
                     selectedSectionTagId = if (state.selectedSectionTagId == tagId) null else state.selectedSectionTagId,
                     pendingSectionTagId = if (state.pendingSectionTagId == tagId) null else state.pendingSectionTagId,
-                    isLoadingSectionTags = false
+                    isLoadingSectionTags = false,
+                    tagSnackbarMessage = "섹션 태그가 삭제되었습니다"
                 )
             }
-            postSideEffect(CreateProductSideEffect.ShowToast("섹션 태그가 삭제되었습니다"))
         }.onFailure { error ->
-            reduce { state.copy(isLoadingSectionTags = false) }
-            postSideEffect(CreateProductSideEffect.ShowToast(error.message ?: "섹션 태그 삭제 실패"))
+            reduce {
+                state.copy(
+                    isLoadingSectionTags = false,
+                    tagSnackbarMessage = error.message ?: "섹션 태그 삭제 실패"
+                )
+            }
         }
     }
 
-    private fun dismissTagToast() = intent {
-        reduce { state.copy(showTagToast = false, tagToastMessage = "") }
+    private fun dismissTagSnackbar() = intent {
+        reduce { state.copy(tagSnackbarMessage = null) }
     }
 
     private fun buildDetailContentBlocks(blocks: List<EditorBlock>, draftIds: ArrayDeque<Int>): List<DetailContentBlock> {
