@@ -39,9 +39,10 @@ import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
 import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.post.LocalSubscribeRequester
+import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
+import com.ninezero.halo.core.ui.components.snackbar.showOrToast
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.core.util.showToast
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.core.util.toFormattedViewCount
 import com.ninezero.halo.feature.feed.domain.model.Author
@@ -208,6 +209,7 @@ private fun LockedPostThumbnail(
     width: Dp? = null
 ) {
     val context = LocalContext.current
+    val snackbarRelay = LocalSnackbarRelay.current
     val subscribeRequester = LocalSubscribeRequester.current
     val previewUrl = post.mediaAttachments.firstOrNull()?.url
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -224,7 +226,7 @@ private fun LockedPostThumbnail(
                 indication = ripple(bounded = true)
             ) {
                 if (post.isSecret) {
-                    context.showToast("크리에이터만 볼 수 있습니다")
+                    snackbarRelay.showOrToast(context, "크리에이터만 볼 수 있습니다")
                 } else {
                     subscribeRequester(post.author.id, post.author.displayName ?: post.author.username)
                 }

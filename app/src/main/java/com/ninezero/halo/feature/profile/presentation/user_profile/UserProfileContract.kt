@@ -23,9 +23,6 @@ data class UserProfileState(
     // 현재 로그인한 사용자 정보
     val myUserId: Int? = null,
 
-    // 구독, Creator 전용
-    val isSubscribed: Boolean = false,
-
     // 탭, Creator HOME·일반 POSTS
     val selectedTab: ProfileTab = ProfileTab.POSTS,
 

@@ -91,13 +91,14 @@ import com.ninezero.halo.core.ui.components.post.LockedPostCard
 import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
 import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.core.ui.components.snackbar.showOrToast
 import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.components.video_player.VideoPreloader
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
 import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostState
-import com.ninezero.halo.core.util.showToast
 import com.ninezero.halo.feature.feed.domain.model.Comment
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
@@ -350,12 +351,13 @@ internal fun PostDetailScreenContent(
                     state.post.let { post ->
                         if (post.isRestricted) {
                             // 잠금 글은 잠금 카드 + 구독 동선
+                            val snackbarRelay = LocalSnackbarRelay.current
                             val subscribeRequester = LocalSubscribeRequester.current
                             LockedPostCard(
                                 post = post,
                                 onClick = {
                                     if (post.isSecret) {
-                                        context.showToast("크리에이터만 볼 수 있습니다")
+                                        snackbarRelay.showOrToast(context, "크리에이터만 볼 수 있습니다")
                                     } else {
                                         subscribeRequester(
                                             post.author.id,
@@ -712,6 +714,7 @@ internal fun PostDetailScreenContent(
         // 댓글 입력창, 로드 성공 시에만
         if (!(state.isCommentsLoading && state.comments.isEmpty() && !state.isChangingSort) && state.commentsError == null) {
             // 잠금 글: 댓글 열람은 열어두되 작성은 구독자 전용
+            val snackbarRelay = LocalSnackbarRelay.current
             val subscribeRequester = LocalSubscribeRequester.current
             CommentInputBar(
                 targetAuthorName = state.post?.author?.displayName ?: state.post?.author?.username,
@@ -721,7 +724,7 @@ internal fun PostDetailScreenContent(
                     state.post?.let { post ->
                         when {
                             post.isRestricted && post.isSecret ->
-                                context.showToast("크리에이터만 댓글을 남길 수 있습니다")
+                                snackbarRelay.showOrToast(context, "크리에이터만 댓글을 남길 수 있습니다")
 
                             post.isRestricted ->
                                 subscribeRequester(

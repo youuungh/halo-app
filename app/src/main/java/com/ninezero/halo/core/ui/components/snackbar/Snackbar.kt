@@ -30,6 +30,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +43,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 
-/** 스낵바 상태 */
 data class SnackbarState(
     val message: String,
     val actionLabel: String? = null,
@@ -51,7 +51,6 @@ data class SnackbarState(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-/** 커스텀 스낵바 visuals */
 data class CustomSnackbarVisuals(
     override val message: String,
     override val actionLabel: String? = null,
@@ -61,7 +60,6 @@ data class CustomSnackbarVisuals(
     val onSecondaryAction: (() -> Unit)? = null  // host가 호출 후 dismiss
 ) : SnackbarVisuals
 
-/** 커스텀 스낵바 호스트 */
 @Composable
 fun DefaultSnackbarHost(
     hostState: SnackbarHostState,
@@ -73,10 +71,10 @@ fun DefaultSnackbarHost(
     val view = LocalView.current
 
     // 표시 중 hostState 등록, 전역 호스트용
-    // relay도 키에 넣어 탭 전환 시 재등록
     val snackbarRelay = LocalSnackbarRelay.current
-    DisposableEffect(snackbarRelay, hostState) {
-        snackbarRelay.register(hostState)
+    val relayScope = rememberCoroutineScope()
+    DisposableEffect(snackbarRelay, hostState) {  // relay도 키에 넣어 탭 전환 시 재등록
+        snackbarRelay.register(hostState, relayScope)
         onDispose { snackbarRelay.unregister(hostState) }
     }
 

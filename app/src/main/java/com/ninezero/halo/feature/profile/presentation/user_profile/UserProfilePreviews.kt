@@ -293,9 +293,9 @@ private fun CreatorProfileScreenFollowingPreview() {
         state = UserProfileState(
             profile = previewProfile.copy(
                 isFollowing = true,
+                isSubscribed = true,
                 isOwnProfile = false
             ),
-            isSubscribed = true,
             selectedTab = ProfileTab.HOME,
             userPosts = previewPosts,
             userCommentThreads = previewCommentThreads,

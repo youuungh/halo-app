@@ -24,6 +24,7 @@ data class UserProfile(
     // 앱 전용 필드
     val username: String = "",
     val isFollowing: Boolean = false,
+    val isSubscribed: Boolean = false,
     val isNotifyEnabled: Boolean = false,
     val isOwnProfile: Boolean = false,
     val coverImageUrl: String? = null

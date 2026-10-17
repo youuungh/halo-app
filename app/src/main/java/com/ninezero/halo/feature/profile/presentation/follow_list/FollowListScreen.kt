@@ -221,7 +221,7 @@ internal fun FollowListScreenContent(
                     when (page) {
                         0 -> FollowListPage(
                             users = state.followers,
-                            isLoading = state.isFollowersLoading,
+                            isLoading = state.isFollowersLoading || FollowTab.FOLLOWERS !in state.loadedTabs,
                             error = state.followersError,
                             emptyText = if (state.followersSearchQuery.isNotBlank()) "검색 결과가 없습니다" else "팔로워가 없습니다",
                             isMyProfile = state.isMyProfile,
@@ -244,7 +244,7 @@ internal fun FollowListScreenContent(
                         )
                         1 -> FollowListPage(
                             users = state.following,
-                            isLoading = state.isFollowingLoading,
+                            isLoading = state.isFollowingLoading || FollowTab.FOLLOWING !in state.loadedTabs,
                             error = state.followingError,
                             emptyText = if (state.followingSearchQuery.isNotBlank()) "검색 결과가 없습니다" else "팔로잉이 없습니다",
                             isMyProfile = state.isMyProfile,
@@ -267,7 +267,7 @@ internal fun FollowListScreenContent(
                         )
                         2 -> FollowListPage(
                             users = state.subscribers,
-                            isLoading = state.isSubscribersLoading,
+                            isLoading = state.isSubscribersLoading || FollowTab.SUBSCRIBERS !in state.loadedTabs,
                             error = state.subscribersError,
                             emptyText = if (state.subscribersSearchQuery.isNotBlank()) "검색 결과가 없습니다" else "구독자가 없습니다",
                             isMyProfile = state.isMyProfile,

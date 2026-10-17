@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -105,14 +106,16 @@ fun UserPostsTabContent(
                 }
             }
             else -> {
-                items(
+                itemsIndexed(
                     items = state.userPosts,
-                    key = { post -> "post_${post.id}" }
-                ) { post ->
-                    HorizontalDivider(
-                        thickness = 0.25.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
+                    key = { _, post -> "post_${post.id}" }
+                ) { index, post ->
+                    if (index == 0) {
+                        HorizontalDivider(
+                            thickness = 0.25.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    }
                     PostCard(
                         post = post,
                         isVideoPlaying = visiblePostId == post.id,
@@ -131,6 +134,10 @@ fun UserPostsTabContent(
                         onMediaClick = { index ->
                             onShowMediaViewer(post.mediaAttachments.toViewerItems(), index)
                         }
+                    )
+                    HorizontalDivider(
+                        thickness = 0.25.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                 }
                 if (state.isPostsLoading && state.userPosts.isNotEmpty()) {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -104,15 +105,17 @@ fun MyPostsTabContent(
             }
 
             else -> {
-                items(
+                itemsIndexed(
                     items = allPosts,
-                    key = { post -> post.pendingId?.let { "pending_$it" } ?: "post_${post.id}" }
-                ) { post ->
+                    key = { _, post -> post.pendingId?.let { "pending_$it" } ?: "post_${post.id}" }
+                ) { index, post ->
                     Column {
-                        HorizontalDivider(
-                            thickness = 0.25.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
+                        if (index == 0) {
+                            HorizontalDivider(
+                                thickness = 0.25.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
                         PostCard(
                             post = post,
                             isUploading = post.isUploading,
@@ -153,6 +156,10 @@ fun MyPostsTabContent(
                             }
                         }
                     )
+                        HorizontalDivider(
+                            thickness = 0.25.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
                     }
                 }
 

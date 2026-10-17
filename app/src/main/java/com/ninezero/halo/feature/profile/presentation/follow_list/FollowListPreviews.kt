@@ -13,7 +13,8 @@ internal fun previewFollowListState(): FollowListState {
         followerCount = 12345,
         followingCount = 567,
         followers = previewFollowUsers,
-        isInitialLoading = false
+        isInitialLoading = false,
+        loadedTabs = FollowTab.entries.toSet()
     )
 }
 
@@ -25,7 +26,8 @@ internal fun previewMyFollowersState(): FollowListState {
         followerCount = 100,
         followingCount = 50,
         followers = previewFollowUsers,
-        isInitialLoading = false
+        isInitialLoading = false,
+        loadedTabs = FollowTab.entries.toSet()
     )
 }
 
@@ -37,7 +39,8 @@ internal fun previewMyFollowingState(): FollowListState {
         followerCount = 100,
         followingCount = 50,
         following = previewFollowUsers,
-        isInitialLoading = false
+        isInitialLoading = false,
+        loadedTabs = FollowTab.entries.toSet()
     )
 }
 
@@ -50,7 +53,8 @@ internal fun previewFollowSearchNoResultsState(): FollowListState {
         followingCount = 50,
         followers = emptyList(),
         followersSearchQuery = "검색어",
-        isInitialLoading = false
+        isInitialLoading = false,
+        loadedTabs = FollowTab.entries.toSet()
     )
 }
 
@@ -63,6 +67,7 @@ internal fun previewFollowUnfollowDialogState(): FollowListState {
         followingCount = 50,
         following = previewFollowUsers,
         isInitialLoading = false,
+        loadedTabs = FollowTab.entries.toSet(),
         showUnfollowConfirmDialog = true,
         unfollowTargetUser = previewUserSummary(
             id = 1,
@@ -82,7 +87,8 @@ internal fun previewFollowEmptyState(): FollowListState {
         followerCount = 0,
         followingCount = 0,
         followers = emptyList(),
-        isInitialLoading = false
+        isInitialLoading = false,
+        loadedTabs = FollowTab.entries.toSet()
     )
 }
 
@@ -92,6 +98,7 @@ internal fun previewFollowErrorState(): FollowListState {
         isMyProfile = false,
         selectedTab = FollowTab.FOLLOWERS,
         isInitialLoading = false,
+        loadedTabs = FollowTab.entries.toSet(),
         followersError = "네트워크 오류가 발생했습니다"
     )
 }

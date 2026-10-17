@@ -103,14 +103,12 @@ fun CommentItem(
     mediaOwnerKey: String? = null  // shared element owner 키, null이면 URL만
 ) {
     val hazeState = remember { HazeState() }
-    // 블라인드는 아바타 유지, 본문만 토글
-    // 차단·삭제는 아바타까지 가림
     var isBlindRevealed by rememberSaveable { mutableStateOf(false) }
     val obscuredByPolicy = isBlocked || isDeleted
     val isObscured = obscuredByPolicy || (isBlinded && !isBlindRevealed)
     val hasMedia = mediaAttachments.isNotEmpty() && !isObscured
     val contentStartPadding = horizontalPadding + indentStart + avatarSize + avatarSpacing
-    // 삭제 자리는 좋아요·답글 불가
+
     val likeAction = if (isDeleted) ({}) else onLikeClick
     val replyAction = if (isDeleted) ({}) else onReplyClick
 
@@ -369,8 +367,11 @@ fun CommentItem(
                 }
             }
 
-            // 하단 여백, 곡선 커넥터 연결
-            Spacer(modifier = Modifier.height(if (showLine) lineBottomSpacing else 12.dp))
+            if (showLine) {
+                Spacer(modifier = Modifier.height(lineBottomSpacing))
+            } else if (isUploading) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
     }
 }

@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
+import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
+import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 
 @Composable
@@ -91,7 +93,19 @@ internal fun FollowListPage(
                     }
                 }
             }
-            users.isEmpty() && !isLoading -> {
+            users.isEmpty() && isLoading -> {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator(size = LoadingIndicatorSize.Large)
+                    }
+                }
+            }
+            users.isEmpty() -> {
                 item {
                     Box(
                         modifier = Modifier
@@ -120,12 +134,11 @@ internal fun FollowListPage(
                         onUserClick = { onUserClick(user.id) },
                         onFollowClick = { onFollowClick(user.id) },
                         onMessageClick = { onMessageClick(user.id) },
-                        onUnfollowClick = { onUnfollowClick(user) },
-                        modifier = Modifier.animateItem()
+                        onUnfollowClick = { onUnfollowClick(user) }
                     )
                 }
 
-                if (isLoading && users.isNotEmpty()) {
+                if (isLoading) {
                     item {
                         ListLoadMoreIndicator()
                     }

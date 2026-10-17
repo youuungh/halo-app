@@ -64,12 +64,13 @@ import com.ninezero.halo.core.ui.components.post.LocalSubscribeRequester
 import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
 import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
+import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.core.ui.components.snackbar.showOrToast
 import com.ninezero.halo.core.ui.components.video_player.VideoPreloader
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
 import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostState
-import com.ninezero.halo.core.util.showToast
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
 import com.ninezero.halo.feature.feed.presentation.comment_detail.components.ParentCommentItem
@@ -221,13 +222,14 @@ internal fun CommentDetailScreenContent(
         VideoPreloader.prefetch(context, orderedVideoUrls.drop(start).take(2).map { it.second })
     }
 
-    // 잠금 글 답글: 비밀글 토스트, 티어 구독 시트
+    // 잠금 글 답글: 비밀글 스낵바, 티어 구독 시트
+    val snackbarRelay = LocalSnackbarRelay.current
     val subscribeRequester = LocalSubscribeRequester.current
     val onReplyComposeClick: () -> Unit = {
         val restrictedPost = state.post?.takeIf { it.isRestricted }
         when {
             restrictedPost == null -> onNavigateToReply()
-            restrictedPost.isSecret -> context.showToast("크리에이터만 댓글을 남길 수 있습니다")
+            restrictedPost.isSecret -> snackbarRelay.showOrToast(context, "크리에이터만 댓글을 남길 수 있습니다")
             else -> subscribeRequester(
                 restrictedPost.author.id,
                 restrictedPost.author.displayName ?: restrictedPost.author.username

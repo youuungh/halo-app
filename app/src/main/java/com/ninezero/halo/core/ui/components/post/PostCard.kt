@@ -55,11 +55,12 @@ import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransition
 import com.ninezero.halo.core.ui.components.modifiers.blockHorizontalScrollLeak
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.mediaSharedElement
+import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
+import com.ninezero.halo.core.ui.components.snackbar.showOrToast
 import com.ninezero.halo.core.ui.components.text.buildHashtagAnnotatedString
 import com.ninezero.halo.core.ui.components.video_player.VideoPlayer
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.core.util.showToast
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
@@ -82,8 +83,7 @@ fun PostCard(
     onCommentClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onMoreClick: () -> Unit = {},
-    onMediaClick: (index: Int) -> Unit = {},
-    onSecretPostClick: (() -> Unit)? = null
+    onMediaClick: (index: Int) -> Unit = {}
 ) {
     val horizontalPadding = 8.dp
     val profileSize = 40.dp
@@ -100,13 +100,13 @@ fun PostCard(
     // 잠금 글은 공용 잠금 카드
     if (post.isRestricted) {
         val context = LocalContext.current
+        val snackbarRelay = LocalSnackbarRelay.current
         val subscribeRequester = LocalSubscribeRequester.current
         LockedPostCard(
             post = post,
             onClick = {
                 if (post.isSecret) {
-                    // 콜백 있으면 위임, 없으면 토스트
-                    onSecretPostClick?.invoke() ?: context.showToast("크리에이터만 볼 수 있습니다")
+                    snackbarRelay.showOrToast(context, "크리에이터만 볼 수 있습니다")
                 } else {
                     // 티어 잠금 → 전역 구독 시트 요청
                     subscribeRequester(post.author.id, post.author.displayName ?: post.author.username)

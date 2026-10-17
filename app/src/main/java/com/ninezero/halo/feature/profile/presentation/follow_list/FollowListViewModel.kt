@@ -15,7 +15,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
@@ -23,6 +22,7 @@ import kotlinx.coroutines.flow.onEach
 import org.orbitmvi.orbit.OrbitContainer
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.blockingIntent
+import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.orbitContainer
 import javax.inject.Inject
 
@@ -55,8 +55,10 @@ class FollowListViewModel @Inject constructor(
     private val followingGeneration = ListGeneration()
     private val subscribersGeneration = ListGeneration()
 
-    // 지우기는 대기 없이 바로, 같은 검색어도 다시 받음
+    // 지우기·검색 버튼은 대기 없이 바로, 자모만이어도 받음
     private data class SearchInput(val query: String, val immediate: Boolean = false)
+
+    private fun SearchInput.sendsRequest() = immediate || query.isBlank() || query.isValidSearchQuery()
 
     override val container: OrbitContainer<FollowListState, FollowListState, FollowListSideEffect> =
         orbitContainer(
@@ -115,27 +117,25 @@ class FollowListViewModel @Inject constructor(
 
     private fun setupDebouncedSearch() {
         // 조합 중 단일 자모 쿼리는 검색 생략
+        // 입력 때 이미 로딩을 켜 두므로 같은 검색어도 걸러내지 않음
         followersSearchQueryFlow
             .drop(1)  // 첫 빈 검색어는 초기 로드가 이미 받음
             .debounce { if (it.immediate) 0L else 300L }
-            .distinctUntilChanged { old, new -> !new.immediate && old.query == new.query }
-            .filter { it.query.isBlank() || it.query.isValidSearchQuery() }
+            .filter { it.sendsRequest() }
             .onEach { intent { loadFollowers(reset = true) } }
             .launchIn(viewModelScope)
 
         followingSearchQueryFlow
             .drop(1)  // 첫 빈 검색어는 초기 로드가 이미 받음
             .debounce { if (it.immediate) 0L else 300L }
-            .distinctUntilChanged { old, new -> !new.immediate && old.query == new.query }
-            .filter { it.query.isBlank() || it.query.isValidSearchQuery() }
+            .filter { it.sendsRequest() }
             .onEach { intent { loadFollowing(reset = true) } }
             .launchIn(viewModelScope)
 
         subscribersSearchQueryFlow
             .drop(1)  // 첫 빈 검색어는 초기 로드가 이미 받음
             .debounce { if (it.immediate) 0L else 300L }
-            .distinctUntilChanged { old, new -> !new.immediate && old.query == new.query }
-            .filter { it.query.isBlank() || it.query.isValidSearchQuery() }
+            .filter { it.sendsRequest() }
             .onEach { intent { loadSubscribers(reset = true) } }
             .launchIn(viewModelScope)
     }
@@ -213,48 +213,68 @@ class FollowListViewModel @Inject constructor(
     }
 
     private fun updateSearchQuery(query: String) = blockingIntent {
-        when (state.selectedTab) {
-            FollowTab.FOLLOWERS -> {
-                reduce { state.copy(followersSearchQuery = query) }
-                followersSearchQueryFlow.value = SearchInput(query)
-            }
-
-            FollowTab.FOLLOWING -> {
-                reduce { state.copy(followingSearchQuery = query) }
-                followingSearchQueryFlow.value = SearchInput(query)
-            }
-
-            FollowTab.SUBSCRIBERS -> {
-                reduce { state.copy(subscribersSearchQuery = query) }
-                subscribersSearchQueryFlow.value = SearchInput(query)
-            }
-        }
+        submitSearch { SearchInput(query) }
     }
 
     private fun search() = intent {
-        // 검색 버튼은 즉시 검색
-        when (state.selectedTab) {
-            FollowTab.FOLLOWERS -> loadFollowers(reset = true)
-            FollowTab.FOLLOWING -> loadFollowing(reset = true)
-            FollowTab.SUBSCRIBERS -> loadSubscribers(reset = true)
-        }
+        submitSearch { query -> SearchInput(query, immediate = true) }  // 기다리던 검색을 이것으로 대체
     }
 
     private fun clearSearch() = intent {
+        submitSearch { SearchInput("", immediate = true) }  // 기다리던 검색을 이것으로 대체
+    }
+
+    /** 요청이 나갈 입력이면 300ms 대기 동안에도 가운데 로딩, 진행 중이던 응답은 버림 */
+    private suspend fun Syntax<FollowListState, FollowListSideEffect>.submitSearch(
+        inputFor: (currentQuery: String) -> SearchInput
+    ) {
         when (state.selectedTab) {
             FollowTab.FOLLOWERS -> {
-                reduce { state.copy(followersSearchQuery = "") }
-                followersSearchQueryFlow.value = SearchInput("", immediate = true)  // 기다리던 검색을 이것으로 대체
+                val input = inputFor(state.followersSearchQuery)
+                val sends = input.sendsRequest()
+                followersGeneration.next()
+                reduce {
+                    state.copy(
+                        followersSearchQuery = input.query,
+                        followers = if (sends) emptyList() else state.followers,
+                        followersHasMore = if (sends) false else state.followersHasMore,
+                        isFollowersLoading = sends
+                    )
+                }
+                // 같은 값은 흘러가지 않아 직접 받음
+                if (followersSearchQueryFlow.value == input) loadFollowers(reset = true) else followersSearchQueryFlow.value = input
             }
 
             FollowTab.FOLLOWING -> {
-                reduce { state.copy(followingSearchQuery = "") }
-                followingSearchQueryFlow.value = SearchInput("", immediate = true)  // 기다리던 검색을 이것으로 대체
+                val input = inputFor(state.followingSearchQuery)
+                val sends = input.sendsRequest()
+                followingGeneration.next()
+                reduce {
+                    state.copy(
+                        followingSearchQuery = input.query,
+                        following = if (sends) emptyList() else state.following,
+                        followingHasMore = if (sends) false else state.followingHasMore,
+                        isFollowingLoading = sends
+                    )
+                }
+                // 같은 값은 흘러가지 않아 직접 받음
+                if (followingSearchQueryFlow.value == input) loadFollowing(reset = true) else followingSearchQueryFlow.value = input
             }
 
             FollowTab.SUBSCRIBERS -> {
-                reduce { state.copy(subscribersSearchQuery = "") }
-                subscribersSearchQueryFlow.value = SearchInput("", immediate = true)  // 기다리던 검색을 이것으로 대체
+                val input = inputFor(state.subscribersSearchQuery)
+                val sends = input.sendsRequest()
+                subscribersGeneration.next()
+                reduce {
+                    state.copy(
+                        subscribersSearchQuery = input.query,
+                        subscribers = if (sends) emptyList() else state.subscribers,
+                        subscribersHasMore = if (sends) false else state.subscribersHasMore,
+                        isSubscribersLoading = sends
+                    )
+                }
+                // 같은 값은 흘러가지 않아 직접 받음
+                if (subscribersSearchQueryFlow.value == input) loadSubscribers(reset = true) else subscribersSearchQueryFlow.value = input
             }
         }
     }
@@ -269,16 +289,8 @@ class FollowListViewModel @Inject constructor(
         reduce { state.copy(isFollowersLoading = true, followersError = null) }
 
         val query = state.followersSearchQuery.takeIf { it.isNotBlank() }
-        fun isStale() = followersGeneration.current() != generation ||
-            state.followersSearchQuery.takeIf { it.isNotBlank() } != query
-        // 검색어만 바뀌어 버릴 땐 새 요청이 없어 로딩 표시를 직접 내림
-        suspend fun dropIfStale(): Boolean {
-            if (!isStale()) return false
-            if (followersGeneration.current() == generation) {
-                reduce { state.copy(isFollowersLoading = false, isInitialLoading = if (reset) false else state.isInitialLoading) }
-            }
-            return true
-        }
+        // 검색어가 바뀌면 세대도 올라가므로 세대만 비교, 로딩 표시는 새 쪽이 맡음
+        fun isStale() = followersGeneration.current() != generation
         val result = if (state.isMyProfile) {
             followRepository.getMyFollowersWithSearch(cursor, PAGE_SIZE, query)
         } else {
@@ -287,7 +299,7 @@ class FollowListViewModel @Inject constructor(
 
         val isSearching = query != null
         result.onSuccess { listResult ->
-            if (dropIfStale()) return@intent
+            if (isStale()) return@intent
             reduce {
                 state.copy(
                     // 서버 페이징 중복 행 제거, 중복 key는 크래시
@@ -296,17 +308,19 @@ class FollowListViewModel @Inject constructor(
                     followersHasMore = listResult.nextCursor != null,
                     isFollowersLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
+                    loadedTabs = state.loadedTabs + FollowTab.FOLLOWERS,
                     // 검색 중에는 탭 카운트가 검색 결과 개수로 바뀌지 않도록 유지
                     followerCount = if (isSearching) state.followerCount else listResult.totalCount,
                     followersError = null
                 )
             }
         }.onFailure { error ->
-            if (dropIfStale()) return@intent
+            if (isStale()) return@intent
             reduce {
                 state.copy(
                     isFollowersLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
+                    loadedTabs = state.loadedTabs + FollowTab.FOLLOWERS,
                     followersError = if (state.followers.isEmpty()) error.message
                         ?: "팔로워 목록을 불러올 수 없습니다" else null,
                     snackbarState = if (state.followers.isNotEmpty()) SnackbarState(
@@ -327,16 +341,8 @@ class FollowListViewModel @Inject constructor(
         reduce { state.copy(isFollowingLoading = true, followingError = null) }
 
         val query = state.followingSearchQuery.takeIf { it.isNotBlank() }
-        fun isStale() = followingGeneration.current() != generation ||
-            state.followingSearchQuery.takeIf { it.isNotBlank() } != query
-        // 검색어만 바뀌어 버릴 땐 새 요청이 없어 로딩 표시를 직접 내림
-        suspend fun dropIfStale(): Boolean {
-            if (!isStale()) return false
-            if (followingGeneration.current() == generation) {
-                reduce { state.copy(isFollowingLoading = false, isInitialLoading = if (reset) false else state.isInitialLoading) }
-            }
-            return true
-        }
+        // 검색어가 바뀌면 세대도 올라가므로 세대만 비교, 로딩 표시는 새 쪽이 맡음
+        fun isStale() = followingGeneration.current() != generation
         val result = if (state.isMyProfile) {
             followRepository.getMyFollowingWithSearch(cursor, PAGE_SIZE, query)
         } else {
@@ -345,7 +351,7 @@ class FollowListViewModel @Inject constructor(
 
         val isSearching = query != null
         result.onSuccess { listResult ->
-            if (dropIfStale()) return@intent
+            if (isStale()) return@intent
             reduce {
                 state.copy(
                     following = if (reset) listResult.items else (state.following + listResult.items).distinctBy { it.id },
@@ -353,17 +359,19 @@ class FollowListViewModel @Inject constructor(
                     followingHasMore = listResult.nextCursor != null,
                     isFollowingLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
+                    loadedTabs = state.loadedTabs + FollowTab.FOLLOWING,
                     // 검색 중에는 탭 카운트가 검색 결과 개수로 바뀌지 않도록 유지
                     followingCount = if (isSearching) state.followingCount else listResult.totalCount,
                     followingError = null
                 )
             }
         }.onFailure { error ->
-            if (dropIfStale()) return@intent
+            if (isStale()) return@intent
             reduce {
                 state.copy(
                     isFollowingLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
+                    loadedTabs = state.loadedTabs + FollowTab.FOLLOWING,
                     followingError = if (state.following.isEmpty()) error.message
                         ?: "팔로잉 목록을 불러올 수 없습니다" else null,
                     snackbarState = if (state.following.isNotEmpty()) SnackbarState(
@@ -393,21 +401,13 @@ class FollowListViewModel @Inject constructor(
         reduce { state.copy(isSubscribersLoading = true, subscribersError = null) }
 
         val query = state.subscribersSearchQuery.takeIf { it.isNotBlank() }
-        fun isStale() = subscribersGeneration.current() != generation ||
-            state.subscribersSearchQuery.takeIf { it.isNotBlank() } != query
-        // 검색어만 바뀌어 버릴 땐 새 요청이 없어 로딩 표시를 직접 내림
-        suspend fun dropIfStale(): Boolean {
-            if (!isStale()) return false
-            if (subscribersGeneration.current() == generation) {
-                reduce { state.copy(isSubscribersLoading = false, isInitialLoading = if (reset) false else state.isInitialLoading) }
-            }
-            return true
-        }
+        // 검색어가 바뀌면 세대도 올라가므로 세대만 비교, 로딩 표시는 새 쪽이 맡음
+        fun isStale() = subscribersGeneration.current() != generation
         val result = subscriptionRepository.getMySubscribers(page, PAGE_SIZE, query)
 
         val isSearching = query != null
         result.onSuccess { listResult ->
-            if (dropIfStale()) return@intent
+            if (isStale()) return@intent
             reduce {
                 state.copy(
                     subscribers = if (reset) listResult.items else (state.subscribers + listResult.items).distinctBy { it.id },
@@ -415,17 +415,19 @@ class FollowListViewModel @Inject constructor(
                     subscribersHasMore = listResult.hasNext,
                     isSubscribersLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
+                    loadedTabs = state.loadedTabs + FollowTab.SUBSCRIBERS,
                     // 검색 중에는 탭 카운트가 검색 결과 개수로 바뀌지 않도록 유지
                     subscriberCount = if (isSearching) state.subscriberCount else listResult.totalCount,
                     subscribersError = null
                 )
             }
         }.onFailure { error ->
-            if (dropIfStale()) return@intent
+            if (isStale()) return@intent
             reduce {
                 state.copy(
                     isSubscribersLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
+                    loadedTabs = state.loadedTabs + FollowTab.SUBSCRIBERS,
                     subscribersError = if (state.subscribers.isEmpty()) error.message
                         ?: "구독자 목록을 불러올 수 없습니다" else null,
                     snackbarState = if (state.subscribers.isNotEmpty()) SnackbarState(

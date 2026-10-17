@@ -39,6 +39,8 @@ data class FollowListState(
     val subscribersSearchQuery: String = "",
     // 로딩 상태
     val isInitialLoading: Boolean = true,
+    // 첫 응답을 받은 탭, 그 전엔 빈 목록 문구 대신 로딩
+    val loadedTabs: Set<FollowTab> = emptySet(),
     // 팔로우 토글 로딩 상태
     val toggleLoadingUserIds: Set<Int> = emptySet(),
     // 팔로우 취소 확인 다이얼로그

@@ -184,9 +184,6 @@ fun UserCommunityTabContent(
                     post = post,
                     isUploading = post.isUploading,
                     onPostClick = { if (!post.isUploading) onPostClick(post.id) },
-                    onSecretPostClick = {
-                        onIntent(UserProfileIntent.ShowRestrictedContentSnackbar("크리에이터만 볼 수 있습니다"))
-                    },
                     onProfileClick = { offset ->
                         if (!post.isUploading) onProfileClick(post.author.id, offset)
                     },

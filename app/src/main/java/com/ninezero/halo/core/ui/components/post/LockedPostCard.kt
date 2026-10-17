@@ -194,7 +194,7 @@ fun LockedPostCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_heart),
+                    painter = painterResource(if (post.isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart),
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant

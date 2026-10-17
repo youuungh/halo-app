@@ -249,15 +249,14 @@ fun PostCommentThreadItem(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(avatarSpacing))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     // 답글 보기
                     Text(
                         text = "답글 보기",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.offset(y = (-1).dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -395,8 +394,7 @@ fun PostCommentThreadItem(
                             text = "답글 더 보기",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.offset(y = (-1).dp)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

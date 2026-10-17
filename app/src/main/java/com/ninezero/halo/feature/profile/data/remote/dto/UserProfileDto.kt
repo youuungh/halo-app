@@ -47,6 +47,8 @@ data class UserProfileDto(
 
     val isFollowing: Boolean = false,
 
+    val isSubscribed: Boolean = false,
+
     val notifyNewPost: Boolean = false,
 
     val notifyNewProduct: Boolean = false,
@@ -77,6 +79,7 @@ fun UserProfileDto.toDomain(): UserProfile {
         isBlockedByMe = isBlockedByMe,
         isBlockedByOther = isBlockedByOther,
         isFollowing = isFollowing,
+        isSubscribed = isSubscribed,
         isNotifyEnabled = notifyNewPost || notifyNewProduct,
         createdAt = createdAt.parseTimestamp(),
         updatedAt = updatedAt.parseTimestamp()

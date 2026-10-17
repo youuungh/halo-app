@@ -48,7 +48,6 @@ import com.ninezero.halo.feature.profile.domain.usecase.GetUserProfileUseCase
 import com.ninezero.halo.feature.profile.presentation.components.ProductSortType
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTab
 import com.ninezero.halo.feature.profile.presentation.components.UserPostSortType
-import com.ninezero.halo.feature.subscription.domain.repository.SubscriptionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
@@ -77,7 +76,6 @@ class UserProfileViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
     private val getCommunityPostsUseCase: GetCommunityPostsUseCase,
     private val followRepository: FollowRepository,
-    private val subscriptionRepository: SubscriptionRepository,
     private val observeCachedPostsUseCase: ObserveCachedPostsUseCase,
     private val observeCachedCommentsUseCase: ObserveCachedCommentsUseCase,
     private val cacheCommentsUseCase: CacheCommentsUseCase,
@@ -506,10 +504,6 @@ class UserProfileViewModel @Inject constructor(
                         snackbarState = state.snackbarState?.takeUnless { it.actionLabel == "재시도" })
                 }
                 if (initialTab == ProfileTab.HOME) loadHomeSections() else loadUserPosts()
-
-                if (ownProfile.isCreator && !ownProfile.isOwnProfile) loadSubscriptionStatus(
-                    ownProfile.userId
-                )
             }
             .onFailure { error ->
                 reduce {
@@ -547,8 +541,6 @@ class UserProfileViewModel @Inject constructor(
                 )
             }
 
-            if (ownProfile.isCreator && !ownProfile.isOwnProfile) loadSubscriptionStatus(ownProfile.userId)
-
             when (currentTab) {
                 ProfileTab.POSTS -> loadUserPosts()
                 ProfileTab.REPLIES -> loadUserCommentThreads()
@@ -581,8 +573,6 @@ class UserProfileViewModel @Inject constructor(
                         (state.myUserId != null && profile.userId == state.myUserId)
             )
             reduce { state.copy(profile = ownProfile) }
-
-            if (ownProfile.isCreator && !ownProfile.isOwnProfile) loadSubscriptionStatus(ownProfile.userId)
 
             when (state.selectedTab) {
                 ProfileTab.POSTS -> refreshPostsQuietly()
@@ -779,15 +769,6 @@ class UserProfileViewModel @Inject constructor(
                 if (state.storeProducts.isEmpty() && state.storeProductSections.isEmpty()) loadStoreProducts()
             }
         }
-    }
-
-    // 구독 완료 시 이벤트로 refreshProfile
-
-    private fun loadSubscriptionStatus(creatorId: Int) = intent {  // 시트는 전역 호스트가 자체 조회
-        subscriptionRepository.getSubscriptionStatus(creatorId)
-            .onSuccess { status ->
-                reduce { state.copy(isSubscribed = status.isSubscribed) }
-            }
     }
 
     private fun sendMessage() = intent {

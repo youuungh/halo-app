@@ -213,7 +213,6 @@ fun CollapsingToolbarLayout(
                         val subscribeRequester = LocalSubscribeRequester.current
                         UserProfileHeaderContent(
                             profile = profile,
-                            isSubscribed = state.isSubscribed,
                             onFollowClick = { onIntent(UserProfileIntent.ToggleFollow) },
                             onSubscribeClick = { subscribeRequester(profile.userId, profile.displayName) },
                             onMessageClick = { onIntent(UserProfileIntent.SendMessage) },

@@ -59,7 +59,6 @@ import com.ninezero.halo.ui.theme.Pretendard
 @Composable
 fun UserProfileHeaderContent(
     profile: UserProfile,
-    isSubscribed: Boolean = false,
     onFollowClick: () -> Unit = {},
     onSubscribeClick: () -> Unit = {},
     onMessageClick: () -> Unit = {},
@@ -326,7 +325,7 @@ fun UserProfileHeaderContent(
 
                 // 구독 버튼, 플랜 있는 크리에이터만
                 if (profile.isCreator && profile.hasSubscriptionPlans) {
-                    if (isSubscribed) {
+                    if (profile.isSubscribed) {
                         // 구독중
                         Box(
                             modifier = Modifier
