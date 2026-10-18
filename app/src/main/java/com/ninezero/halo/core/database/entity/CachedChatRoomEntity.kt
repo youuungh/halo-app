@@ -19,6 +19,7 @@ data class CachedChatRoomEntity(
     val otherUserUsername: String,
     val otherUserDisplayName: String?,
     val otherUserAvatarUrl: String?,
+    val otherUserAvatarThumbUrl: String?,
     val otherUserRole: String,
     val otherUserFollowerCount: Int,
     val otherUserFollowingCount: Int,
@@ -31,5 +32,6 @@ data class CachedChatRoomEntity(
     val unreadCount: Int,
     val isArchived: Boolean,
     val createdAt: Long,
-    val cachedAt: Long = System.currentTimeMillis()
+    val cachedAt: Long = System.currentTimeMillis(),
+    val isHistoryComplete: Boolean = false
 )

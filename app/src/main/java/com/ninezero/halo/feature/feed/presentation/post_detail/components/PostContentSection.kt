@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.badge.SecretPostBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
 import com.ninezero.halo.core.ui.components.media.MediaDisplayPolicy
@@ -144,6 +145,8 @@ fun PostContentSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = OutlineVariant
                 )
+
+                if (post.isSecret) SecretPostBadge()
             }
 
             // 팔로우 버튼

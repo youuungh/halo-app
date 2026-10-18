@@ -77,7 +77,11 @@ interface ChatRepository {
     /** 메시지 캐시 저장 */
     suspend fun cacheMessages(messages: List<Message>)
     /** 최신 페이지 캐시 저장 */
-    suspend fun cacheLatestMessages(roomId: Int, messages: List<Message>)  // 그보다 오래된 이 방의 보낸 메시지 캐시는 삭제
+    suspend fun cacheLatestMessages(roomId: Int, messages: List<Message>, hasNext: Boolean)  // 옛 보낸 메시지 캐시는 삭제
+    /** 메시지 캐시가 대화 처음까지 닿았는지 */
+    suspend fun isChatHistoryComplete(roomId: Int): Boolean
+    /** 메시지 캐시가 대화 처음까지 닿음 기록 */
+    suspend fun markChatHistoryComplete(roomId: Int)
 
     // 낙관적 갱신
     /** 이미지 메시지 임시 저장 */

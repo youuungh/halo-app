@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.badge.SecretPostBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.comment.CommentItem
 import com.ninezero.halo.core.ui.components.comment.CommentMedia
@@ -205,9 +206,10 @@ fun CommentThreadItem(
                             Text(
                                 text = " · ${thread.post.createdAt.toRelativeTime()}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            if (thread.post.isSecret && !isPostUnavailable && !isPostRestricted) SecretPostBadge()
+                            Spacer(modifier = Modifier.weight(1f))
                             // 더보기 버튼, 삭제·숨김·잠금 시 숨김
                             if (!isPostUnavailable && !isPostRestricted) {
                                 Icon(

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -22,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
@@ -59,6 +57,7 @@ import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
+import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerOverlay
 import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerState
@@ -176,11 +175,6 @@ fun ChatRoomScreen(
             is ChatRoomSideEffect.HideKeyboard -> {
                 focusManager.clearFocus()
             }
-            is ChatRoomSideEffect.FocusSearchField -> {
-                try {
-                    searchFocusRequester.requestFocus()
-                } catch (_: Exception) { }
-            }
             is ChatRoomSideEffect.ScrollToMessage -> {
                 val index = state.messages.indexOfFirst { it.id == sideEffect.messageId }
                 if (index >= 0) {
@@ -201,8 +195,14 @@ fun ChatRoomScreen(
                     }
                 }
             }
-            is ChatRoomSideEffect.NavigateToPostDetail -> onNavigateToPostDetail(sideEffect.postId)
-            is ChatRoomSideEffect.NavigateToProductDetail -> onNavigateToProductDetail(sideEffect.productId)
+            is ChatRoomSideEffect.NavigateToPostDetail -> {
+                focusManager.clearFocus()
+                onNavigateToPostDetail(sideEffect.postId)
+            }
+            is ChatRoomSideEffect.NavigateToProductDetail -> {
+                focusManager.clearFocus()
+                onNavigateToProductDetail(sideEffect.productId)
+            }
             is ChatRoomSideEffect.ShowCenterToast -> {
                 centerToastMessage = sideEffect.message
                 centerToastVisible = true
@@ -301,7 +301,10 @@ fun ChatRoomScreen(
             filePickerLauncher.launch(arrayOf("*/*"))
         },
         onUserClick = {
-            state.otherUser?.let { onNavigateToUserProfile(it.id) }
+            state.otherUser?.let {
+                focusManager.clearFocus()
+                onNavigateToUserProfile(it.id)
+            }
         },
         onProductClick = { productId, canAccess ->
             viewModel.onIntent(ChatRoomIntent.ProductLinkClicked(productId, canAccess))
@@ -310,6 +313,7 @@ fun ChatRoomScreen(
             viewModel.onIntent(ChatRoomIntent.PostLinkClicked(postId, canAccess))
         },
         onImageClick = { imageUrls, index ->
+            focusManager.clearFocus()
             mediaViewerState = MediaViewerState(
                 isVisible = true,
                 items = imageUrls.map { ViewerMediaItem(url = it) },
@@ -317,6 +321,7 @@ fun ChatRoomScreen(
             )
         },
         onVideoClick = { videoUrl, thumbnailUrl ->
+            focusManager.clearFocus()
             mediaViewerState = MediaViewerState(
                 isVisible = true,
                 items = listOf(ViewerMediaItem(url = videoUrl, thumbnailUrl = thumbnailUrl, type = ViewerMediaType.VIDEO))
@@ -361,6 +366,7 @@ internal fun ChatRoomScreenContent(
     val hazeState = remember { HazeState() }
     val backgroundColor = MaterialTheme.colorScheme.surface
     val density = LocalDensity.current
+    val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     var topBarHeight by rememberSaveableDp()
     var bottomBarHeight by rememberSaveableDp()
@@ -415,9 +421,10 @@ internal fun ChatRoomScreenContent(
         )
     }
 
+    // 첫 페이지 전엔 이전 페이지 로드 보류
     InfiniteScrollTrigger(
         listState = listState,
-        isLoading = state.isLoadingMore,
+        isLoading = state.isLoadingMore || state.isEntryLoading,
         hasMore = state.hasMore,
         onLoadMore = { onIntent(ChatRoomIntent.LoadMoreMessages) }
     )
@@ -435,10 +442,10 @@ internal fun ChatRoomScreenContent(
         ) {
             when {
                 // 캐시 확정 전엔 아무것도 안 그림
-                !state.messagesResolved && state.messages.isEmpty() -> {}
+                state.entryPhase == EntryPhase.CACHE_CHECKING && state.messages.isEmpty() -> {}
 
                 // 첫 로드 실패
-                state.error != null && state.messages.isEmpty() -> {
+                state.entryPhase == EntryPhase.FAILED && state.messages.isEmpty() -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -447,7 +454,7 @@ internal fun ChatRoomScreenContent(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = state.error,
+                                text = state.error.orEmpty(),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -463,7 +470,7 @@ internal fun ChatRoomScreenContent(
                     }
                 }
 
-                (state.isLoading || state.otherUser == null) && state.messages.isEmpty() -> {
+                (state.entryPhase == EntryPhase.LOADING || state.otherUser == null) && state.messages.isEmpty() -> {
                     // 캐시 없음 확정 후 콜드 로딩만
                     CenteredLoadingIndicator(
                         modifier = Modifier
@@ -622,16 +629,7 @@ internal fun ChatRoomScreenContent(
 
                             if (state.isLoadingMore) {
                                 item {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.padding(8.dp)
-                                        )
-                                    }
+                                    ListLoadMoreIndicator()
                                 }
                             }
 
@@ -679,7 +677,10 @@ internal fun ChatRoomScreenContent(
                 },
                 onUserClick = onUserClick,
                 onSearchClick = { onIntent(ChatRoomIntent.ToggleSearchMode) },
-                onMoreClick = { onIntent(ChatRoomIntent.ShowProfileOptions) },
+                onMoreClick = {
+                    focusManager.clearFocus(force = true)
+                    onIntent(ChatRoomIntent.ShowProfileOptions)
+                },
                 showActions = state.messages.isNotEmpty(),
                 isSearchMode = state.isSearchMode,
                 searchQuery = state.searchQuery,

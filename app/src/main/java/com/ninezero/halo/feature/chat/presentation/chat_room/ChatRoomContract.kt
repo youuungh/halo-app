@@ -15,10 +15,15 @@ data class AttachmentState(
 )
 
 enum class AttachmentUploadStatus {
-    PENDING,      // 업로드 대기
     UPLOADING,    // 업로드 중
-    SUCCESS,      // 업로드 완료
     FAILED        // 업로드 실패
+}
+
+enum class EntryPhase {
+    CACHE_CHECKING,  // 캐시 확인 전, 빈 화면
+    LOADING,         // 캐시 확인 후 첫 페이지 받는 중
+    READY,           // 첫 페이지 반영 끝 또는 새 대화
+    FAILED           // 첫 페이지 실패, 메시지가 없으면 오류+재시도
 }
 
 data class ChatRoomState(
@@ -29,9 +34,8 @@ data class ChatRoomState(
     val unreadStartMessageId: Int? = null,
     val entryUnreadCount: Int = 0,
     val messageInput: String = "",
-    val isLoading: Boolean = false,
-    val messagesResolved: Boolean = false,  // 확정 전엔 로딩 표시 보류
-    val error: String? = null,  // 첫 로드 실패, 메시지가 없을 때 오류+재시도
+    val entryPhase: EntryPhase = EntryPhase.CACHE_CHECKING,
+    val error: String? = null,  // 첫 로드 실패 문구
     val isLoadingMore: Boolean = false,
     val isSending: Boolean = false,
     val hasMore: Boolean = true,
@@ -70,6 +74,10 @@ data class ChatRoomState(
 
     val canSend: Boolean
         get() = (messageInput.isNotBlank() || hasAttachment) && !isSending
+
+    // 첫 페이지 받는 중, 이전 페이지 로드 보류
+    val isEntryLoading: Boolean
+        get() = entryPhase == EntryPhase.CACHE_CHECKING || entryPhase == EntryPhase.LOADING
 }
 
 sealed interface ChatRoomIntent {
@@ -122,7 +130,6 @@ sealed interface ChatRoomSideEffect {
     data object NavigateBack : ChatRoomSideEffect
     data object ScrollToBottom : ChatRoomSideEffect
     data object HideKeyboard : ChatRoomSideEffect
-    data object FocusSearchField : ChatRoomSideEffect
     data class ScrollToMessage(val messageId: Int) : ChatRoomSideEffect
     data class ScrollToUnread(val lastReadMessageId: Int) : ChatRoomSideEffect
     data class NavigateToPostDetail(val postId: Int) : ChatRoomSideEffect

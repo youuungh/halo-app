@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.badge.SecretPostBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
 import com.ninezero.halo.core.ui.components.media.MediaDisplayPolicy
@@ -239,9 +240,10 @@ fun PostPreviewSection(
                             Text(
                                 text = " · ${currentPost.createdAt.toRelativeTime()}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            if (currentPost.isSecret && !isMasked) SecretPostBadge()
+                            Spacer(modifier = Modifier.weight(1f))
                             if (!isRestricted) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_ellipsis_horizontal),

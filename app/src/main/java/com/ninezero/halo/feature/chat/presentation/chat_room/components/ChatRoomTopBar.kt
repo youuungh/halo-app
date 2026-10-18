@@ -25,6 +25,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -191,6 +192,10 @@ private fun ChatRoomSearchBar(
     modifier: Modifier = Modifier
 ) {
     val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+
+    LaunchedEffect(focusRequester) {
+        focusRequester?.requestFocus()
+    }
 
     Box(
         modifier = modifier

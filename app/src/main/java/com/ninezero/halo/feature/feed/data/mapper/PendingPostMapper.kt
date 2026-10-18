@@ -52,6 +52,7 @@ fun PendingPostEntity.toPost(): Post {
         viewCount = 0,
         isLiked = false,
         isBookmarked = false,
+        isSecret = isSecret,
         createdAt = createdAt,
         contextType = if (creatorId != null) PostContextType.COMMUNITY else PostContextType.GENERAL,
         pendingId = id

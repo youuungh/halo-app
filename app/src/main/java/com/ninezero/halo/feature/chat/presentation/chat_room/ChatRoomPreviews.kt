@@ -161,7 +161,7 @@ internal fun previewChatRoomLoadingState(): ChatRoomState {
     return ChatRoomState(
         roomId = 1,
         otherUser = previewUserSummary(id = 2, username = "minsoo_art", displayName = "김민수"),
-        isLoading = true
+        entryPhase = EntryPhase.LOADING
     )
 }
 

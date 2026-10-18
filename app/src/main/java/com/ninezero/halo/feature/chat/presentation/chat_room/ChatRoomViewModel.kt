@@ -16,7 +16,6 @@ import com.ninezero.halo.feature.chat.domain.model.ChatEvent
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.feature.chat.domain.model.ChatUploadEvent
 import com.ninezero.halo.feature.chat.domain.model.Message
-import com.ninezero.halo.feature.chat.domain.model.MessageStatus
 import com.ninezero.halo.feature.chat.domain.repository.ChatEventRepository
 import com.ninezero.halo.feature.chat.domain.repository.ChatMediaRepository
 import com.ninezero.halo.feature.chat.domain.repository.ChatRepository
@@ -35,9 +34,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.orbitmvi.orbit.OrbitContainer
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.blockingIntent
@@ -47,6 +48,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 private const val SEARCH_PAGE_SIZE = 50
+private const val REFLECT_TIMEOUT_MS = 3_000L
 
 @HiltViewModel
 class ChatRoomViewModel @Inject constructor(
@@ -87,8 +89,6 @@ class ChatRoomViewModel @Inject constructor(
         } else null
     }
 
-    private var entryUnreadInitialized = false
-
     private val isDraftMode: Boolean
         get() = roomId == 0 && targetUserId > 0
 
@@ -99,7 +99,8 @@ class ChatRoomViewModel @Inject constructor(
             ChatRoomState(
                 roomId = roomId,
                 otherUser = seededOtherUser,
-                messages = seededMessages
+                messages = seededMessages,
+                hasMore = !messageCache.isHistoryComplete(roomId)
             )
         )
 
@@ -131,18 +132,25 @@ class ChatRoomViewModel @Inject constructor(
     private fun observeMessagesFromDb() {
         observeMessagesJob?.cancel()
         if (roomId == 0) return
+        var isFirstEmission = true
         observeMessagesJob = chatRepository.observeMessages(roomId)
             .onEach { messages ->
                 // 재진입 즉시 표시용 캐시 갱신
                 if (messages.isNotEmpty()) messageCache.put(roomId, messages)
+                // 첫 표시는 저장값으로 상단 헤더 판단
+                val storedComplete = isFirstEmission && chatRepository.isChatHistoryComplete(roomId)
+                isFirstEmission = false
                 intent {
                     reduce {
-                        // 빈 emit도 반영
+                        // 빈 emit도 반영, 캐시 확인 뒤 첫 페이지 대기
                         state.copy(
                             messages = messages,
-                            messagesResolved = true,
-                            // 로딩 해제는 실제 메시지 도착 시점에 위임
-                            isLoading = if (messages.isNotEmpty()) false else state.isLoading
+                            entryPhase = if (state.entryPhase == EntryPhase.CACHE_CHECKING) {
+                                EntryPhase.LOADING
+                            } else {
+                                state.entryPhase
+                            },
+                            hasMore = state.hasMore && !(storedComplete && state.entryPhase != EntryPhase.READY)
                         )
                     }
                 }
@@ -229,14 +237,14 @@ class ChatRoomViewModel @Inject constructor(
                     loadBlockStatus(existingChat.otherUser.id)
                     loadMessages(isEntry = true)
                 } else {
-                    // 채팅방 없음이면 빈 draft 확정, 로딩 해제
-                    reduce { state.copy(messagesResolved = true) }
+                    // 채팅방 없음이면 빈 draft 확정
+                    reduce { state.copy(entryPhase = EntryPhase.READY) }
                     loadOtherUserProfile()
                 }
             }
             .onFailure { error ->
-                Timber.e(error, "기존 채팅방 조회 실패 — draft로 대체")
-                reduce { state.copy(messagesResolved = true) }
+                Timber.e(error, "기존 채팅방 조회 실패")
+                reduce { state.copy(entryPhase = EntryPhase.READY) }
                 loadOtherUserProfile()
             }
     }
@@ -341,9 +349,8 @@ class ChatRoomViewModel @Inject constructor(
     private fun loadMessages(isEntry: Boolean) = intent {
         val pageSize = Constants.DEFAULT_PAGE_SIZE * 2
 
-        // 메시지 목록은 DB 관찰이 갱신
-        if (state.messages.isEmpty()) {
-            reduce { state.copy(isLoading = true, error = null) }
+        if (state.entryPhase == EntryPhase.FAILED) {
+            reduce { state.copy(entryPhase = EntryPhase.LOADING, error = null) }
         }
 
         chatRepository.getMessages(
@@ -352,65 +359,70 @@ class ChatRoomViewModel @Inject constructor(
             beforeMessageId = null
         ).onSuccess { result ->
             if (isEntry) {
-                chatRepository.cacheLatestMessages(roomId, result.messages)
+                chatRepository.cacheLatestMessages(roomId, result.messages, result.hasNext)
+                messageCache.putHistoryComplete(roomId, !result.hasNext)
             } else {
                 chatRepository.cacheMessages(result.messages)
             }
-            reduce {
-                state.copy(
-                    // 빈 방만 즉시 해제, 그 외는 DB 관찰이 해제
-                    isLoading = if (result.messages.isEmpty()) false else state.isLoading,
-                    hasMore = result.hasNext,
-                    error = null
-                )
-            }
-            if (!entryUnreadInitialized) {
-                // DB 반영 전일 수 있어 먼저 합쳐 경계 계산
-                val oldestFetchedId = result.messages.minOfOrNull { it.id } ?: Int.MAX_VALUE
+            // 첫 성공이면 입장 마무리, 경계는 반영 뒤
+            if (state.entryPhase != EntryPhase.READY) {
+                if (!isEntry && !result.hasNext) markHistoryComplete()
+                awaitMessagesReflected(result.messages)
+                // 재연결 조회와 겹쳐도 마무리는 한 번
+                var completesEntry = false
                 reduce {
-                    val kept = if (isEntry) {
-                        state.messages.filter { it.status != MessageStatus.SENT || it.id >= oldestFetchedId }
+                    completesEntry = state.entryPhase != EntryPhase.READY
+                    if (completesEntry) {
+                        state.copy(entryPhase = EntryPhase.READY, hasMore = result.hasNext, error = null)
                     } else {
-                        state.messages
+                        state
                     }
-                    state.copy(
-                        messages = (result.messages + kept)
-                            .distinctBy { it.id }
-                            .sortedByDescending { it.createdAt }
-                    )
                 }
-                initEntryUnread(result.lastReadMessageId)
-                entryUnreadInitialized = true
+                if (completesEntry) initEntryUnread(result.lastReadMessageId)
             }
             if (isRoomVisible()) markAsRead()
         }.onFailure { error ->
-            if (state.messages.isEmpty()) {
+            if (state.entryPhase != EntryPhase.READY) {
                 reduce {
                     state.copy(
-                        isLoading = false,
+                        entryPhase = EntryPhase.FAILED,
                         error = error.message ?: "메시지를 불러올 수 없습니다"
                     )
                 }
-            } else {
-                reduce { state.copy(isLoading = false) }
             }
         }
     }
 
+    // 받은 페이지가 목록에 반영될 때까지 대기
+    private suspend fun awaitMessagesReflected(fetched: List<Message>) {
+        val ids = fetched.mapTo(HashSet()) { it.id }
+        withTimeoutOrNull(REFLECT_TIMEOUT_MS) {
+            container.stateFlow.first { state ->
+                state.entryPhase != EntryPhase.CACHE_CHECKING &&
+                        (ids.isEmpty() || state.messages.any { it.id in ids })
+            }
+        }
+    }
 
     // 복귀마다 트레이 알림 정리와 읽음 처리
     private fun onScreenResumed() {
         clearRoomTrayNotifications()
         // 첫 진입은 조회 뒤에 읽음, 안 읽음 경계 보존
-        if (roomId > 0 && entryUnreadInitialized) markAsRead()
+        if (roomId > 0 && container.stateFlow.value.entryPhase == EntryPhase.READY) markAsRead()
     }
 
     private fun clearRoomTrayNotifications() {
         if (roomId > 0) trayNotifications.cancelChatRoom(roomId)
     }
 
+    // 재진입 때 서버 응답 전에도 상단 헤더 표시
+    private suspend fun markHistoryComplete() {
+        chatRepository.markChatHistoryComplete(roomId)
+        messageCache.putHistoryComplete(roomId, true)
+    }
+
     private fun loadMoreMessages() = intent {
-        if (state.isLoadingMore || !state.hasMore || state.messages.isEmpty()) return@intent
+        if (state.isEntryLoading || state.isLoadingMore || !state.hasMore || state.messages.isEmpty()) return@intent
 
         val oldestMessageId = state.messages.oldestServerMessageId() ?: return@intent
         reduce { state.copy(isLoadingMore = true) }
@@ -421,6 +433,7 @@ class ChatRoomViewModel @Inject constructor(
             beforeMessageId = oldestMessageId
         ).onSuccess { result ->
             chatRepository.cacheMessages(result.messages)
+            if (!result.hasNext) markHistoryComplete()
             reduce {
                 state.copy(
                     isLoadingMore = false,
@@ -567,8 +580,16 @@ class ChatRoomViewModel @Inject constructor(
                         otherUserLoaded = true
                     )
                 }
-                observeMessagesFromDb()     // roomId 갱신 후 observe 재시작
-                loadMessages(isEntry = true)  // 기존 방이면 히스토리도 로드
+                observeMessagesFromDb()  // roomId 갱신 후 observe 재시작
+                // 빈 방은 조회 생략, 로딩 깜빡임 방지
+                if (chat.lastMessage != null) {
+                    // 기존 방이면 입장 다시 밟아 히스토리 로드
+                    reduce { state.copy(entryPhase = EntryPhase.LOADING) }
+                    loadMessages(isEntry = true)
+                } else {
+                    markHistoryComplete()
+                    reduce { state.copy(entryPhase = EntryPhase.READY, hasMore = false) }  // 상단 프로필 헤더 조건
+                }
             }
 
             try {
@@ -980,11 +1001,7 @@ class ChatRoomViewModel @Inject constructor(
                 searchTotalCount = 0
             )
         }
-        if (enteringSearchMode) {
-            postSideEffect(ChatRoomSideEffect.FocusSearchField)
-        } else {
-            postSideEffect(ChatRoomSideEffect.HideKeyboard)
-        }
+        if (!enteringSearchMode) postSideEffect(ChatRoomSideEffect.HideKeyboard)
     }
 
     private fun searchQueryChanged(query: String) = blockingIntent {
@@ -1126,33 +1143,24 @@ class ChatRoomViewModel @Inject constructor(
         if (state.messages.any { it.id == messageId }) return true
 
         var hasMore = state.hasMore
+        var beforeMessageId = state.messages.oldestServerMessageId()
 
-        while (hasMore) {
-            val oldestMessageId = state.messages.oldestServerMessageId() ?: break
-
-            val apiResult = chatRepository.getMessages(
+        while (hasMore && beforeMessageId != null) {
+            val result = chatRepository.getMessages(
                 roomId = roomId,
                 limit = Constants.DEFAULT_PAGE_SIZE,
-                beforeMessageId = oldestMessageId
-            )
+                beforeMessageId = beforeMessageId
+            ).getOrElse { return false }
 
-            apiResult.onSuccess { result ->
-                chatRepository.cacheMessages(result.messages)
+            chatRepository.cacheMessages(result.messages)
+            if (!result.hasNext) markHistoryComplete()
+            awaitMessagesReflected(result.messages)
+            reduce { state.copy(hasMore = result.hasNext) }
 
-                reduce {
-                    state.copy(
-                        messages = (state.messages + result.messages).distinctBy { it.id },
-                        hasMore = result.hasNext
-                    )
-                }
-                hasMore = result.hasNext
-
-                if (result.messages.any { it.id == messageId }) {
-                    return true
-                }
-            }.onFailure {
-                return false
-            }
+            if (result.messages.any { it.id == messageId }) return true
+            hasMore = result.hasNext
+            // 다음 기준은 응답의 가장 오래된 id
+            beforeMessageId = result.messages.minOfOrNull { it.id }
         }
 
         return state.messages.any { it.id == messageId }

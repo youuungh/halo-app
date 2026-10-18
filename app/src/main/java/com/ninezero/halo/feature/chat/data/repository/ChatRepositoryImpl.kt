@@ -406,9 +406,18 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     // 옛 구간은 위로 올릴 때 서버에서 다시 받음
-    override suspend fun cacheLatestMessages(roomId: Int, messages: List<Message>) {
+    override suspend fun cacheLatestMessages(roomId: Int, messages: List<Message>, hasNext: Boolean) {
         cacheMessages(messages)
         cachedMessageDao.deleteSentBefore(roomId, messages.minOfOrNull { it.id } ?: Int.MAX_VALUE)
+        // 옛 구간을 지웠으니 처음까지 닿았는지 다시 기록
+        cachedChatRoomDao.setHistoryComplete(roomId, !hasNext)
+    }
+
+    override suspend fun isChatHistoryComplete(roomId: Int): Boolean =
+        cachedChatRoomDao.isHistoryComplete(roomId) == true
+
+    override suspend fun markChatHistoryComplete(roomId: Int) {
+        cachedChatRoomDao.setHistoryComplete(roomId, true)
     }
 
     // 낙관적 갱신
