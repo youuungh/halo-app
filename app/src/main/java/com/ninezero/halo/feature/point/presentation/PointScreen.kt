@@ -120,132 +120,166 @@ internal fun PointScreenContent(
             modifier = Modifier.fillMaxSize(),
             indicatorPadding = PaddingValues(top = headerHeight)
         ) {
-        // 본문
-        when {
-            isInitialLoading -> {
-                // 초기 로딩 스켈레톤
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .hazeSource(hazeState),
-                    contentPadding = PaddingValues(
-                        top = headerHeight,
-                        bottom = 16.dp
-                    )
-                ) {
-                    item { PointBalanceCardSkeleton() }
-                    items(8) {
-                        PointHistoryItemSkeleton()
-                    }
-                }
-            }
-            else -> {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .hazeSource(hazeState),
-                    contentPadding = PaddingValues(
-                        top = headerHeight,
-                        bottom = 16.dp
-                    )
-                ) {
-                    item {
-                        state.balance?.let { balance ->
-                            PointBalanceCard(balance = balance)
-                        }
-                    }
-
-                    item {
-                        MonthNavigationBar(
-                            monthDisplay = state.selectedMonthDisplay,
-                            dateRange = state.selectedMonthDateRange,
-                            canGoPrevious = state.canGoPreviousMonth,
-                            canGoNext = state.canGoNextMonth,
-                            onPreviousMonth = { onIntent(PointIntent.GoToPreviousMonth) },
-                            onNextMonth = { onIntent(PointIntent.GoToNextMonth) },
-                            onMonthClick = { onIntent(PointIntent.ShowMonthPicker) }
+            // 본문
+            when {
+                isInitialLoading -> {
+                    // 초기 로딩 스켈레톤
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(hazeState),
+                        contentPadding = PaddingValues(
+                            top = headerHeight,
+                            bottom = 16.dp
                         )
-                    }
-
-                    // 필터 칩 자리
-                    item(key = CHIP_SLOT_KEY) {
-                        Spacer(modifier = Modifier.height(chipsHeight))
-                    }
-
-                    // 필터 변경 시 로딩
-                    if (state.isLoading && state.histories.isEmpty()) {
-                        items(5) {
+                    ) {
+                        item { PointBalanceCardSkeleton() }
+                        items(8) {
                             PointHistoryItemSkeleton()
                         }
                     }
+                }
 
-                    // 포인트 내역 리스트
-                    if (state.error != null && state.histories.isEmpty() && !state.isLoading) {
+                else -> {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(hazeState),
+                        contentPadding = PaddingValues(
+                            top = headerHeight,
+                            bottom = 16.dp
+                        )
+                    ) {
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = state.error,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    OutlinedButton(
-                                        onClick = { onIntent(PointIntent.RefreshData) },
-                                        shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier.bounceClick()
-                                    ) {
-                                        Text("재시도")
+                            state.balance?.let { balance ->
+                                PointBalanceCard(balance = balance)
+                            }
+                        }
+
+                        item {
+                            MonthNavigationBar(
+                                monthDisplay = state.selectedMonthDisplay,
+                                dateRange = state.selectedMonthDateRange,
+                                canGoPrevious = state.canGoPreviousMonth,
+                                canGoNext = state.canGoNextMonth,
+                                onPreviousMonth = { onIntent(PointIntent.GoToPreviousMonth) },
+                                onNextMonth = { onIntent(PointIntent.GoToNextMonth) },
+                                onMonthClick = { onIntent(PointIntent.ShowMonthPicker) }
+                            )
+                        }
+
+                        // 필터 칩 자리
+                        item(key = CHIP_SLOT_KEY) {
+                            Spacer(modifier = Modifier.height(chipsHeight))
+                        }
+
+                        // 필터 변경 시 로딩
+                        if (state.isLoading && state.histories.isEmpty()) {
+                            items(5) {
+                                PointHistoryItemSkeleton()
+                            }
+                        }
+
+                        // 포인트 내역 리스트
+                        if (state.error != null && state.histories.isEmpty() && !state.isLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = state.error,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        OutlinedButton(
+                                            onClick = { onIntent(PointIntent.RefreshData) },
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.bounceClick()
+                                        ) {
+                                            Text("재시도")
+                                        }
                                     }
                                 }
                             }
-                        }
-                    } else if (state.histories.isEmpty() && !state.isLoading) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "${state.selectedMonthDisplay} 포인트 내역이 없습니다",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                        } else if (state.histories.isEmpty() && !state.isLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${state.selectedMonthDisplay} 포인트 내역이 없습니다",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
-                        }
-                    } else {
-                        itemsIndexed(
-                            items = state.histories,
-                            key = { _, item -> item.id }
-                        ) { index, history ->
-                            PointHistoryItem(history = history)
-                            if (index < state.histories.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
+                        } else {
+                            itemsIndexed(
+                                items = state.histories,
+                                key = { _, item -> item.id }
+                            ) { index, history ->
+                                PointHistoryItem(history = history)
+                                if (index < state.histories.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        thickness = 0.5.dp,
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                }
                             }
-                        }
 
-                        // 추가 로딩 스켈레톤
-                        if (state.isLoading && state.histories.isNotEmpty()) {
-                            items(3) {
-                                PointHistoryItemSkeleton()
+                            // 추가 로딩 스켈레톤
+                            if (state.isLoading && state.histories.isNotEmpty()) {
+                                items(3) {
+                                    PointHistoryItemSkeleton()
+                                }
                             }
                         }
                     }
                 }
             }
-        }
+
+            // 필터 칩, 플로팅. 새로고침 표시가 위에 오도록 박스 안
+            if (!isInitialLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset {
+                            val headerPx = headerHeight.roundToPx()
+                            val info = listState.layoutInfo
+                            val slot = info.visibleItemsInfo.firstOrNull { it.key == CHIP_SLOT_KEY }
+                            // 슬롯이 안 보임 = 스크롤로 지나감 -> 톱바 아래 고정
+                            val y = slot?.let { it.offset - info.viewportStartOffset } ?: headerPx
+                            IntOffset(0, y.coerceAtLeast(headerPx))
+                        }
+                        .haloBlur(state = hazeState) {
+                            style = HaloBlurStyle(
+                                backgroundColor = backgroundColor,
+                                tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
+                                blurRadius = 20.dp,
+                                noiseFactor = 0f
+                            )
+                        }
+                        .onGloballyPositioned { coordinates ->
+                            chipsHeight = with(density) { coordinates.size.height.toDp() }
+                        }
+                ) {
+                    PointFilterChips(
+                        selectedType = state.selectedType,
+                        onFilterByType = { onIntent(PointIntent.FilterByType(it)) },
+                        hazeState = hazeState
+                    )
+                }
+            }
         }
 
         // 헤더
@@ -291,38 +325,6 @@ internal fun PointScreenContent(
                 )
             }
 
-        }
-
-        if (!isInitialLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset {
-                        val headerPx = headerHeight.roundToPx()
-                        val info = listState.layoutInfo
-                        val slot = info.visibleItemsInfo.firstOrNull { it.key == CHIP_SLOT_KEY }
-                        // 슬롯이 안 보임 = 스크롤로 지나감 -> 톱바 아래 고정
-                        val y = slot?.let { it.offset - info.viewportStartOffset } ?: headerPx
-                        IntOffset(0, y.coerceAtLeast(headerPx))
-                    }
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = backgroundColor,
-                            tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0f
-                        )
-                    }
-                    .onGloballyPositioned { coordinates ->
-                        chipsHeight = with(density) { coordinates.size.height.toDp() }
-                    }
-            ) {
-                PointFilterChips(
-                    selectedType = state.selectedType,
-                    onFilterByType = { onIntent(PointIntent.FilterByType(it)) },
-                    hazeState = hazeState
-                )
-            }
         }
 
         DefaultSnackbarHost(

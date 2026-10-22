@@ -12,6 +12,12 @@ fun Context.copyLinkToClipboard(link: String) {
     GlobalCenterToast.show("링크를 복사했습니다")
 }
 
+fun Context.copyCodeToClipboard(code: String) {
+    val clipboard = getSystemService(ClipboardManager::class.java)
+    clipboard.setPrimaryClip(ClipData.newPlainText("code", code))
+    GlobalCenterToast.show("쿠폰 코드를 복사했습니다")
+}
+
 fun Context.shareTextExternally(text: String) {
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"

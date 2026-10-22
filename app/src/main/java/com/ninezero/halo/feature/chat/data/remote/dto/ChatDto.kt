@@ -24,6 +24,8 @@ data class ChatDto(
     val lastMessage: LastMessageInfoDto? = null,
     val unreadCount: Int = 0,
     val isArchived: Boolean = false,
+    val isBlockedByMe: Boolean = false,
+    val isBlockedByOther: Boolean = false,
     val createdAt: String,
     val updatedAt: String
 )
@@ -159,6 +161,8 @@ fun ChatDto.toDomain() = Chat(
     lastMessage = lastMessage?.toDomain(),
     unreadCount = unreadCount,
     isArchived = isArchived,
+    isBlockedByMe = isBlockedByMe,
+    isBlockedByOther = isBlockedByOther,
     createdAt = createdAt.parseTimestamp()
 )
 

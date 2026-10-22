@@ -56,7 +56,9 @@ sealed interface Screen {
         val targetUsername: String = "",
         val targetDisplayName: String = "",
         val targetAvatarUrl: String = "",
-        val targetRole: String = "USER"
+        val targetRole: String = "USER",
+        val targetBlockedByMe: Boolean = false,
+        val targetBlockedByOther: Boolean = false
     ) : Screen
     @Serializable data object ArchivedChats : Screen
 

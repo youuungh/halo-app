@@ -47,7 +47,9 @@ import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.overlay.LockedOverlay
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
+import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
 import com.ninezero.halo.core.ui.components.text.buildHashtagAnnotatedString
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.util.toRelativeTime
@@ -189,7 +191,11 @@ fun CommentThreadItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (isPostUnavailable || isPostRestricted) Modifier.heightIn(min = 80.dp) else Modifier)
-                            .then(if (isPostUnavailable || isPostRestricted) Modifier.hazeSource(state = postHazeState) else Modifier)
+                            .then(
+                                if (isPostUnavailable || isPostRestricted) {
+                                    Modifier.clip(ObscuredOverlayShape).hazeSource(state = postHazeState)
+                                } else Modifier
+                            )
                     ) {
                         // 포스트 작성자 이름 + 시간 + 더보기
                         Row(
@@ -264,7 +270,7 @@ fun CommentThreadItem(
 
                     // 잠금 포스트 오버레이
                     if (isPostRestricted) {
-                        ObscuredOverlay(
+                        LockedOverlay(
                             hazeState = postHazeState,
                             icon = R.drawable.ic_lock,
                             label = if (thread.post.isSecret) "비밀글" else "${thread.post.requiredTier} 이상 멤버십 전용",

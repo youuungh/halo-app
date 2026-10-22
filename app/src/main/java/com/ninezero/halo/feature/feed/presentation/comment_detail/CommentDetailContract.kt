@@ -91,7 +91,6 @@ sealed interface CommentDetailIntent {
     data object EditPost : CommentDetailIntent
     data object PinPost : CommentDetailIntent
     data object BookmarkPost : CommentDetailIntent
-    data object HidePost : CommentDetailIntent
 
     // 차단 다이얼로그
     data object BlockCommentAuthor : CommentDetailIntent

@@ -65,7 +65,6 @@ sealed interface PostDetailIntent {
     data object DeletePost : PostDetailIntent
     data object EditPost : PostDetailIntent
     data object PinPost : PostDetailIntent
-    data object NotInterestedPost : PostDetailIntent
 
     // 댓글
     data object LoadMoreComments : PostDetailIntent

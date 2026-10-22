@@ -19,7 +19,8 @@ data class HaloBlurStyle(
     val backgroundColor: Color = Color.Unspecified,
     val tint: HaloBlurTint? = null,
     val blurRadius: Dp = Dp.Unspecified,
-    val noiseFactor: Float = -1f
+    val noiseFactor: Float = -1f,
+    val fallbackTint: HaloBlurTint? = null
 )
 
 @Immutable
@@ -43,6 +44,7 @@ fun Modifier.haloBlur(
             resolved.tint?.let { colorEffects(listOf(HazeColorEffect.tint(it.color))) }
             if (resolved.blurRadius.isSpecified) blurRadius(resolved.blurRadius)
             if (resolved.noiseFactor >= 0f) noiseFactor(resolved.noiseFactor)
+            resolved.fallbackTint?.let { fallbackColorEffect(HazeColorEffect.tint(it.color)) }
             scope.progressive?.let { progressive(it) }
         },
         performanceMode = HazePerformanceMode.Quality

@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.feed.data.repository
 
+import com.ninezero.halo.core.database.dao.CachedChatRoomDao
 import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.network.dto.toDomain
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 class BlockRepositoryImpl @Inject constructor(
     private val api: BlockApi,
-    private val blockEventBus: BlockEventBus
+    private val blockEventBus: BlockEventBus,
+    private val cachedChatRoomDao: CachedChatRoomDao
 ) : BlockRepository {
 
     override suspend fun toggleBlock(userId: Int): Result<Boolean> {
@@ -21,6 +23,8 @@ class BlockRepositoryImpl @Inject constructor(
         }.map { response ->
             response.isBlocked
         }.onSuccess { isBlocked ->
+            // 채팅방 진입 시 차단 안내를 바로 그리도록 캐시 먼저
+            cachedChatRoomDao.setBlockedByMe(userId, isBlocked)
             if (isBlocked) {
                 blockEventBus.emitBlocked(userId)
             } else {
@@ -37,6 +41,8 @@ class BlockRepositoryImpl @Inject constructor(
                 isBlockedByMe = response.isBlockedByMe,
                 isBlockedByOther = response.isBlockedByOther
             )
+        }.onSuccess { relation ->
+            cachedChatRoomDao.setBlockRelation(userId, relation.isBlockedByMe, relation.isBlockedByOther)
         }
     }
 

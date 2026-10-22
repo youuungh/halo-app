@@ -416,7 +416,6 @@ class UserProfileViewModel @Inject constructor(
             is UserProfileIntent.ShowPostOptions -> showPostOptions(intent.post)
             is UserProfileIntent.DismissPostOptions -> dismissPostOptions()
             is UserProfileIntent.BookmarkPost -> bookmarkPost()
-            is UserProfileIntent.NotInterestedPost -> notInterestedPost()
             is UserProfileIntent.BlockPostAuthor -> blockPostAuthor()
             is UserProfileIntent.EditPost -> editPost()
             is UserProfileIntent.DeletePost -> deletePost()
@@ -447,7 +446,6 @@ class UserProfileViewModel @Inject constructor(
             is UserProfileIntent.ShowThreadPostOptions -> showThreadPostOptions(intent.post)
             is UserProfileIntent.DismissThreadPostOptions -> dismissThreadPostOptions()
             is UserProfileIntent.BookmarkThreadPost -> bookmarkThreadPost()
-            is UserProfileIntent.NotInterestedThreadPost -> notInterestedThreadPost()
             is UserProfileIntent.BlockThreadPostAuthor -> blockThreadPostAuthor()
             // 홈 탭, Creator 전용
             is UserProfileIntent.NavigateToSectionDetail -> navigateToSectionDetail(
@@ -780,7 +778,9 @@ class UserProfileViewModel @Inject constructor(
                 username = profile.username,
                 displayName = profile.displayName,
                 avatarUrl = (profile.avatarThumbUrl ?: profile.avatarUrl) ?: "",
-                role = profile.role
+                role = profile.role,
+                isBlockedByMe = profile.isBlockedByMe,
+                isBlockedByOther = profile.isBlockedByOther
             )
         )
     }
@@ -1125,37 +1125,6 @@ class UserProfileViewModel @Inject constructor(
         communityPosts = communityPosts.map { if (it.id == postId) transform(it) else it },
         communityPinnedPosts = communityPinnedPosts.map { if (it.id == postId) transform(it) else it }
     )
-
-    private fun notInterestedPost() = intent {
-        val post = state.selectedPost ?: return@intent
-        val postId = post.id
-
-        reduce {
-            state.copy(
-                showPostOptionsSheet = false,
-                selectedPost = null
-            )
-        }
-
-        postMutationDelegate.hidePost(postId)
-            .onSuccess { isHidden ->
-                if (isHidden) {
-                    reduce {
-                        state.copy(
-                            userPosts = state.userPosts.filter { it.id != postId },
-                            communityPosts = state.communityPosts.filter { it.id != postId },
-                            communityPinnedPosts = state.communityPinnedPosts.filter { it.id != postId },
-                            snackbarState = SnackbarState("관심없음 처리되었습니다")
-                        )
-                    }
-                }
-            }
-            .onFailure { error ->
-                reduce {
-                    state.copy(snackbarState = SnackbarState(error.message ?: "처리 실패"))
-                }
-            }
-    }
 
     private fun blockPostAuthor() = intent {
         val post = state.selectedPost ?: return@intent
@@ -1580,35 +1549,6 @@ class UserProfileViewModel @Inject constructor(
                         },
                         snackbarState = SnackbarState("저장 실패")
                     )
-                }
-            }
-    }
-
-    private fun notInterestedThreadPost() = intent {
-        val post = state.selectedThreadPost ?: return@intent
-        val postId = post.id
-
-        reduce {
-            state.copy(
-                showThreadPostOptionsSheet = false,
-                selectedThreadPost = null
-            )
-        }
-
-        postMutationDelegate.hidePost(postId)
-            .onSuccess { isHidden ->
-                if (isHidden) {
-                    reduce {
-                        state.copy(
-                            userCommentThreads = state.userCommentThreads.filter { it.post.id != postId },
-                            snackbarState = SnackbarState("관심없음 처리되었습니다")
-                        )
-                    }
-                }
-            }
-            .onFailure { error ->
-                reduce {
-                    state.copy(snackbarState = SnackbarState(error.message ?: "처리 실패"))
                 }
             }
     }

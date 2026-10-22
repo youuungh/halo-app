@@ -99,6 +99,8 @@ class ChatRoomViewModel @Inject constructor(
             ChatRoomState(
                 roomId = roomId,
                 otherUser = seededOtherUser,
+                isBlocked = savedStateHandle.get<Boolean>("targetBlockedByMe") ?: false,
+                isBlockedByOther = savedStateHandle.get<Boolean>("targetBlockedByOther") ?: false,
                 messages = seededMessages,
                 hasMore = !messageCache.isHistoryComplete(roomId)
             )
@@ -109,6 +111,7 @@ class ChatRoomViewModel @Inject constructor(
     init {
         // draft 모드는 기존 방 조회, 없으면 첫 전송 때 생성
         if (isDraftMode) {
+            loadBlockStatus(targetUserId)
             initDraftMode()
         } else {
             failStuckTextMessages()
@@ -166,6 +169,10 @@ class ChatRoomViewModel @Inject constructor(
                     intent {
                         if (!state.otherUserLoaded) {
                             reduce { state.copy(otherUser = chat.otherUser) }
+                        }
+                        reduce {
+                            if (state.blockStatusLoaded) state
+                            else state.copy(isBlocked = chat.isBlockedByMe, isBlockedByOther = chat.isBlockedByOther)
                         }
                     }
                 }
@@ -234,7 +241,6 @@ class ChatRoomViewModel @Inject constructor(
                         )
                     }
                     observeMessagesFromDb()  // roomId 갱신 후 observe 재시작
-                    loadBlockStatus(existingChat.otherUser.id)
                     loadMessages(isEntry = true)
                 } else {
                     // 채팅방 없음이면 빈 draft 확정
@@ -265,7 +271,6 @@ class ChatRoomViewModel @Inject constructor(
                     isFollowing = profile.isFollowing
                 )
                 reduce { state.copy(otherUser = summary, otherUserLoaded = true) }
-                loadBlockStatus(summary.id)
             }
             .onFailure { error ->
                 Timber.e(error, "draft 상대 사용자 로드 실패")
@@ -331,19 +336,18 @@ class ChatRoomViewModel @Inject constructor(
             }
     }
 
-    /** 양쪽 차단 관계 로드 */
     private fun loadBlockStatus(userId: Int) = intent {
         blockRepository.getBlockRelation(userId)
             .onSuccess { relation ->
                 reduce {
                     state.copy(
                         isBlocked = relation.isBlockedByMe,
-                        isBlockedByOther = relation.isBlockedByOther
+                        isBlockedByOther = relation.isBlockedByOther,
+                        blockStatusLoaded = true
                     )
                 }
             }
     }
-
 
     // 옛 캐시 비우기는 진입 때만
     private fun loadMessages(isEntry: Boolean) = intent {

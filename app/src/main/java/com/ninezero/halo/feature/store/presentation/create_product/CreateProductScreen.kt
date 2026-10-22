@@ -62,6 +62,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassActionButton
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
@@ -103,7 +104,8 @@ fun CreateProductScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    BackHandler {
+    // 입력한 게 없으면 예측형 뒤로가기 그대로
+    BackHandler(enabled = state.hasUnsavedChanges) {
         viewModel.onIntent(CreateProductIntent.NavigateBack)
     }
 
@@ -138,6 +140,18 @@ fun CreateProductScreen(
 
     if (state.isSaving) {
         LoadingDialog()
+    }
+
+    if (state.showExitConfirmDialog) {
+        ConfirmDialog(
+            title = if (state.isEditMode) "수정을 취소할까요?" else "작성을 취소할까요?",
+            message = if (state.isEditMode) "변경한 내용은 저장되지 않습니다" else "작성한 내용은 저장되지 않습니다",
+            confirmText = "나가기",
+            dismissText = if (state.isEditMode) "계속 수정" else "계속 작성",
+            confirmColor = MaterialTheme.colorScheme.error,
+            onConfirm = { viewModel.onIntent(CreateProductIntent.ConfirmExit) },
+            onDismiss = { viewModel.onIntent(CreateProductIntent.DismissExitConfirm) }
+        )
     }
 }
 

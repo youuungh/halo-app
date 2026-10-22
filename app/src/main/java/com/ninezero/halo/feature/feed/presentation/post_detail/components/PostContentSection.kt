@@ -196,6 +196,10 @@ fun PostContentSection(
         Spacer(modifier = Modifier.height(12.dp))
 
         // 액션 버튼
+        val actionsEnabled = !post.isBlinded
+        val actionColor = if (actionsEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+        val likeColor = if (post.isLiked && actionsEnabled) Like else actionColor
+
         Row(
             modifier = Modifier.padding(horizontal = horizontalPadding),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
@@ -207,6 +211,7 @@ fun PostContentSection(
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
+                    enabled = actionsEnabled,
                     onClick = onLikeClick
                 )
             ) {
@@ -215,17 +220,17 @@ fun PostContentSection(
                         if (post.isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart
                     ),
                     contentDescription = "좋아요",
-                    tint = if (post.isLiked) Like else MaterialTheme.colorScheme.onSurface,
+                    tint = likeColor,
                     modifier = Modifier
                         .size(20.dp)
-                        .bounceClick()
+                        .bounceClick(enabled = actionsEnabled)
                 )
                 if (post.likeCount > 0) {
                     Spacer(modifier = Modifier.width(4.dp))
                     AnimatedCounter(
                         count = post.likeCount,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (post.isLiked) Like else MaterialTheme.colorScheme.onSurface
+                        color = likeColor
                     )
                 }
             }
@@ -236,23 +241,24 @@ fun PostContentSection(
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
+                    enabled = actionsEnabled,
                     onClick = onCommentClick
                 )
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_comment),
                     contentDescription = "댓글",
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = actionColor,
                     modifier = Modifier
                         .size(20.dp)
-                        .bounceClick()
+                        .bounceClick(enabled = actionsEnabled)
                 )
                 if (post.commentCount > 0) {
                     Spacer(modifier = Modifier.width(4.dp))
                     AnimatedCounter(
                         count = post.commentCount,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = actionColor
                     )
                 }
             }
@@ -263,16 +269,17 @@ fun PostContentSection(
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
+                    enabled = actionsEnabled,
                     onClick = onShareClick
                 )
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_send),
                     contentDescription = "공유",
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = actionColor,
                     modifier = Modifier
                         .size(20.dp)
-                        .bounceClick()
+                        .bounceClick(enabled = actionsEnabled)
                 )
                 if (post.shareCount > 0) {
                     Spacer(modifier = Modifier.width(4.dp))

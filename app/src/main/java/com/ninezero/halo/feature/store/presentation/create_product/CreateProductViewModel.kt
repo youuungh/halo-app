@@ -56,7 +56,7 @@ class CreateProductViewModel @Inject constructor(
             CreateProductState(
                 isEditMode = productId != null,
                 productId = productId
-            )
+            ).let { if (productId == null) it.copy(initialForm = it.toFormSnapshot()) else it }
         )
 
     init {
@@ -73,6 +73,8 @@ class CreateProductViewModel @Inject constructor(
     fun onIntent(intent: CreateProductIntent) {
         when (intent) {
             is CreateProductIntent.NavigateBack -> navigateBack()
+            is CreateProductIntent.ConfirmExit -> confirmExit()
+            is CreateProductIntent.DismissExitConfirm -> dismissExitConfirm()
             is CreateProductIntent.UpdateName -> updateName(intent.name)
             is CreateProductIntent.UpdateDescription -> updateDescription(intent.description)
             is CreateProductIntent.UpdatePrice -> updatePrice(intent.price)
@@ -149,7 +151,7 @@ class CreateProductViewModel @Inject constructor(
                     selectedSectionTagId = product.sectionTag?.id,
                     existingImageUrls = product.imageUrls,
                     detailBlocks = blocks
-                )
+                ).let { it.copy(initialForm = it.toFormSnapshot()) }
             }
         }.onFailure { error ->
             reduce {
@@ -342,8 +344,22 @@ class CreateProductViewModel @Inject constructor(
         )
     }
 
+    // 입력한 게 있으면 확인부터
     private fun navigateBack() = intent {
+        if (state.hasUnsavedChanges) {
+            reduce { state.copy(showExitConfirmDialog = true) }
+        } else {
+            postSideEffect(CreateProductSideEffect.NavigateBack)
+        }
+    }
+
+    private fun confirmExit() = intent {
+        reduce { state.copy(showExitConfirmDialog = false) }
         postSideEffect(CreateProductSideEffect.NavigateBack)
+    }
+
+    private fun dismissExitConfirm() = intent {
+        reduce { state.copy(showExitConfirmDialog = false) }
     }
 
     private fun dismissSnackbar() = intent {

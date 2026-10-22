@@ -24,6 +24,8 @@ object ChatRoomCacheMapper {
             lastMessageTimestamp = lastMessage?.timestamp,
             unreadCount = unreadCount,
             isArchived = isArchived,
+            isBlockedByMe = isBlockedByMe,
+            isBlockedByOther = isBlockedByOther,
             createdAt = createdAt
         )
     }
@@ -51,6 +53,8 @@ object ChatRoomCacheMapper {
             } else null,
             unreadCount = unreadCount,
             isArchived = isArchived,
+            isBlockedByMe = isBlockedByMe,
+            isBlockedByOther = isBlockedByOther,
             createdAt = createdAt
         )
     }

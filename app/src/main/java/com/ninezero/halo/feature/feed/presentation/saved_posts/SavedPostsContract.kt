@@ -44,7 +44,6 @@ sealed interface SavedPostsIntent {
     data class LikePost(val postId: Int) : SavedPostsIntent
     data class UnlikePost(val postId: Int) : SavedPostsIntent
     data class BookmarkPost(val postId: Int) : SavedPostsIntent
-    data class HidePost(val postId: Int) : SavedPostsIntent
     data class BlockUser(val userId: Int) : SavedPostsIntent
     data class FollowUser(val userId: Int) : SavedPostsIntent
     data class UnfollowUser(val userId: Int) : SavedPostsIntent

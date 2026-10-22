@@ -142,7 +142,6 @@ sealed interface UserProfileIntent {
     data class ShowPostOptions(val post: Post) : UserProfileIntent
     data object DismissPostOptions : UserProfileIntent
     data object BookmarkPost : UserProfileIntent
-    data object NotInterestedPost : UserProfileIntent
     data object BlockPostAuthor : UserProfileIntent
     // 내 글, 내 프로필 진입 또는 남의 커뮤니티에 쓴 글
     data object EditPost : UserProfileIntent
@@ -173,7 +172,6 @@ sealed interface UserProfileIntent {
     data class ShowThreadPostOptions(val post: PostSummaryData) : UserProfileIntent
     data object DismissThreadPostOptions : UserProfileIntent
     data object BookmarkThreadPost : UserProfileIntent
-    data object NotInterestedThreadPost : UserProfileIntent
     data object BlockThreadPostAuthor : UserProfileIntent
 
     // 홈 탭, Creator 전용
@@ -216,7 +214,9 @@ sealed interface UserProfileSideEffect {
         val username: String = "",
         val displayName: String = "",
         val avatarUrl: String = "",
-        val role: String = "USER"
+        val role: String = "USER",
+        val isBlockedByMe: Boolean = false,
+        val isBlockedByOther: Boolean = false
     ) : UserProfileSideEffect
     data class NavigateToProductDetail(val productId: Int) : UserProfileSideEffect
     data class NavigateToCreateCommunityPost(val creatorId: Int) : UserProfileSideEffect

@@ -742,7 +742,8 @@ internal fun PostDetailScreenContent(
                     .onGloballyPositioned { coordinates ->
                         inputBarHeight = with(density) { coordinates.size.height.toDp() }
                     },
-                actionText = "댓글"
+                actionText = "댓글",
+                disabledText = if (state.post?.isBlinded == true) "블라인드된 포스트에는 댓글을 남길 수 없습니다" else null
             )
         }
 
@@ -765,7 +766,7 @@ internal fun PostDetailScreenContent(
             onEdit = { onIntent(PostDetailIntent.EditPost) },
             onDelete = { onIntent(PostDetailIntent.DeletePost) },
             onBookmark = { onIntent(PostDetailIntent.BookmarkPost) },
-            onNotInterested = { onIntent(PostDetailIntent.NotInterestedPost) },
+            onNotInterested = null,
             onBlock = { onIntent(PostDetailIntent.BlockAuthor) },
             onReport = { reportRequester(ReportTargetType.POST, state.post.id) },
             // 피드 고정은 크리에이터 피드의 내 글만

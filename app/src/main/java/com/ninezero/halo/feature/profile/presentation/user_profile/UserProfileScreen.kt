@@ -74,7 +74,7 @@ fun UserProfileScreen(
     onNavigateToPostDetail: (Int) -> Unit = {},
     onNavigateToUserProfile: (Int) -> Unit = {},
     onNavigateToMessage: (Int) -> Unit = {},
-    onNavigateToNewChat: (targetUserId: Int, username: String, displayName: String, avatarUrl: String, role: String) -> Unit = { _, _, _, _, _ -> },
+    onNavigateToNewChat: (targetUserId: Int, username: String, displayName: String, avatarUrl: String, role: String, isBlockedByMe: Boolean, isBlockedByOther: Boolean) -> Unit = { _, _, _, _, _, _, _ -> },
     onNavigateToProductDetail: (Int) -> Unit = {},
     onNavigateToSectionDetail: (SectionType, Int, Int?, String) -> Unit = { _, _, _, _ -> },
     onNavigateToCreateCommunityPost: (Int) -> Unit = {},
@@ -113,7 +113,9 @@ fun UserProfileScreen(
                 sideEffect.username,
                 sideEffect.displayName,
                 sideEffect.avatarUrl,
-                sideEffect.role
+                sideEffect.role,
+                sideEffect.isBlockedByMe,
+                sideEffect.isBlockedByOther
             )
 
             is UserProfileSideEffect.NavigateToProductDetail -> onNavigateToProductDetail(sideEffect.productId)
@@ -382,7 +384,7 @@ internal fun UserProfileScreenContent(
             onDelete = { onIntent(UserProfileIntent.DeletePost) },
             onPin = {},
             onBookmark = { onIntent(UserProfileIntent.BookmarkPost) },
-            onNotInterested = { onIntent(UserProfileIntent.NotInterestedPost) },
+            onNotInterested = null,
             onBlock = { onIntent(UserProfileIntent.BlockPostAuthor) },
             onReport = { reportRequester(ReportTargetType.POST, selectedPost.id) }
         )
@@ -413,7 +415,7 @@ internal fun UserProfileScreenContent(
             onEdit = {},
             onDelete = {},
             onBookmark = { onIntent(UserProfileIntent.BookmarkThreadPost) },
-            onNotInterested = { onIntent(UserProfileIntent.NotInterestedThreadPost) },
+            onNotInterested = null,
             onBlock = { onIntent(UserProfileIntent.BlockThreadPostAuthor) },
             onReport = { reportRequester(ReportTargetType.POST, state.selectedThreadPost.id) }
         )

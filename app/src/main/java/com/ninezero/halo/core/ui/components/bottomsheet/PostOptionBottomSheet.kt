@@ -25,15 +25,15 @@ fun PostOptionBottomSheet(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onBookmark: () -> Unit,
-    onNotInterested: () -> Unit,
+    onNotInterested: (() -> Unit)?,
     onBlock: () -> Unit,
     onReport: () -> Unit,
     modifier: Modifier = Modifier,
     isBookmarked: Boolean = false,
-    canPin: Boolean = false,  // 고정 가능 여부는 호출부가 글 종류·권한으로 판단
+    canPin: Boolean = false,
     isPinned: Boolean = false,
     canCreatorDelete: Boolean = false,
-    copyLink: String? = null,  // 외부 링크, null이면 숨김
+    copyLink: String? = null,
     onPin: () -> Unit = {},
     sheetState: SheetState = rememberModalBottomSheetState()
 ) {
@@ -94,7 +94,7 @@ fun PostOptionBottomSheet(
                 )
             } else {
                 BottomSheetMenuItemGroup(
-                    items = listOf(
+                    items = listOfNotNull(
                         BottomSheetMenuItemData(
                             text = if (isBookmarked) "저장 취소" else "저장",
                             iconRes = if (isBookmarked) R.drawable.ic_bookmark_slash else R.drawable.ic_bookmark,
@@ -103,14 +103,16 @@ fun PostOptionBottomSheet(
                                 onDismiss()
                             }
                         ),
-                        BottomSheetMenuItemData(
-                            text = "관심없음",
-                            iconRes = R.drawable.ic_eye_off,
-                            onClick = {
-                                onNotInterested()
-                                onDismiss()
-                            }
-                        )
+                        onNotInterested?.let { action ->
+                            BottomSheetMenuItemData(
+                                text = "관심없음",
+                                iconRes = R.drawable.ic_eye_off,
+                                onClick = {
+                                    action()
+                                    onDismiss()
+                                }
+                            )
+                        }
                     )
                 )
                 // 크리에이터가 커뮤니티에서 다른 사람 글 삭제

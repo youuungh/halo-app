@@ -222,12 +222,24 @@ internal fun CommentDetailScreenContent(
         VideoPreloader.prefetch(context, orderedVideoUrls.drop(start).take(2).map { it.second })
     }
 
+    // 답글 불가 사유, 입력바는 이 문구만
+    val parentComment = state.parentComment
+    val replyDisabledText = when {
+        state.post?.isBlocked == true || state.unavailablePost != null -> "볼 수 없는 포스트에는 답글을 남길 수 없습니다"
+        state.post?.isBlinded == true -> "블라인드된 포스트에는 답글을 남길 수 없습니다"
+        parentComment?.isBlinded == true -> "블라인드된 댓글에는 답글을 남길 수 없습니다"
+        parentComment?.isDeleted == true -> "삭제된 댓글에는 답글을 남길 수 없습니다"
+        parentComment?.isBlocked == true -> "차단된 사용자의 댓글에는 답글을 남길 수 없습니다"
+        else -> null
+    }
+
     // 잠금 글 답글: 비밀글 스낵바, 티어 구독 시트
     val snackbarRelay = LocalSnackbarRelay.current
     val subscribeRequester = LocalSubscribeRequester.current
     val onReplyComposeClick: () -> Unit = {
         val restrictedPost = state.post?.takeIf { it.isRestricted }
         when {
+            replyDisabledText != null -> Unit
             restrictedPost == null -> onNavigateToReply()
             restrictedPost.isSecret -> snackbarRelay.showOrToast(context, "크리에이터만 댓글을 남길 수 있습니다")
             else -> subscribeRequester(
@@ -746,9 +758,7 @@ internal fun CommentDetailScreenContent(
         )
 
         // 답글 입력창, 로드 성공 시에만
-        val isPostObscured = state.post?.isBlocked == true || state.unavailablePost != null  // 못 보는 원글엔 답글 불가
-        val isParentCommentObscured = state.parentComment?.let { it.isBlocked || it.isDeleted } == true  // 삭제 자리엔 답글 불가
-        if (!(state.isRepliesLoading && state.replies.isEmpty() && !state.isChangingSort) && state.repliesError == null && state.parentComment != null && !isPostObscured && !isParentCommentObscured) {
+        if (!(state.isRepliesLoading && state.replies.isEmpty() && !state.isChangingSort) && state.repliesError == null && state.parentComment != null) {
             CommentInputBar(
                 targetAuthorName = state.parentComment.author.displayName
                     ?: state.parentComment.author.username,
@@ -761,7 +771,8 @@ internal fun CommentDetailScreenContent(
                     .onGloballyPositioned { coordinates ->
                         inputBarHeight = with(density) { coordinates.size.height.toDp() }
                     },
-                actionText = "답글"
+                actionText = "답글",
+                disabledText = replyDisabledText
             )
         }
 
@@ -797,7 +808,7 @@ internal fun CommentDetailScreenContent(
             onEdit = { onIntent(CommentDetailIntent.EditPost) },
             onDelete = { /* CommentDetail에서는 삭제 불가 */ },
             onBookmark = { onIntent(CommentDetailIntent.BookmarkPost) },
-            onNotInterested = { onIntent(CommentDetailIntent.HidePost) },
+            onNotInterested = null,
             onBlock = { onIntent(CommentDetailIntent.BlockPostAuthor) },
             onReport = { reportRequester(ReportTargetType.POST, state.post.id) },
             // 피드 고정은 크리에이터 피드의 내 글만

@@ -489,7 +489,7 @@ internal fun MyProfileScreenContent(
             onEdit = { onIntent(if (isCommunityPost) MyProfileIntent.EditCommunityPost else MyProfileIntent.EditPost) },
             onDelete = { onIntent(if (isCommunityPost) MyProfileIntent.DeleteCommunityPost else MyProfileIntent.DeletePost) },
             onBookmark = { onIntent(MyProfileIntent.BookmarkPost) },
-            onNotInterested = { onIntent(MyProfileIntent.NotInterestedPost) },
+            onNotInterested = null,
             onBlock = { onIntent(MyProfileIntent.BlockPostAuthor) },
             onReport = { reportRequester(ReportTargetType.POST, selectedPost.id) },
             // 고정은 내 커뮤니티·크리에이터 피드 글, 비밀글은 해제만
@@ -527,7 +527,7 @@ internal fun MyProfileScreenContent(
             onEdit = {},
             onDelete = {},
             onBookmark = { onIntent(MyProfileIntent.BookmarkThreadPost) },
-            onNotInterested = { onIntent(MyProfileIntent.NotInterestedThreadPost) },
+            onNotInterested = null,
             onBlock = { onIntent(MyProfileIntent.BlockThreadPostAuthor) },
             onReport = { reportRequester(ReportTargetType.POST, state.selectedThreadPost.id) }
         )

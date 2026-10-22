@@ -238,7 +238,6 @@ class PostDetailViewModel @Inject constructor(
             is PostDetailIntent.DeletePost -> deletePost()
             is PostDetailIntent.EditPost -> editPost()
             is PostDetailIntent.PinPost -> pinPost()
-            is PostDetailIntent.NotInterestedPost -> notInterestedPost()
 
             // 댓글 관련
             is PostDetailIntent.LoadMoreComments -> loadMoreComments()
@@ -462,16 +461,6 @@ class PostDetailViewModel @Inject constructor(
                         snackbarState = SnackbarState(error.message ?: "고정 처리 실패")
                     )
                 }
-            }
-    }
-
-    private fun notInterestedPost() = intent {
-        val post = state.post ?: return@intent
-        dismissPostOptions()
-
-        postMutationDelegate.hidePost(post.id)
-            .onSuccess {
-                postSideEffect(PostDetailSideEffect.NavigateBack)
             }
     }
 

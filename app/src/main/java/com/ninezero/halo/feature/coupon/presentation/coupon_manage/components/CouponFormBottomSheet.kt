@@ -72,6 +72,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun CouponFormBottomSheet(
     isEditing: Boolean,
+    isIssued: Boolean,  // 받은 사람이 있으면 사용 조건 잠금
     formState: CouponFormState,
     isSaving: Boolean,
     onDismiss: () -> Unit,
@@ -109,6 +110,7 @@ fun CouponFormBottomSheet(
         Box {
             CouponFormBottomSheetContent(
                 isEditing = isEditing,
+                isIssued = isIssued,
                 formState = formState,
                 onDismiss = onDismiss,
                 onCodeChange = onCodeChange,
@@ -142,6 +144,7 @@ fun CouponFormBottomSheet(
 @Composable
 private fun CouponFormBottomSheetContent(
     isEditing: Boolean,
+    isIssued: Boolean,
     formState: CouponFormState,
     onDismiss: () -> Unit,
     onCodeChange: (String) -> Unit,
@@ -285,6 +288,7 @@ private fun CouponFormBottomSheetContent(
                         imeAction = ImeAction.Next,
                         onNext = { focusManager.moveFocus(FocusDirection.Down) },
                         prefix = "₩",
+                        enabled = !isIssued,
                         numberFormat = true
                     )
                 }
@@ -304,6 +308,7 @@ private fun CouponFormBottomSheetContent(
                             imeAction = ImeAction.Next,
                             onNext = { focusManager.moveFocus(FocusDirection.Down) },
                             prefix = "₩",
+                            enabled = !isIssued,
                             numberFormat = true
                         )
                     }
@@ -334,6 +339,7 @@ private fun CouponFormBottomSheetContent(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Next,
                         onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                        enabled = !isIssued,
                         isError = showErrors && (formState.maxUseCount.isBlank() || (formState.maxUseCount.toIntOrNull() ?: 0) <= 0),
                         errorMessage = "사용 횟수를 입력해주세요"
                     )
@@ -599,6 +605,7 @@ private fun CouponFormBottomSheetCreatePreview() {
         Surface {
             CouponFormBottomSheetContent(
                 isEditing = false,
+                isIssued = false,
                 formState = CouponFormState(),
                 onDismiss = {},
                 onCodeChange = {},
@@ -625,6 +632,7 @@ private fun CouponFormBottomSheetEditPreview() {
         Surface {
             CouponFormBottomSheetContent(
                 isEditing = true,
+                isIssued = true,
                 formState = CouponFormState(
                     code = "WELCOME10",
                     name = "신규 가입 할인 쿠폰",
@@ -663,6 +671,7 @@ private fun CouponFormBottomSheetFreeShippingPreview() {
         Surface {
             CouponFormBottomSheetContent(
                 isEditing = false,
+                isIssued = false,
                 formState = CouponFormState(
                     code = "FREESHIP",
                     name = "무료배송 쿠폰",
@@ -700,6 +709,7 @@ private fun CouponFormBottomSheetValidationPreview() {
         Surface {
             CouponFormBottomSheetContent(
                 isEditing = false,
+                isIssued = false,
                 formState = CouponFormState(
                     name = "",
                     discountValue = "",

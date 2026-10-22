@@ -36,7 +36,8 @@ fun CommentInputBar(
     onInputClick: () -> Unit,
     onCancelReply: () -> Unit,
     modifier: Modifier = Modifier,
-    actionText: String = "댓글"
+    actionText: String = "댓글",
+    disabledText: String? = null
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
 
@@ -67,11 +68,16 @@ fun CommentInputBar(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .bounceClick()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onInputClick
+                    .then(
+                        if (disabledText == null) {
+                            Modifier
+                                .bounceClick()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onInputClick
+                                )
+                        } else Modifier
                     )
                     .clip(RoundedCornerShape(20.dp))
                     .haloBlur(state = hazeState) {
@@ -86,7 +92,7 @@ fun CommentInputBar(
                 contentAlignment = Alignment.CenterStart
             ) {
                 Text(
-                    text = replyTo?.let {
+                    text = disabledText ?: replyTo?.let {
                         "${it.author.displayName ?: it.author.username}님에게 답글 남기기"
                     } ?: targetAuthorName?.let {
                         "${it}님에게 $actionText 남기기"

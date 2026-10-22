@@ -8,6 +8,8 @@ data class Chat(
     val lastMessage: LastMessageInfo?,
     val unreadCount: Int,
     val isArchived: Boolean,
+    val isBlockedByMe: Boolean = false,
+    val isBlockedByOther: Boolean = false,
     val createdAt: Long
 )
 

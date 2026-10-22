@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,11 +41,13 @@ import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.PostAuthorBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
+import com.ninezero.halo.core.ui.components.comment.BlindHideButton
 import com.ninezero.halo.core.ui.components.comment.CommentMedia
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
+import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Author
@@ -67,8 +70,11 @@ fun ParentCommentItem(
     isPostAuthorReply: Boolean = false
 ) {
     val hazeState = remember { HazeState() }
+    var isBlindRevealed by rememberSaveable { mutableStateOf(false) }
     // 차단·삭제 자리는 아바타·본문을 가림
-    val isObscured = comment.isBlocked || comment.isDeleted
+    val obscuredByPolicy = comment.isBlocked || comment.isDeleted
+    val isObscured = obscuredByPolicy || (comment.isBlinded && !isBlindRevealed)
+    val hasMedia = comment.mediaAttachments.isNotEmpty() && !isObscured
     val likeAction = if (comment.isDeleted) ({}) else onLikeClick
 
     val horizontalPadding = 8.dp
@@ -99,7 +105,7 @@ fun ParentCommentItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(avatarSize)
             ) {
-                if (isObscured) {
+                if (obscuredByPolicy) {
                     Image(
                         painter = painterResource(R.drawable.ic_profile_placeholder),
                         contentDescription = null,
@@ -158,7 +164,11 @@ fun ParentCommentItem(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(if (isObscured) Modifier.hazeSource(state = hazeState) else Modifier)
+                        .then(if (isObscured) Modifier.clip(ObscuredOverlayShape) else Modifier)
+                        // 오버레이 꺼져도 블러 소스 유지
+                        .then(
+                            if (isObscured || comment.isBlinded) Modifier.hazeSource(state = hazeState) else Modifier
+                        )
                 ) {
                     // 이름 + 시간 + 더보기
                     Row(
@@ -177,9 +187,16 @@ fun ParentCommentItem(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (isPostAuthorReply && !isObscured) PostAuthorBadge()
+                        if (isPostAuthorReply && !obscuredByPolicy) PostAuthorBadge()
                         Spacer(modifier = Modifier.weight(1f))
-                        if (onMoreClick != null && !isObscured) {
+                        // 펼친 블라인드 본문 다시 가리기
+                        if (comment.isBlinded && !comment.isDeleted && isBlindRevealed) {
+                            BlindHideButton(
+                                onClick = { isBlindRevealed = false },
+                                showDivider = onMoreClick != null && !obscuredByPolicy
+                            )
+                        }
+                        if (onMoreClick != null && !obscuredByPolicy) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_ellipsis_horizontal),
                                 contentDescription = "더보기",
@@ -206,7 +223,7 @@ fun ParentCommentItem(
                     }
 
                     // 좋아요·답글 버튼
-                    if (comment.mediaAttachments.isEmpty()) {
+                    if (!hasMedia) {
                         ParentReplyButtons(
                             comment = comment,
                             onLikeClick = likeAction,
@@ -216,20 +233,37 @@ fun ParentCommentItem(
                     }
                 }
 
-                // 차단·삭제 자리 오버레이
+                // 차단·삭제·블라인드 자리 오버레이
                 if (isObscured) {
+                    val isBlindedPlaceholder = comment.isBlinded && comment.isDeleted
                     ObscuredOverlay(
                         hazeState = hazeState,
-                        icon = if (comment.isDeleted) R.drawable.ic_delete else R.drawable.ic_block,
-                        label = if (comment.isDeleted) "삭제된 댓글입니다" else "차단된 사용자입니다",
-                        contentDescription = if (comment.isDeleted) "삭제됨" else "차단됨"
+                        icon = when {
+                            comment.isBlinded -> R.drawable.ic_warning
+                            comment.isDeleted -> R.drawable.ic_delete
+                            else -> R.drawable.ic_block
+                        },
+                        label = when {
+                            isBlindedPlaceholder -> "신고 누적으로 가려진 댓글입니다"
+                            comment.isBlinded -> "신고 누적으로 블라인드 처리되었습니다"
+                            comment.isDeleted -> "삭제된 댓글입니다"
+                            else -> "차단된 사용자입니다"
+                        },
+                        contentDescription = when {
+                            comment.isBlinded -> "가려짐"
+                            comment.isDeleted -> "삭제됨"
+                            else -> "차단됨"
+                        },
+                        color = if (comment.isBlinded) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        // 펼칠 본문 있는 작성자만 탭해서 펼침
+                        onClick = if (comment.isBlinded && !comment.isDeleted) ({ isBlindRevealed = true }) else null
                     )
                 }
             }
         }
 
         // 미디어
-        if (comment.mediaAttachments.isNotEmpty() && !isObscured) {
+        if (hasMedia) {
             CommentMedia(
                 mediaAttachments = comment.mediaAttachments,
                 startPadding = horizontalPadding + avatarSize + avatarSpacing,
@@ -283,6 +317,10 @@ private fun ParentReplyButtons(
     onCommentClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val enabled = !comment.isBlinded
+    val baseColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+    val likeColor = if (comment.isLiked && enabled) Like else baseColor
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(20.dp),
@@ -294,6 +332,7 @@ private fun ParentReplyButtons(
             modifier = Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = enabled,
                 onClick = onLikeClick
             )
         ) {
@@ -304,15 +343,15 @@ private fun ParentReplyButtons(
                 contentDescription = "좋아요",
                 modifier = Modifier
                     .size(20.dp)
-                    .bounceClick(),
-                tint = if (comment.isLiked) Like else MaterialTheme.colorScheme.onSurface
+                    .bounceClick(enabled = enabled),
+                tint = likeColor
             )
             if (comment.likeCount > 0) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = comment.likeCount.toString(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (comment.isLiked) Like else MaterialTheme.colorScheme.onSurface
+                    color = likeColor
                 )
             }
         }
@@ -323,6 +362,7 @@ private fun ParentReplyButtons(
             modifier = Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = enabled,
                 onClick = onCommentClick
             )
         ) {
@@ -331,15 +371,15 @@ private fun ParentReplyButtons(
                 contentDescription = "답글",
                 modifier = Modifier
                     .size(20.dp)
-                    .bounceClick(),
-                tint = MaterialTheme.colorScheme.onSurface
+                    .bounceClick(enabled = enabled),
+                tint = baseColor
             )
             if (comment.replyCount > 0) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = comment.replyCount.toString(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = baseColor
                 )
             }
         }

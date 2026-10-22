@@ -120,7 +120,6 @@ sealed interface MyProfileIntent {
     data object PinPost : MyProfileIntent
     // 커뮤니티 탭 멤버 글
     data object BookmarkPost : MyProfileIntent
-    data object NotInterestedPost : MyProfileIntent
     data object BlockPostAuthor : MyProfileIntent
 
     // 답글 탭
@@ -149,7 +148,6 @@ sealed interface MyProfileIntent {
     data class ShowThreadPostOptions(val post: PostSummaryData) : MyProfileIntent
     data object DismissThreadPostOptions : MyProfileIntent
     data object BookmarkThreadPost : MyProfileIntent
-    data object NotInterestedThreadPost : MyProfileIntent
     data object BlockThreadPostAuthor : MyProfileIntent
 
     // 홈 탭, Creator 전용

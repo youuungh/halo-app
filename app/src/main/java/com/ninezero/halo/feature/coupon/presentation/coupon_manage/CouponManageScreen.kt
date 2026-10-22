@@ -124,13 +124,15 @@ internal fun CouponManageScreenContent(
             },
             onEdit = { onIntent(CouponManageIntent.ShowEditCouponSheet(coupon)) },
             onDelete = { onIntent(CouponManageIntent.ShowDeleteDialog(coupon)) },
-            onDismiss = { onIntent(CouponManageIntent.DismissCouponOptions) }
+            onDismiss = { onIntent(CouponManageIntent.DismissCouponOptions) },
+            copyCode = coupon.code
         )
     }
 
     if (state.showCouponBottomSheet) {
         CouponFormBottomSheet(
             isEditing = state.editingCoupon != null,
+            isIssued = (state.editingCoupon?.issuedQuantity ?: 0) > 0,
             formState = state.couponFormState,
             isSaving = state.isSaving,
             onDismiss = { onIntent(CouponManageIntent.DismissCouponSheet) },

@@ -62,7 +62,9 @@ import com.ninezero.halo.core.ui.components.media.clampedAspectRatio
 import com.ninezero.halo.core.ui.components.media.preferredAspectRatio
 import com.ninezero.halo.core.ui.components.media.singleMediaHeightForWidth
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.overlay.LockedOverlay
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
+import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
 import com.ninezero.halo.core.ui.components.text.buildHashtagAnnotatedString
 import com.ninezero.halo.core.ui.components.video_player.VideoPlayer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
@@ -223,7 +225,7 @@ fun PostPreviewSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (isRestricted) Modifier.heightIn(min = 80.dp) else Modifier)
-                            .then(if (isMasked) Modifier.hazeSource(state = hazeState) else Modifier)
+                            .then(if (isMasked) Modifier.clip(ObscuredOverlayShape).hazeSource(state = hazeState) else Modifier)
                     ) {
                         // 포스트 작성자 이름 + 시간 + 더보기
                         Row(
@@ -342,21 +344,21 @@ fun PostPreviewSection(
                         }
                     }
 
-                    // 차단/잠금 오버레이
-                    if (isMasked) {
-                        val overlayIcon = when {
-                            currentPost.isBlocked -> R.drawable.ic_block
-                            else -> R.drawable.ic_lock
-                        }
-                        val overlayText = when {
-                            currentPost.isBlocked -> "차단된 사용자입니다"
-                            currentPost.isSecret -> "비밀글"
-                            else -> "${currentPost.requiredTier} 이상 멤버십 전용"
-                        }
+                    // 차단 오버레이
+                    if (isObscured) {
                         ObscuredOverlay(
                             hazeState = hazeState,
-                            icon = overlayIcon,
-                            label = overlayText
+                            icon = R.drawable.ic_block,
+                            label = "차단된 사용자입니다"
+                        )
+                    }
+
+                    // 잠금 오버레이
+                    if (isRestricted) {
+                        LockedOverlay(
+                            hazeState = hazeState,
+                            icon = R.drawable.ic_lock,
+                            label = if (currentPost.isSecret) "비밀글" else "${currentPost.requiredTier} 이상 멤버십 전용"
                         )
                     }
                 }

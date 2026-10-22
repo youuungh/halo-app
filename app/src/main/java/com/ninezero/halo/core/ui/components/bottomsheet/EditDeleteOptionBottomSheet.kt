@@ -10,8 +10,10 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.deeplink.copyCodeToClipboard
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.ui.theme.HaloTheme
 
@@ -24,8 +26,10 @@ fun EditDeleteOptionBottomSheet(
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
     isActive: Boolean = false,
-    onToggleActive: (() -> Unit)? = null
+    onToggleActive: (() -> Unit)? = null,
+    copyCode: String? = null
 ) {
+    val context = LocalContext.current
     val errorColor = MaterialTheme.colorScheme.error
 
     ModalBottomSheet(
@@ -37,6 +41,16 @@ fun EditDeleteOptionBottomSheet(
     ) {
         BottomSheetDragHandle()
         Column(modifier = Modifier.navigationBarsPadding()) {
+            if (copyCode != null) {
+                BottomSheetMenuItem(
+                    text = "코드 복사",
+                    iconRes = R.drawable.ic_copy,
+                    onClick = {
+                        context.copyCodeToClipboard(copyCode)
+                        onDismiss()
+                    }
+                )
+            }
             if (onToggleActive != null) {
                 BottomSheetMenuItemGroup(
                     items = listOf(

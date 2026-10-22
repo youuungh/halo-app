@@ -58,6 +58,17 @@ interface CachedChatRoomDao {
     @Query("UPDATE cached_chat_rooms SET isArchived = :archived WHERE id = :roomId")
     suspend fun setArchived(roomId: Int, archived: Boolean)
 
+    @Query("UPDATE cached_chat_rooms SET isBlockedByMe = :blocked WHERE otherUserId = :otherUserId")
+    suspend fun setBlockedByMe(otherUserId: Int, blocked: Boolean)
+
+    @Query("""
+        UPDATE cached_chat_rooms
+        SET isBlockedByMe = :blockedByMe,
+            isBlockedByOther = :blockedByOther
+        WHERE otherUserId = :otherUserId
+    """)
+    suspend fun setBlockRelation(otherUserId: Int, blockedByMe: Boolean, blockedByOther: Boolean)
+
     @Query("UPDATE cached_chat_rooms SET unreadCount = :count WHERE id = :roomId")
     suspend fun updateUnreadCount(roomId: Int, count: Int)
 

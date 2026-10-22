@@ -71,7 +71,6 @@ class LikedPostsViewModel @Inject constructor(
             is LikedPostsIntent.LikePost -> likePost(intent.postId)
             is LikedPostsIntent.UnlikePost -> unlikePost(intent.postId)
             is LikedPostsIntent.BookmarkPost -> bookmarkPost(intent.postId)
-            is LikedPostsIntent.HidePost -> hidePost(intent.postId)
             is LikedPostsIntent.BlockUser -> blockUser(intent.userId)
             is LikedPostsIntent.FollowUser -> followUser(intent.userId)
             is LikedPostsIntent.UnfollowUser -> unfollowUser(intent.userId)
@@ -330,27 +329,6 @@ class LikedPostsViewModel @Inject constructor(
         togglePinPostUseCase(post.id, shouldPin)
             .onFailure { error ->
                 reduce { state.copy(snackbarState = SnackbarState(error.message ?: "고정 처리 실패")) }
-            }
-    }
-
-    private fun hidePost(postId: Int) = intent {
-        reduce { state.copy(selectedPost = null, showPostOptionsSheet = false) }
-
-        postMutationDelegate.hidePost(postId)
-            .onSuccess { isHidden ->
-                if (isHidden) {
-                    reduce {
-                        state.copy(
-                            items = state.items.filter {
-                                !(it.targetType == LikeTargetType.POST && it.targetId == postId)
-                            },
-                            snackbarState = SnackbarState("관심없음 처리되었습니다")
-                        )
-                    }
-                }
-            }
-            .onFailure { error ->
-                reduce { state.copy(snackbarState = SnackbarState(error.message ?: "처리 실패")) }
             }
     }
 

@@ -103,12 +103,53 @@ data class CreateProductState(
     val stockError: String? = null,
     // 섹션 접기
     val collapsedSections: Set<String> = emptySet(),
+    // 나가기 확인, 기준은 새 상품이면 처음 값·수정이면 불러온 값
+    val initialForm: ProductFormSnapshot? = null,
+    val showExitConfirmDialog: Boolean = false,
 
     val snackbarState: SnackbarState? = null
+) {
+    val hasUnsavedChanges: Boolean
+        get() = initialForm != null && toFormSnapshot() != initialForm
+}
+
+/** 나가기 확인용 입력값 */
+data class ProductFormSnapshot(
+    val name: String,
+    val description: String,
+    val price: String,
+    val originalPrice: String,
+    val stock: String,
+    val brandName: String,
+    val requiredTier: String,
+    val selectedImageUris: List<Uri>,
+    val existingImageUrls: List<String>,
+    val removedImageUrls: List<String>,
+    val detailBlocks: List<EditorBlock>,
+    val tags: List<String>,
+    val selectedSectionTagId: Int?
+)
+
+fun CreateProductState.toFormSnapshot() = ProductFormSnapshot(
+    name = name,
+    description = description,
+    price = price,
+    originalPrice = originalPrice,
+    stock = stock,
+    brandName = brandName,
+    requiredTier = requiredTier,
+    selectedImageUris = selectedImageUris,
+    existingImageUrls = existingImageUrls,
+    removedImageUrls = removedImageUrls,
+    detailBlocks = detailBlocks.map { it.copy(id = "", regionId = "") },
+    tags = tags,
+    selectedSectionTagId = selectedSectionTagId
 )
 
 sealed interface CreateProductIntent {
     data object NavigateBack : CreateProductIntent
+    data object ConfirmExit : CreateProductIntent
+    data object DismissExitConfirm : CreateProductIntent
     data class UpdateName(val name: String) : CreateProductIntent
     data class UpdateDescription(val description: String) : CreateProductIntent
     data class UpdatePrice(val price: String) : CreateProductIntent

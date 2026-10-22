@@ -115,7 +115,15 @@ class CommentRepositoryImpl @Inject constructor(
         return safeApiCall {
             api.getCommentThread(commentId)
         }.map { dtos -> dtos.map { it.toDomain() } }.also { result ->
-            result.getOrNull()?.forEach { cacheComment(it) }
+            // 스레드 응답엔 답글 정보가 없어 캐시 것 유지
+            result.getOrNull()?.forEach { fresh ->
+                val cached = commentStateStore.getComment(fresh.id)
+                cacheComment(
+                    cached?.let {
+                        fresh.copy(firstReply = it.firstReply, replyPreviewUsers = it.replyPreviewUsers)
+                    } ?: fresh
+                )
+            }
         }
     }
 

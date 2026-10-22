@@ -608,7 +608,7 @@ fun HaloNavGraph(
                     onNavigateToMessage = { roomId ->
                         navController.navigateUnlessOnTop(Screen.ChatRoom(roomId = roomId.toString()))
                     },
-                    onNavigateToNewChat = { targetUserId, username, displayName, avatarUrl, role ->
+                    onNavigateToNewChat = { targetUserId, username, displayName, avatarUrl, role, isBlockedByMe, isBlockedByOther ->
                         navController.navigateUnlessOnTop(
                             Screen.ChatRoom(
                                 roomId = "0",
@@ -616,7 +616,9 @@ fun HaloNavGraph(
                                 targetUsername = username,
                                 targetDisplayName = displayName,
                                 targetAvatarUrl = avatarUrl,
-                                targetRole = role
+                                targetRole = role,
+                                targetBlockedByMe = isBlockedByMe,
+                                targetBlockedByOther = isBlockedByOther
                             )
                         )
                     },

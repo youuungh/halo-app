@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +42,14 @@ import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.PostAuthorBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
+import com.ninezero.halo.core.ui.components.comment.BlindHideButton
 import com.ninezero.halo.core.ui.components.comment.CommentMedia
 import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
+import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.previewComment
 import com.ninezero.halo.core.ui.preview.previewMediaItem
@@ -105,6 +108,7 @@ fun ParentCommentSection(
         } else {
             // 상단: 프로필 + 이름 + 시간 + 더보기
             var profilePosition by remember { mutableStateOf(IntOffset.Zero) }
+            var isBlindRevealed by rememberSaveable { mutableStateOf(false) }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -158,6 +162,11 @@ fun ParentCommentSection(
                     if (isPostAuthorReply) PostAuthorBadge()
                 }
 
+                // 펼친 블라인드 본문 다시 가리기
+                if (comment.isBlinded && isBlindRevealed) {
+                    BlindHideButton(onClick = { isBlindRevealed = false })
+                }
+
                 Icon(
                     painter = painterResource(R.drawable.ic_ellipsis_horizontal),
                     contentDescription = "더보기",
@@ -174,32 +183,56 @@ fun ParentCommentSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 본문
-            Text(
-                text = comment.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            // 본문·미디어·버튼, 본인 블라인드 댓글은 가림
+            val hazeState = remember { HazeState() }
+            val isBlindObscured = comment.isBlinded && !isBlindRevealed
+            Box {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (isBlindObscured) Modifier.clip(ObscuredOverlayShape) else Modifier)
+                        // 오버레이 꺼져도 블러 소스 유지
+                        .then(if (comment.isBlinded) Modifier.hazeSource(state = hazeState) else Modifier)
+                ) {
+                    // 본문
+                    Text(
+                        text = comment.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
 
-            // 미디어
-            if (comment.mediaAttachments.isNotEmpty()) {
-                CommentMedia(
-                    mediaAttachments = comment.mediaAttachments,
-                    startPadding = 0.dp,
-                    endPadding = 0.dp,
-                    onMediaClick = { index -> onMediaClick(comment.mediaAttachments.toViewerItems(), index) },
-                    isVideoPlaying = isVideoPlaying
-                )
+                    // 미디어
+                    if (comment.mediaAttachments.isNotEmpty() && !isBlindObscured) {
+                        CommentMedia(
+                            mediaAttachments = comment.mediaAttachments,
+                            startPadding = 0.dp,
+                            endPadding = 0.dp,
+                            onMediaClick = { index -> onMediaClick(comment.mediaAttachments.toViewerItems(), index) },
+                            isVideoPlaying = isVideoPlaying
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 액션 버튼
+                    ParentSectionActionButtons(
+                        comment = comment,
+                        onLikeClick = onLikeClick,
+                        onCommentClick = onCommentClick
+                    )
+                }
+
+                if (isBlindObscured) {
+                    ObscuredOverlay(
+                        hazeState = hazeState,
+                        icon = R.drawable.ic_warning,
+                        label = "신고 누적으로 블라인드 처리되었습니다",
+                        contentDescription = "가려짐",
+                        color = MaterialTheme.colorScheme.error,
+                        onClick = { isBlindRevealed = true }
+                    )
+                }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 액션 버튼
-            ParentSectionActionButtons(
-                comment = comment,
-                onLikeClick = onLikeClick,
-                onCommentClick = onCommentClick
-            )
 
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -234,6 +267,7 @@ private fun ObscuredParentContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(ObscuredOverlayShape)
                     .hazeSource(state = hazeState)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -268,12 +302,26 @@ private fun ObscuredParentContent(
                 )
             }
 
-            // 차단·삭제 자리 오버레이
+            // 차단·삭제·블라인드 자리 오버레이
+            val isBlindedPlaceholder = comment.isBlinded && comment.isDeleted
             ObscuredOverlay(
                 hazeState = hazeState,
-                icon = if (comment.isDeleted) R.drawable.ic_delete else R.drawable.ic_block,
-                label = if (comment.isDeleted) "삭제된 댓글입니다" else "차단된 사용자입니다",
-                contentDescription = if (comment.isDeleted) "삭제됨" else "차단됨"
+                icon = when {
+                    isBlindedPlaceholder -> R.drawable.ic_warning
+                    comment.isDeleted -> R.drawable.ic_delete
+                    else -> R.drawable.ic_block
+                },
+                label = when {
+                    isBlindedPlaceholder -> "신고 누적으로 가려진 댓글입니다"
+                    comment.isDeleted -> "삭제된 댓글입니다"
+                    else -> "차단된 사용자입니다"
+                },
+                contentDescription = when {
+                    isBlindedPlaceholder -> "가려짐"
+                    comment.isDeleted -> "삭제됨"
+                    else -> "차단됨"
+                },
+                color = if (isBlindedPlaceholder) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -287,6 +335,10 @@ private fun ParentSectionActionButtons(
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit
 ) {
+    val enabled = !comment.isBlinded
+    val baseColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+    val likeColor = if (comment.isLiked && enabled) Like else baseColor
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(20.dp)
@@ -297,6 +349,7 @@ private fun ParentSectionActionButtons(
             modifier = Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = enabled,
                 onClick = onLikeClick
             )
         ) {
@@ -307,15 +360,15 @@ private fun ParentSectionActionButtons(
                 contentDescription = "좋아요",
                 modifier = Modifier
                     .size(20.dp)
-                    .bounceClick(),
-                tint = if (comment.isLiked) Like else MaterialTheme.colorScheme.onSurface
+                    .bounceClick(enabled = enabled),
+                tint = likeColor
             )
             if (comment.likeCount > 0) {
                 Spacer(modifier = Modifier.width(4.dp))
                 AnimatedCounter(
                     count = comment.likeCount,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (comment.isLiked) Like else MaterialTheme.colorScheme.onSurface
+                    color = likeColor
                 )
             }
         }
@@ -326,6 +379,7 @@ private fun ParentSectionActionButtons(
             modifier = Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = enabled,
                 onClick = onCommentClick
             )
         ) {
@@ -334,15 +388,15 @@ private fun ParentSectionActionButtons(
                 contentDescription = "답글",
                 modifier = Modifier
                     .size(20.dp)
-                    .bounceClick(),
-                tint = MaterialTheme.colorScheme.onSurface
+                    .bounceClick(enabled = enabled),
+                tint = baseColor
             )
             if (comment.replyCount > 0) {
                 Spacer(modifier = Modifier.width(4.dp))
                 AnimatedCounter(
                     count = comment.replyCount,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = baseColor
                 )
             }
         }

@@ -213,7 +213,6 @@ class CommentDetailViewModel @Inject constructor(
             is CommentDetailIntent.EditPost -> editPost()
             is CommentDetailIntent.PinPost -> pinPost()
             is CommentDetailIntent.BookmarkPost -> bookmarkPost()
-            is CommentDetailIntent.HidePost -> hidePost()
 
             // 차단 다이얼로그
             is CommentDetailIntent.BlockCommentAuthor -> blockCommentAuthor()
@@ -249,10 +248,24 @@ class CommentDetailViewModel @Inject constructor(
             }
             loadPost(tappedComment.postId)
             loadReplies(id)
+            refreshParentChain(id)
         } else {
             // 캐시에 없거나 조상이 잘린 경우
             reduce { state.copy(isParentLoading = true) }
             loadCommentFromServer(id)
+        }
+    }
+
+    // 캐시 체인은 그 뒤 블라인드·삭제를 모름, 서버 것으로 교체
+    private fun refreshParentChain(id: Int) = intent {
+        getCommentThreadUseCase(id).onSuccess { chain ->
+            val tappedComment = chain.lastOrNull() ?: return@onSuccess
+            reduce {
+                state.copy(
+                    parentChain = chain.dropLast(1),
+                    parentComment = tappedComment
+                )
+            }
         }
     }
 
@@ -410,6 +423,11 @@ class CommentDetailViewModel @Inject constructor(
     }
 
     private fun refreshReplies() = intent {
+        // 댓글을 못 받았으면 답글만 받지 않고 처음부터
+        if (state.parentComment == null) {
+            loadCommentDetail()
+            return@intent
+        }
         // 목록 유지한 채 스피너만
         reduce { state.copy(isRefreshing = true) }
         loadReplies()
@@ -578,24 +596,6 @@ class CommentDetailViewModel @Inject constructor(
         postMutationDelegate.togglePostBookmark(post.id, shouldBookmark)
             ?.onFailure {
                 reduce { state.copy(snackbarState = SnackbarState("저장 실패")) }
-            }
-    }
-
-    private fun hidePost() = intent {
-        val post = state.post ?: return@intent
-        dismissPostOptions()
-
-        postMutationDelegate.hidePost(post.id)
-            .onSuccess {
-                // 글 숨김 시 화면 종료
-                postSideEffect(CommentDetailSideEffect.NavigateBack)
-            }
-            .onFailure { error ->
-                reduce {
-                    state.copy(
-                        snackbarState = SnackbarState(error.message ?: "처리 실패")
-                    )
-                }
             }
     }
 

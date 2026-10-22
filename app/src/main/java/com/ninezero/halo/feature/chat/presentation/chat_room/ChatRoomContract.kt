@@ -58,6 +58,7 @@ data class ChatRoomState(
     // 차단
     val isBlocked: Boolean = false,  // 차단 해제 버튼 오버레이
     val isBlockedByOther: Boolean = false,  // 안내 문구 오버레이
+    val blockStatusLoaded: Boolean = false,  // 서버값 받은 뒤엔 캐시로 덮지 않음
     val showProfileOptionsSheet: Boolean = false,
     val showBlockConfirmDialog: Boolean = false,
     val showUnblockConfirmDialog: Boolean = false,

@@ -2,7 +2,6 @@ package com.ninezero.halo.core.ui.components.comment
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.PostAuthorBadge
@@ -48,12 +46,9 @@ import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayLabelColor
+import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 import com.ninezero.halo.core.util.toRelativeTime
@@ -198,6 +193,7 @@ fun CommentItem(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .then(if (isObscured) Modifier.clip(ObscuredOverlayShape) else Modifier)
                         // 오버레이 꺼져도 블러 소스 유지
                         .then(
                             if (isObscured || isBlinded) Modifier.hazeSource(state = hazeState) else Modifier
@@ -222,6 +218,10 @@ fun CommentItem(
                         )
                         if (isPostAuthorReply && !isBlocked && !isDeleted) PostAuthorBadge()
                         Spacer(modifier = Modifier.weight(1f))
+                        // 펼친 블라인드 본문 다시 가리기
+                        if (isBlinded && !isDeleted && isBlindRevealed) {
+                            BlindHideButton(onClick = { isBlindRevealed = false })
+                        }
                         if (!isBlocked && !isDeleted) {
                             if (isUploading) {
                                 CircularProgressIndicator(
@@ -272,7 +272,8 @@ fun CommentItem(
                             replyCount = replyCount,
                             showReplyButton = showReplyButton,
                             onLikeClick = likeAction,
-                            onReplyClick = replyAction
+                            onReplyClick = replyAction,
+                            enabled = !isBlinded
                         )
                     }
                 }
@@ -281,30 +282,21 @@ fun CommentItem(
                 if (isObscured) {
                     ObscuredOverlay(
                         hazeState = hazeState,
-                        // 블라인드가 차단·삭제보다 우선
+                        // 블라인드가 차단·삭제보다 우선, 본문 없는 블라인드 자리는 남의 댓글
                         icon = when {
                             isBlinded -> R.drawable.ic_warning
                             isBlocked -> R.drawable.ic_block
                             else -> R.drawable.ic_delete
                         },
                         label = when {
+                            isBlinded && isDeleted -> "신고 누적으로 가려진 댓글입니다"
                             isBlinded -> "신고 누적으로 블라인드 처리되었습니다"
                             isBlocked -> "차단된 사용자입니다"
                             else -> "삭제된 댓글입니다"
                         },
-                        // 기본 흰색, 블라인드만 경고색
-                        color = if (isBlinded) MaterialTheme.colorScheme.error else ObscuredOverlayLabelColor
-                    )
-                }
-
-                // 오버레이보다 뒤에 그림
-                // 오버레이 밖이라 다시 접기 가능
-                if (isBlinded) {
-                    BlindRevealToggle(
-                        revealed = isBlindRevealed,
-                        onToggle = { isBlindRevealed = !isBlindRevealed },
-                        hazeState = hazeState,
-                        modifier = Modifier.align(Alignment.BottomEnd)
+                        color = if (isBlinded) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        // 펼칠 본문 있는 작성자만 탭해서 펼침
+                        onClick = if (isBlinded && !isDeleted) ({ isBlindRevealed = true }) else null
                     )
                 }
             }
@@ -361,7 +353,8 @@ fun CommentItem(
                             replyCount = replyCount,
                             showReplyButton = showReplyButton,
                             onLikeClick = likeAction,
-                            onReplyClick = replyAction
+                            onReplyClick = replyAction,
+                            enabled = !isBlinded
                         )
                     }
                 }
@@ -383,8 +376,12 @@ private fun CommentActionButtons(
     replyCount: Int?,
     onLikeClick: () -> Unit,
     onReplyClick: () -> Unit,
-    showReplyButton: Boolean = true
+    showReplyButton: Boolean = true,
+    enabled: Boolean = true
 ) {
+    val baseColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+    val likeColor = if (isLiked && enabled) Like else baseColor
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -395,6 +392,7 @@ private fun CommentActionButtons(
             modifier = Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = enabled,
                 onClick = onLikeClick
             )
         ) {
@@ -405,15 +403,15 @@ private fun CommentActionButtons(
                 contentDescription = "좋아요",
                 modifier = Modifier
                     .size(20.dp)
-                    .bounceClick(),
-                tint = if (isLiked) Like else MaterialTheme.colorScheme.onSurface
+                    .bounceClick(enabled = enabled),
+                tint = likeColor
             )
             if (likeCount > 0) {
                 Spacer(modifier = Modifier.width(4.dp))
                 AnimatedCounter(
                     count = likeCount,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isLiked) Like else MaterialTheme.colorScheme.onSurface
+                    color = likeColor
                 )
             }
         }
@@ -425,6 +423,7 @@ private fun CommentActionButtons(
                 modifier = Modifier.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
+                    enabled = enabled,
                     onClick = onReplyClick
                 )
             ) {
@@ -433,15 +432,15 @@ private fun CommentActionButtons(
                     contentDescription = "답글",
                     modifier = Modifier
                         .size(20.dp)
-                        .bounceClick(),
-                    tint = MaterialTheme.colorScheme.onSurface
+                        .bounceClick(enabled = enabled),
+                    tint = baseColor
                 )
                 if (replyCount != null && replyCount > 0) {
                     Spacer(modifier = Modifier.width(4.dp))
                     AnimatedCounter(
                         count = replyCount,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = baseColor
                     )
                 }
             }
@@ -449,58 +448,34 @@ private fun CommentActionButtons(
     }
 }
 
-/** 블라인드 댓글 본문 펼치기 버튼 */
 @Composable
-private fun BlindRevealToggle(
-    revealed: Boolean,
-    onToggle: () -> Unit,
-    hazeState: HazeState,
-    modifier: Modifier = Modifier
+fun BlindHideButton(
+    onClick: () -> Unit,
+    showDivider: Boolean = true
 ) {
-    val surfaceColor = MaterialTheme.colorScheme.surface
-
-    Row(
-        modifier = modifier
-            .padding(end = 6.dp, bottom = 6.dp)
-            .clip(CircleShape)
-            // 오버레이보다 옅은 틴트
-            .haloBlur(state = hazeState) {
-                style = HaloBlurStyle(
-                    backgroundColor = surfaceColor,
-                    tint = HaloBlurTint(Color.Black.copy(alpha = 0.25f)),
-                    blurRadius = 14.dp,
-                    noiseFactor = 0f
-                )
-            }
-            .border(
-                width = 0.5.dp,
-                color = Color.White.copy(alpha = 0.3f),
-                shape = CircleShape
-            )
-            .bounceClick()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onToggle
-            )
-            .padding(horizontal = 7.dp, vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            painter = painterResource(if (revealed) R.drawable.ic_eye_off else R.drawable.ic_eye),
-            contentDescription = null,
-            modifier = Modifier.size(11.dp),
-            tint = ObscuredOverlayLabelColor
+            painter = painterResource(R.drawable.ic_eye_off),
+            contentDescription = "다시 가리기",
+            modifier = Modifier
+                .size(18.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick
+                ),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(
-            text = if (revealed) "숨기기" else "보이기",
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 10.sp,
-            lineHeight = 10.sp,
-            fontWeight = FontWeight.Medium,
-            color = ObscuredOverlayLabelColor
-        )
+        if (showDivider) {
+            Spacer(modifier = Modifier.width(10.dp))
+            Box(
+                modifier = Modifier
+                    .width(0.5.dp)
+                    .height(14.dp)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
     }
 }
 

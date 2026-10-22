@@ -343,7 +343,7 @@ internal fun LikedPostsScreenContent(
             onEdit = { onIntent(LikedPostsIntent.EditPost) },
             onDelete = { onIntent(LikedPostsIntent.DeletePost) },
             onBookmark = { onIntent(LikedPostsIntent.BookmarkPost(state.selectedPost.id)) },
-            onNotInterested = { onIntent(LikedPostsIntent.HidePost(state.selectedPost.id)) },
+            onNotInterested = null,
             onBlock = { onIntent(LikedPostsIntent.BlockUser(state.selectedPost.author.id)) },
             onReport = { reportRequester(ReportTargetType.POST, state.selectedPost.id) },
             // 피드 고정은 크리에이터 피드의 내 글만

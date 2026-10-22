@@ -116,107 +116,137 @@ internal fun MyCouponsScreenContent(
             modifier = Modifier.fillMaxSize(),
             indicatorPadding = PaddingValues(top = headerHeight)
         ) {
-        // 본문
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeSource(hazeState),
-            contentPadding = PaddingValues(
-                top = headerHeight,
-                bottom = 16.dp
-            )
-        ) {
-            item {
-                CouponCodeInputField(
-                    value = state.couponCode,
-                    onValueChange = { onIntent(MyCouponsIntent.UpdateCouponCode(it)) },
-                    onClaimClick = { onIntent(MyCouponsIntent.ClaimCoupon) },
-                    isClaiming = state.isClaiming,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            // 본문
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState),
+                contentPadding = PaddingValues(
+                    top = headerHeight,
+                    bottom = 16.dp
                 )
-            }
-
-            // 필터 칩 자리
-            item(key = CHIP_SLOT_KEY) {
-                Spacer(modifier = Modifier.height(chipsHeight))
-            }
-
-            // 에러 상태
-            if (state.error != null && state.coupons.isEmpty() && !state.isLoading) {
+            ) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillParentMaxSize()
-                            .padding(bottom = 174.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(MyCouponsIntent.LoadCoupons) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
+                    CouponCodeInputField(
+                        value = state.couponCode,
+                        onValueChange = { onIntent(MyCouponsIntent.UpdateCouponCode(it)) },
+                        onClaimClick = { onIntent(MyCouponsIntent.ClaimCoupon) },
+                        isClaiming = state.isClaiming,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+
+                // 필터 칩 자리
+                item(key = CHIP_SLOT_KEY) {
+                    Spacer(modifier = Modifier.height(chipsHeight))
+                }
+
+                // 에러 상태
+                if (state.error != null && state.coupons.isEmpty() && !state.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(bottom = 174.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = state.error,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                OutlinedButton(
+                                    onClick = { onIntent(MyCouponsIntent.LoadCoupons) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.bounceClick()
+                                ) {
+                                    Text("재시도")
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // 초기 로딩 스켈레톤
-            if (state.isLoading && state.coupons.isEmpty()) {
-                items(5) {
-                    CouponCardSkeleton(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // 빈 상태
-            if (state.coupons.isEmpty() && !state.isLoading && state.error == null) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillParentMaxSize()
-                            .padding(bottom = 174.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "쿠폰이 없습니다",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
-                items(
-                    items = state.coupons,
-                    key = { it.id }
-                ) { coupon ->
-                    CouponCard(
-                        coupon = coupon,
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-
-                // 추가 로딩 스켈레톤
-                if (state.isLoading && state.coupons.isNotEmpty()) {
-                    items(3) {
+                // 초기 로딩 스켈레톤
+                if (state.isLoading && state.coupons.isEmpty()) {
+                    items(5) {
                         CouponCardSkeleton(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
                 }
+
+                // 빈 상태
+                if (state.coupons.isEmpty() && !state.isLoading && state.error == null) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(bottom = 174.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "쿠폰이 없습니다",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    items(
+                        items = state.coupons,
+                        key = { it.id }
+                    ) { coupon ->
+                        CouponCard(
+                            coupon = coupon,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    // 추가 로딩 스켈레톤
+                    if (state.isLoading && state.coupons.isNotEmpty()) {
+                        items(3) {
+                            CouponCardSkeleton(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
             }
-        }
+
+            // 필터 칩, 플로팅. 새로고침 표시가 위에 오도록 박스 안
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset {
+                        val headerPx = headerHeight.roundToPx()
+                        val info = listState.layoutInfo
+                        val slot = info.visibleItemsInfo.firstOrNull { it.key == CHIP_SLOT_KEY }
+                        val y = slot?.let { it.offset - info.viewportStartOffset } ?: headerPx
+                        IntOffset(0, y.coerceAtLeast(headerPx))
+                    }
+                    .haloBlur(state = hazeState) {
+                        style = HaloBlurStyle(
+                            backgroundColor = backgroundColor,
+                            tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
+                            blurRadius = 20.dp,
+                            noiseFactor = 0f
+                        )
+                    }
+                    .onGloballyPositioned { coordinates ->
+                        chipsHeight = with(density) { coordinates.size.height.toDp() }
+                    }
+            ) {
+                CouponFilterChips(
+                    selectedStatus = state.selectedStatus,
+                    onFilterByStatus = { onIntent(MyCouponsIntent.FilterByStatus(it)) },
+                    hazeState = hazeState
+                )
+            }
         }
 
         // 헤더
@@ -262,37 +292,6 @@ internal fun MyCouponsScreenContent(
                 )
             }
 
-        }
-
-        // 필터 칩, 플로팅
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset {
-                    val headerPx = headerHeight.roundToPx()
-                    val info = listState.layoutInfo
-                    val slot = info.visibleItemsInfo.firstOrNull { it.key == CHIP_SLOT_KEY }
-                    // 슬롯이 안 보임 = 스크롤로 지나감 → 톱바 아래 고정
-                    val y = slot?.let { it.offset - info.viewportStartOffset } ?: headerPx
-                    IntOffset(0, y.coerceAtLeast(headerPx))
-                }
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0f
-                    )
-                }
-                .onGloballyPositioned { coordinates ->
-                    chipsHeight = with(density) { coordinates.size.height.toDp() }
-                }
-        ) {
-            CouponFilterChips(
-                selectedStatus = state.selectedStatus,
-                onFilterByStatus = { onIntent(MyCouponsIntent.FilterByStatus(it)) },
-                hazeState = hazeState
-            )
         }
 
         CenterToast(

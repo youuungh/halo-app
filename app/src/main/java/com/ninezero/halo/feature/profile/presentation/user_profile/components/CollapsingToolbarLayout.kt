@@ -319,9 +319,9 @@ fun CollapsingToolbarLayout(
                                         Icon(
                                             painter = painterResource(
                                                 when {
-                                                    !profile.isFollowing -> R.drawable.ic_notification
-                                                    profile.isNotifyEnabled -> R.drawable.ic_bell_ring
-                                                    else -> R.drawable.ic_bell_off
+                                                    !profile.isFollowing -> R.drawable.ic_bell
+                                                    profile.isNotifyEnabled -> R.drawable.ic_bell_alert
+                                                    else -> R.drawable.ic_bell_slash
                                                 }
                                             ),
                                             contentDescription = when {

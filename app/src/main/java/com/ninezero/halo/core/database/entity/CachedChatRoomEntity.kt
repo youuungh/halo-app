@@ -31,6 +31,8 @@ data class CachedChatRoomEntity(
     // 카운트·플래그
     val unreadCount: Int,
     val isArchived: Boolean,
+    val isBlockedByMe: Boolean,
+    val isBlockedByOther: Boolean,
     val createdAt: Long,
     val cachedAt: Long = System.currentTimeMillis(),
     val isHistoryComplete: Boolean = false

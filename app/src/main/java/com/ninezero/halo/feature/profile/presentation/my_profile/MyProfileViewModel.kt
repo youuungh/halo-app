@@ -388,7 +388,6 @@ class MyProfileViewModel @Inject constructor(
             is MyProfileIntent.EditPost -> editPost()
             is MyProfileIntent.PinPost -> pinPost()
             is MyProfileIntent.BookmarkPost -> bookmarkPost()
-            is MyProfileIntent.NotInterestedPost -> notInterestedPost()
             is MyProfileIntent.BlockPostAuthor -> blockPostAuthor()
             // 답글 탭
             is MyProfileIntent.LoadMoreCommentThreads -> loadMoreCommentThreads()
@@ -414,7 +413,6 @@ class MyProfileViewModel @Inject constructor(
             is MyProfileIntent.ShowThreadPostOptions -> showThreadPostOptions(intent.post)
             is MyProfileIntent.DismissThreadPostOptions -> dismissThreadPostOptions()
             is MyProfileIntent.BookmarkThreadPost -> bookmarkThreadPost()
-            is MyProfileIntent.NotInterestedThreadPost -> notInterestedThreadPost()
             is MyProfileIntent.BlockThreadPostAuthor -> blockThreadPostAuthor()
             // 홈 탭, Creator 전용
             is MyProfileIntent.NavigateToSectionDetail -> navigateToSectionDetail(
@@ -1170,20 +1168,6 @@ class MyProfileViewModel @Inject constructor(
             }
     }
 
-    private fun notInterestedThreadPost() = intent {
-        val postId = state.selectedThreadPost?.id ?: return@intent
-        dismissThreadPostOptions()
-
-        postMutationDelegate.hidePost(postId)
-            .onSuccess {
-                reduce {
-                    state.copy(
-                        myCommentThreads = state.myCommentThreads.filter { it.post.id != postId }
-                    )
-                }
-            }
-    }
-
     private fun blockThreadPostAuthor() = intent {
         val authorId = state.selectedThreadPost?.author?.id ?: return@intent
         dismissThreadPostOptions()
@@ -1560,26 +1544,6 @@ class MyProfileViewModel @Inject constructor(
                     state.updateCommunityPost(post.id) { it.copy(isBookmarked = post.isBookmarked) }
                         .copy(snackbarState = SnackbarState("저장 실패"))
                 }
-            }
-    }
-
-    private fun notInterestedPost() = intent {
-        val postId = state.selectedPost?.id ?: return@intent
-        reduce { state.copy(showPostOptionsSheet = false, selectedPost = null) }
-        postMutationDelegate.hidePost(postId)
-            .onSuccess { isHidden ->
-                if (isHidden) {
-                    reduce {
-                        state.copy(
-                            communityPosts = state.communityPosts.filter { it.id != postId },
-                            communityPinnedPosts = state.communityPinnedPosts.filter { it.id != postId },
-                            snackbarState = SnackbarState("관심없음 처리되었습니다")
-                        )
-                    }
-                }
-            }
-            .onFailure { error ->
-                reduce { state.copy(snackbarState = SnackbarState(error.message ?: "처리 실패")) }
             }
     }
 

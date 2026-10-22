@@ -182,7 +182,7 @@ fun UserProfileHeaderContent(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
-                        onClick = onFollowerClick
+                        onClick = if (profile.isBlocked) null else onFollowerClick
                     )
                     StatBoxItem(
                         count = profile.followingCount,
@@ -190,7 +190,7 @@ fun UserProfileHeaderContent(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
-                        onClick = onFollowingClick
+                        onClick = if (profile.isBlocked) null else onFollowingClick
                     )
                     if (profile.isCreator && profile.subscriberCount != null) {
                         StatBoxItem(
