@@ -26,9 +26,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,13 +45,14 @@ import com.ninezero.halo.core.deeplink.DeepLinks
 import com.ninezero.halo.core.model.ReportTargetType
 import com.ninezero.halo.core.ui.components.bottomsheet.CommentOptionBottomSheet
 import com.ninezero.halo.core.ui.components.bottomsheet.PostOptionBottomSheet
-import com.ninezero.halo.core.ui.components.fab.AnimatedScrollAwareFAB
 import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
 import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.navigation.BottomBarAccessory
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
+import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarAccessory
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupData
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupHost
@@ -229,6 +232,21 @@ internal fun MyProfileScreenContent(
 ) {
     val hazeState = remember { HazeState() }
     val topBarBlurColor = MaterialTheme.colorScheme.background
+
+    // 커뮤니티 글 작성 버튼은 하단 바 옆에 붙음
+    val canWriteCommunityPost = state.selectedTab == ProfileTab.COMMUNITY && state.profile?.isCreator == true
+    val bottomBarAccessory = LocalBottomBarAccessory.current
+    val latestOnIntent by rememberUpdatedState(onIntent)
+    DisposableEffect(bottomBarAccessory, canWriteCommunityPost) {
+        if (canWriteCommunityPost) {
+            bottomBarAccessory?.show(
+                BottomBarAccessory(R.drawable.ic_chat_bubbles, "커뮤니티 글 작성") {
+                    latestOnIntent(MyProfileIntent.CreateCommunityPost)
+                }
+            )
+        }
+        onDispose { bottomBarAccessory?.hide() }
+    }
 
     val isCreator = state.profile?.isCreator == true
     val tabs = if (isCreator) {
@@ -457,18 +475,6 @@ internal fun MyProfileScreenContent(
                     )
                 }
             }
-
-                // 커뮤니티 글 작성 FAB
-                val canWriteCommunityPost = state.selectedTab == ProfileTab.COMMUNITY && state.profile?.isCreator == true
-                AnimatedScrollAwareFAB(
-                    visible = canWriteCommunityPost,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .padding(bottom = LocalBottomBarPadding.current),
-                    contentDescription = "커뮤니티 글 작성",
-                    onClick = { onIntent(MyProfileIntent.CreateCommunityPost) }
-                )
             }
         }
     }

@@ -24,7 +24,9 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ninezero.halo.core.ui.components.media.LocalAutoplayEnabled
 import com.ninezero.halo.core.ui.components.modifiers.LocalActiveViewerMediaKey
 import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransitionScope
+import com.ninezero.halo.core.ui.components.navigation.BottomBarAccessoryState
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
+import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarAccessory
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.components.profile_image_viewer.LocalProfileImageOverlayVisible
 import com.ninezero.halo.core.ui.components.profile_image_viewer.LocalProfileImageTransitionScope
@@ -101,6 +103,7 @@ fun MainScreen(
 
     val bottomBarBackdrop = rememberLayerBackdrop()
     val bottomBarReservePadding = BottomBarDefaults.reservedContentPadding()  // BottomNavBar 만큼 각 탭 스크롤이 예약할 패딩
+    val bottomBarAccessory = remember { BottomBarAccessoryState() }
 
     val viewerHostState = rememberViewerOverlayHostState()  // 이미지/비디오 뷰어 호스트
 
@@ -128,7 +131,8 @@ fun MainScreen(
             LocalViewerOverlayHostState provides viewerHostState,
             LocalMediaSharedTransitionScope provides this@SharedTransitionLayout,
             LocalActiveViewerMediaKey provides viewerHostState.activeMediaKey,
-            LocalBottomBarPadding provides bottomBarReservePadding
+            LocalBottomBarPadding provides bottomBarReservePadding,
+            LocalBottomBarAccessory provides bottomBarAccessory
         ) {
             // 오버레이는 Scaffold 밖이라 바 위 풀스크린
             Box(modifier = Modifier.fillMaxSize()) {
@@ -227,6 +231,8 @@ fun MainScreen(
                         selectedTab = state.selectedTab,
                         hasUnreadMessage = state.hasUnreadMessage,
                         backdrop = bottomBarBackdrop,
+                        // 탭 화면은 숨겨져도 남아 있어서 보이는 탭 것만
+                        accessory = bottomBarAccessory.accessory.takeIf { state.selectedTab == MainTab.PROFILE },
                         modifier = Modifier.align(Alignment.BottomCenter),
                         onTabSelected = { tab ->
                             if (tab == state.selectedTab && tab != MainTab.CREATE) {

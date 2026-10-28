@@ -19,7 +19,7 @@ val SurfaceVariant = Color(0xFFF5F5F5)
 val SurfaceContainer = Color(0xFFFAFAFA)
 val OnBackground = Color(0xFF1C1C1E)
 val OnSurface = Color(0xFF1C1C1E)
-val OnSurfaceVariant = Color(0xFF9E9E9E)
+val OnSurfaceVariant = Color(0xFF767676)
 
 // 에러
 val Error = Color(0xFFFF3B30)

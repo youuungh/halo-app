@@ -176,7 +176,7 @@ fun ProfileTabRow(
                             color = if (isSelected) {
                                 MaterialTheme.colorScheme.onSurface
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             }
                         )
                     }

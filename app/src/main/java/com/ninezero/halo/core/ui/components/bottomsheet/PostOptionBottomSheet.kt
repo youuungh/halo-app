@@ -59,14 +59,20 @@ fun PostOptionBottomSheet(
                     }
                 )
             }
-            if (canPin) {
+            val pinItem = BottomSheetMenuItemData(
+                text = if (isPinned) "고정 해제" else "고정",
+                iconRes = if (isPinned) R.drawable.ic_pin_off else R.drawable.ic_pin,
+                onClick = {
+                    onPin()
+                    onDismiss()
+                }
+            )
+            // 내 글은 고정 단독, 남의 글은 저장과 한 칸
+            if (canPin && isOwnPost) {
                 BottomSheetMenuItem(
-                    text = if (isPinned) "고정 해제" else "고정",
-                    iconRes = if (isPinned) R.drawable.ic_pin_off else R.drawable.ic_pin,
-                    onClick = {
-                        onPin()
-                        onDismiss()
-                    }
+                    text = pinItem.text,
+                    iconRes = pinItem.iconRes,
+                    onClick = pinItem.onClick
                 )
             }
             if (isOwnPost) {
@@ -95,6 +101,7 @@ fun PostOptionBottomSheet(
             } else {
                 BottomSheetMenuItemGroup(
                     items = listOfNotNull(
+                        pinItem.takeIf { canPin },
                         BottomSheetMenuItemData(
                             text = if (isBookmarked) "저장 취소" else "저장",
                             iconRes = if (isBookmarked) R.drawable.ic_bookmark_slash else R.drawable.ic_bookmark,

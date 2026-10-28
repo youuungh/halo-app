@@ -54,6 +54,7 @@ import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.popClick
+import com.ninezero.halo.core.ui.components.navigation.BottomBarAccessory
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
 import com.ninezero.halo.core.ui.components.navigation.liquidtabs.DampedDragAnimation
 import com.ninezero.halo.core.ui.components.navigation.liquidtabs.InteractiveHighlight
@@ -85,7 +86,8 @@ fun BottomNavBar(  // Kyant liquid glass
     hasUnreadMessage: Boolean,
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    accessory: BottomBarAccessory? = null
 ) {
     val items = navItems(hasUnreadMessage)
     val tabsCount = items.size
@@ -124,6 +126,9 @@ fun BottomNavBar(  // Kyant liquid glass
         }
     }
 
+    // 옆 버튼이 물방울처럼 떨어져 나오는 만큼 바가 비켜남
+    val accessoryMotion = rememberAccessoryMotion(visible = accessory != null)
+
     CompositionLocalProvider(LocalRippleConfiguration provides null) {
         Box(
             modifier = modifier
@@ -134,15 +139,18 @@ fun BottomNavBar(  // Kyant liquid glass
                 )
                 .fillMaxWidth()
                 .height(BottomBarDefaults.PillHeight)
-                .shadow(elevation = 6.dp, shape = shape, clip = false)
         ) {
             BoxWithConstraints(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(end = AccessorySlot * accessoryMotion.separation.value.coerceIn(0f, 1f))
+                    .shadow(elevation = 6.dp, shape = shape, clip = false),
                 contentAlignment = Alignment.CenterStart
             ) {
                 val density = LocalDensity.current
                 val insetPx = with(density) { 8.dp.toPx() }
                 val tabWidth = (constraints.maxWidth.toFloat() - insetPx) / tabsCount
+                val latestTabWidth = rememberUpdatedState(tabWidth)  // 바 너비가 바뀌어도 드래그·하이라이트가 새 폭을 씀
                 val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
 
                 val dampedDrag = remember(animationScope) {
@@ -173,7 +181,7 @@ fun BottomNavBar(  // Kyant liquid glass
                         },
                         onDrag = { _, dragAmount ->
                             updateValue(
-                                (targetValue + dragAmount.x / tabWidth * if (isLtr) 1f else -1f)
+                                (targetValue + dragAmount.x / latestTabWidth.value * if (isLtr) 1f else -1f)
                                     .fastCoerceIn(0f, (tabsCount - 1).toFloat())
                             )
                         }
@@ -187,9 +195,10 @@ fun BottomNavBar(  // Kyant liquid glass
                     InteractiveHighlight(
                         animationScope = animationScope,
                         position = { size, _ ->
+                            val width = latestTabWidth.value
                             Offset(
-                                if (isLtr) (dampedDrag.value + 0.5f) * tabWidth + insetPx / 2f
-                                else size.width - (dampedDrag.value + 0.5f) * tabWidth - insetPx / 2f,
+                                if (isLtr) (dampedDrag.value + 0.5f) * width + insetPx / 2f
+                                else size.width - (dampedDrag.value + 0.5f) * width - insetPx / 2f,
                                 size.height / 2f
                             )
                         }
@@ -330,6 +339,14 @@ fun BottomNavBar(  // Kyant liquid glass
                     }
                 }
             }
+
+            // 바 위에 그려서 바 그림자를 덮으며 바 끝에서 떨어져 나옴
+            LiquidAccessory(
+                accessory = accessory,
+                motion = accessoryMotion,
+                backdrop = backdrop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

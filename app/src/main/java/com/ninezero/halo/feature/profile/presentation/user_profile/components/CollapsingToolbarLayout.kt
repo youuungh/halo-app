@@ -519,6 +519,7 @@ fun CollapsingToolbarLayout(
         val canWriteCommunityPost = state.selectedTab == ProfileTab.COMMUNITY && profile.isFollowing
         AnimatedScrollAwareFAB(
             visible = canWriteCommunityPost,
+            hazeState = tabHazeState,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),

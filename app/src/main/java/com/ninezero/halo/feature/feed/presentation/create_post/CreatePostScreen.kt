@@ -622,7 +622,11 @@ internal fun CreatePostScreenContent(
 
                 // 타이틀
                 Text(
-                    text = if (state.isEditMode) "수정" else "새로운 포스트",
+                    text = when {
+                        state.isEditMode -> "수정"
+                        state.isCommunityMode -> "새로운 커뮤니티 포스트"
+                        else -> "새로운 포스트"
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,

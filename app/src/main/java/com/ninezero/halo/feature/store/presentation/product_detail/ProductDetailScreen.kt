@@ -350,7 +350,8 @@ internal fun ProductDetailScreenContent(
                         onIntent(ProductDetailIntent.ShowImageViewer(product.imageUrls, index))
                     },
                     viewCount = product.viewCount,
-                    likeCount = product.likeCount
+                    likeCount = product.likeCount,
+                    isWishlisted = state.isWishlisted
                 )
             }
 

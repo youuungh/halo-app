@@ -265,7 +265,7 @@ internal fun MyProductsScreenContent(
                                     }
                                     HorizontalDivider(
                                         thickness = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                     )
                                 }
                             }
@@ -293,10 +293,6 @@ internal fun MyProductsScreenContent(
 
                             item(key = "header_${tag.id}") {
                                 Column(modifier = Modifier.animateItem()) {
-                                    HorizontalDivider(
-                                        thickness = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                                    )
                                     SectionGroupHeader(
                                         tagName = tag.name,
                                         itemCount = products.size,
@@ -315,7 +311,7 @@ internal fun MyProductsScreenContent(
                                     )
                                     HorizontalDivider(
                                         thickness = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                     )
                                 }
                             }
@@ -375,7 +371,7 @@ internal fun MyProductsScreenContent(
                                         }
                                         HorizontalDivider(
                                             thickness = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                         )
                                     }
                                 }
