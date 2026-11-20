@@ -30,7 +30,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.button.ActionButton
-import com.ninezero.halo.core.ui.components.input.AuthTextField
+import com.ninezero.halo.core.ui.components.input.LabeledTextField
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
@@ -118,7 +118,7 @@ internal fun LoginScreenContent(
         ) {
             Spacer(modifier = Modifier.height(headerHeight + 16.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.email,
                 onValueChange = { onIntent(LoginIntent.EmailChanged(it)) },
                 label = "이메일",
@@ -130,7 +130,7 @@ internal fun LoginScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.password,
                 onValueChange = { onIntent(LoginIntent.PasswordChanged(it)) },
                 label = "비밀번호",

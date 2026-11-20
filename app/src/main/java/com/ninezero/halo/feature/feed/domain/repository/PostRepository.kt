@@ -4,8 +4,8 @@ import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.feature.feed.domain.model.NewMediaItem
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.domain.model.PostType
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import kotlinx.coroutines.flow.Flow
-import okhttp3.MultipartBody
 
 interface PostRepository {
     //  SSOT
@@ -41,7 +41,7 @@ interface PostRepository {
         content: String,
         postType: PostType = PostType.TEXT,
         productId: Int? = null,
-        requiredTier: String = "FREE",
+        requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
         tagIds: List<Int>? = null,
         sectionTagId: Int? = null,
         mediaDraftIds: List<Int> = emptyList(),  // 표시 순서대로
@@ -61,9 +61,8 @@ interface PostRepository {
         postId: Int,
         content: String?,
         keepMediaIds: List<Int>?,
-        newFiles: List<MultipartBody.Part>,
         reorder: List<Int>?,
-        items: List<NewMediaItem>? = null  // 새 미디어 순서, 없으면 파일 파트 순서
+        items: List<NewMediaItem>? = null  // 새 미디어 순서
     ): Result<Post>
 
     /** 포스트 삭제 */

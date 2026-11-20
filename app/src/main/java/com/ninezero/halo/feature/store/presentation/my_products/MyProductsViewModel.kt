@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ninezero.halo.core.local.PreferencesManager
+import com.ninezero.halo.core.datastore.PreferencesManager
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.ListGeneration
 import com.ninezero.halo.core.util.mergeFreshHead
@@ -63,7 +63,7 @@ class MyProductsViewModel @Inject constructor(
         when (intent) {
             is MyProductsIntent.Load -> load()
             is MyProductsIntent.Refresh -> refresh()
-            is MyProductsIntent.ScreenResumed -> refreshProductsQuietly()
+            is MyProductsIntent.ScreenResumed -> refreshProductsSilently()
             is MyProductsIntent.LoadMore -> loadMore()
             is MyProductsIntent.NavigateBack -> navigateBack()
             is MyProductsIntent.NavigateToCreateProduct -> navigateToCreateProduct()
@@ -109,7 +109,7 @@ class MyProductsViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-    private fun refreshProductsQuietly() = intent {
+    private fun refreshProductsSilently() = intent {
         if (state.isLoading || state.isRefreshing) return@intent
         productRepository.getMyProducts(null, PAGE_SIZE).onSuccess { result ->
             listGeneration.next()
@@ -323,6 +323,7 @@ class MyProductsViewModel @Inject constructor(
         if (product.isDealActive) {
             reduce {
                 state.copy(
+                    optionSheetProduct = null,
                     snackbarState = SnackbarState(
                         message = "타임딜 진행 중에는 수정할 수 없습니다. 타임딜을 먼저 해제해주세요"
                     )
@@ -330,6 +331,8 @@ class MyProductsViewModel @Inject constructor(
             }
             return@intent
         }
+        // 시트를 먼저 닫아야 새 화면이 시트 뒤로 먼저 뜨지 않음
+        reduce { state.copy(optionSheetProduct = null) }
         postSideEffect(MyProductsSideEffect.NavigateToEditProduct(product.id))
     }
 

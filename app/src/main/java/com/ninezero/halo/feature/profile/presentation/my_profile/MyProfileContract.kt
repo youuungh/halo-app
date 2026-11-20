@@ -3,12 +3,12 @@ package com.ninezero.halo.feature.profile.presentation.my_profile
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
-import com.ninezero.halo.feature.profile.domain.model.PostSummaryData
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
 import com.ninezero.halo.feature.profile.domain.model.PostTagSection
 import com.ninezero.halo.feature.profile.domain.model.ProductTagSection
 import com.ninezero.halo.feature.profile.domain.model.SectionType
-import com.ninezero.halo.feature.profile.domain.model.ThreadCommentData
+import com.ninezero.halo.feature.profile.domain.model.ThreadComment
+import com.ninezero.halo.feature.profile.domain.model.ThreadPost
 import com.ninezero.halo.feature.profile.domain.model.UserProfile
 import com.ninezero.halo.feature.profile.presentation.components.ProductSortType
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTab
@@ -21,62 +21,52 @@ data class MyProfileState(
     val profile: UserProfile? = null,
     val error: String? = null,
     val snackbarState: SnackbarState? = null,
-
     // 탭, 크리에이터 5탭·일반 2탭
     val selectedTab: ProfileTab = ProfileTab.POSTS,
-
     // 포스트 탭
     val pendingPosts: List<Post> = emptyList(),
     val myPosts: List<Post> = emptyList(),
     val isPostsLoading: Boolean = false,
     val postsNextCursor: String? = null,
-    val postsHasMore: Boolean = true,
+    val hasMorePosts: Boolean = true,
     val postsSortType: UserPostSortType = UserPostSortType.LATEST,
     val postsContextType: PostContextType? = PostContextType.GENERAL,
-
     // 답글 탭
-    val myCommentThreads: List<CommentThreadData> = emptyList(),
+    val myCommentThreads: List<CommentThread> = emptyList(),
     val isRepliesLoading: Boolean = false,
     val repliesNextCursor: String? = null,
-    val repliesHasMore: Boolean = true,
+    val hasMoreReplies: Boolean = true,
     val repliesSortType: UserPostSortType = UserPostSortType.LATEST,
     val repliesContextType: PostContextType? = PostContextType.GENERAL,
-
     // 포스트 옵션
     val showPostOptionsSheet: Boolean = false,
     val selectedPost: Post? = null,
-
     // 댓글 옵션
     val showCommentOptionsSheet: Boolean = false,
-    val selectedComment: ThreadCommentData? = null,
-    val selectedCommentThread: CommentThreadData? = null,
-
+    val selectedComment: ThreadComment? = null,
+    val selectedCommentThread: CommentThread? = null,
     // 스레드 포스트 옵션
     val showThreadPostOptionsSheet: Boolean = false,
-    val selectedThreadPost: PostSummaryData? = null,
-
+    val selectedThreadPost: ThreadPost? = null,
     // 홈 탭, Creator 전용
     val isHomeSectionsLoading: Boolean = false,
     val pinnedPosts: List<Post> = emptyList(),
     val postSections: List<PostTagSection> = emptyList(),
     val productSections: List<ProductTagSection> = emptyList(),
-
     // 커뮤니티 탭, Creator 전용
     val communityPosts: List<Post> = emptyList(),
-    val pendingCommunityPosts: List<Post> = emptyList(),  // 업로드 중인 커뮤니티 글
+    val pendingCommunityPosts: List<Post> = emptyList(),
     val communityPinnedPosts: List<Post> = emptyList(),
     val isCommunityLoading: Boolean = false,
     val communityNextCursor: String? = null,
-    val communityHasMore: Boolean = true,
-
+    val hasMoreCommunityPosts: Boolean = true,
     // 스토어 탭, Creator 전용
     val storeProducts: List<Product> = emptyList(),
     val storeProductSections: List<ProductTagSection> = emptyList(),
     val isStoreLoading: Boolean = false,
     val storePage: Int = 1,
-    val storeHasMore: Boolean = true,
+    val hasMoreStoreProducts: Boolean = true,
     val storeSortType: ProductSortType = ProductSortType.LATEST,
-
     // 공유
     val showShareSheet: Boolean = false,
     val sharePostId: Int? = null,
@@ -102,10 +92,8 @@ sealed interface MyProfileIntent {
     data object NavigateToMyProducts : MyProfileIntent
     data object NavigateToSalesManage : MyProfileIntent
     data object SnackbarDismissed : MyProfileIntent
-
     // 탭 관련
     data class SelectTab(val tab: ProfileTab) : MyProfileIntent
-
     // 포스트 탭
     data object LoadMorePosts : MyProfileIntent
     data class ChangePostsSortType(val sortType: UserPostSortType) : MyProfileIntent
@@ -121,7 +109,6 @@ sealed interface MyProfileIntent {
     // 커뮤니티 탭 멤버 글
     data object BookmarkPost : MyProfileIntent
     data object BlockPostAuthor : MyProfileIntent
-
     // 답글 탭
     data object LoadMoreCommentThreads : MyProfileIntent
     data class ChangeRepliesSortType(val sortType: UserPostSortType) : MyProfileIntent
@@ -136,20 +123,17 @@ sealed interface MyProfileIntent {
     // 팔로우
     data class FollowUser(val userId: Int) : MyProfileIntent
     data class UnfollowUser(val userId: Int) : MyProfileIntent
-
     // 댓글 옵션
-    data class ShowCommentOptions(val comment: ThreadCommentData, val thread: CommentThreadData) : MyProfileIntent
+    data class ShowCommentOptions(val comment: ThreadComment, val thread: CommentThread) : MyProfileIntent
     data object DismissCommentOptions : MyProfileIntent
     data object DeleteComment : MyProfileIntent
     data object BookmarkComment : MyProfileIntent
     data object BlockCommentAuthor : MyProfileIntent
-
     // 스레드 포스트 옵션
-    data class ShowThreadPostOptions(val post: PostSummaryData) : MyProfileIntent
+    data class ShowThreadPostOptions(val post: ThreadPost) : MyProfileIntent
     data object DismissThreadPostOptions : MyProfileIntent
     data object BookmarkThreadPost : MyProfileIntent
     data object BlockThreadPostAuthor : MyProfileIntent
-
     // 홈 탭, Creator 전용
     data class NavigateToSectionDetail(
         val sectionType: SectionType,
@@ -157,7 +141,6 @@ sealed interface MyProfileIntent {
         val title: String
     ) : MyProfileIntent
     data class NavigateToProductDetail(val productId: Int) : MyProfileIntent
-
     // 커뮤니티 탭, Creator 전용
     data object LoadCommunityPosts : MyProfileIntent
     data object LoadMoreCommunityPosts : MyProfileIntent
@@ -167,13 +150,11 @@ sealed interface MyProfileIntent {
     data object DeleteCommunityPost : MyProfileIntent
     data object PinCommunityPost : MyProfileIntent
     data object CreateCommunityPost : MyProfileIntent
-
     // 공유
     data class SharePost(val postId: Int) : MyProfileIntent
     data object DismissShareSheet : MyProfileIntent
     data class ShareCompleted(val sharedRoomIds: List<Int>, val recipientCount: Int) : MyProfileIntent
     data class NavigateToChatRoom(val roomId: Int) : MyProfileIntent
-
     // 스토어 탭, Creator 전용
     data object LoadStoreProducts : MyProfileIntent
     data object LoadMoreStoreProducts : MyProfileIntent

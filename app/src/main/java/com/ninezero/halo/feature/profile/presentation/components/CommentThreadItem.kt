@@ -43,31 +43,31 @@ import com.ninezero.halo.core.ui.components.badge.SecretPostBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.comment.CommentItem
 import com.ninezero.halo.core.ui.components.comment.CommentMedia
-import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlay
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlayShape
 import com.ninezero.halo.core.ui.components.overlay.LockedOverlay
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
+import com.ninezero.halo.core.ui.components.text.AnimatedCounter
 import com.ninezero.halo.core.ui.components.text.buildHashtagAnnotatedString
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Like
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
-import com.ninezero.halo.feature.profile.domain.model.PostSummaryData
-import com.ninezero.halo.feature.profile.domain.model.ThreadCommentData
-import com.ninezero.halo.feature.profile.domain.model.UserSummaryData
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.Like
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
+import com.ninezero.halo.feature.profile.domain.model.ThreadComment
+import com.ninezero.halo.feature.profile.domain.model.ThreadPost
+import com.ninezero.halo.feature.profile.domain.model.ThreadUser
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
 /** 답글 탭 스레드 아이템 */
 @Composable
 fun CommentThreadItem(
-    thread: CommentThreadData,
+    thread: CommentThread,
     onThreadClick: (Int) -> Unit,
     onDeletedPostClick: () -> Unit,
     onPostLikeClick: (Int) -> Unit,
@@ -134,7 +134,7 @@ fun CommentThreadItem(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.width(avatarSize)
                 ) {
-                    // 삭제/숨김된 포스트는 프로필 placeholder로 표시
+                    // 삭제·숨김된 포스트는 프로필 placeholder로 표시
                     if (isPostUnavailable) {
                         Image(
                             painter = painterResource(R.drawable.ic_profile_placeholder),
@@ -193,7 +193,7 @@ fun CommentThreadItem(
                             .then(if (isPostUnavailable || isPostRestricted) Modifier.heightIn(min = 80.dp) else Modifier)
                             .then(
                                 if (isPostUnavailable || isPostRestricted) {
-                                    Modifier.clip(ObscuredOverlayShape).hazeSource(state = postHazeState)
+                                    Modifier.clip(CoverOverlayShape).hazeSource(state = postHazeState)
                                 } else Modifier
                             )
                     ) {
@@ -250,7 +250,7 @@ fun CommentThreadItem(
 
                     // 삭제된 포스트 오버레이
                     if (isPostDeleted) {
-                        ObscuredOverlay(
+                        CoverOverlay(
                             hazeState = postHazeState,
                             icon = R.drawable.ic_delete,
                             label = "삭제된 포스트입니다",
@@ -260,7 +260,7 @@ fun CommentThreadItem(
 
                     // 유효하지 않은 포스트 오버레이
                     if (isPostHidden) {
-                        ObscuredOverlay(
+                        CoverOverlay(
                             hazeState = postHazeState,
                             icon = R.drawable.ic_eye_off,
                             label = "유효하지 않은 포스트입니다",
@@ -273,7 +273,7 @@ fun CommentThreadItem(
                         LockedOverlay(
                             hazeState = postHazeState,
                             icon = R.drawable.ic_lock,
-                            label = if (thread.post.isSecret) "비밀글" else "${thread.post.requiredTier} 이상 멤버십 전용",
+                            label = if (thread.post.isSecret) "비밀글" else "${thread.post.requiredTier.label} 이상 멤버십 전용",
                             contentDescription = "잠금"
                         )
                     }
@@ -296,7 +296,7 @@ fun CommentThreadItem(
                 )
             }
 
-            // 삭제/숨김/잠금 포스트는 버튼 영역 숨김
+            // 삭제·숨김·잠금 포스트는 버튼 영역 숨김
             if (!isPostUnavailable && !isPostRestricted) Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -311,7 +311,7 @@ fun CommentThreadItem(
                         .background(lineColor)
                 )
 
-                // 좋아요/댓글 버튼
+                // 좋아요·댓글 버튼
                 Row(
                     modifier = Modifier
                         .padding(start = contentStartPadding, end = horizontalPadding)
@@ -329,7 +329,7 @@ fun CommentThreadItem(
                     ) {
                         Icon(
                             painter = painterResource(
-                                if (thread.post.isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart
+                                if (thread.post.isLiked) R.drawable.ic_post_heart_filled else R.drawable.ic_post_heart
                             ),
                             contentDescription = "좋아요",
                             modifier = Modifier
@@ -360,7 +360,7 @@ fun CommentThreadItem(
                         )
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_comment),
+                            painter = painterResource(R.drawable.ic_post_comment),
                             contentDescription = "댓글",
                             modifier = Modifier
                                 .size(20.dp)
@@ -438,12 +438,12 @@ private fun CommentThreadItemPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "원글입니다. 좋은 하루 되세요!",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 2,
                                 username = "user1",
                                 displayName = "사용자1",
@@ -456,16 +456,16 @@ private fun CommentThreadItemPreview() {
                             isLiked = false,
                             isProfileUser = false
                         ),
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 2,
                             content = "정말 좋은 포스트네요! 많은 도움이 되었습니다.",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
                                 avatarUrl = null
                             ),
-                            replyTo = UserSummaryData(
+                            replyTo = ThreadUser(
                                 id = 2,
                                 username = "user1",
                                 displayName = "사용자1",
@@ -478,11 +478,11 @@ private fun CommentThreadItemPreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "오늘 새로운 프로젝트를 시작했습니다. 많은 관심 부탁드려요!",
                         mediaAttachments = emptyList(),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 3,
                             username = "creator",
                             displayName = "크리에이터",
@@ -510,12 +510,12 @@ private fun CommentThreadItemSingleCommentPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "정말 멋진 사진이네요! 제주도 언제 가보고 싶었는데 이 사진 보니까 더 가고 싶어졌어요 😊",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
@@ -529,14 +529,14 @@ private fun CommentThreadItemSingleCommentPreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "제주도 성산일출봉에서 찍은 일출 사진입니다. 새벽 5시에 일어나서 찍었어요!",
                         mediaAttachments = listOf(
                             MediaItem(id = 1, type = MediaType.IMAGE, url = "https://picsum.photos/400/300", thumbnailUrl = null),
                             MediaItem(id = 2, type = MediaType.IMAGE, url = "https://picsum.photos/401/300", thumbnailUrl = null)
                         ),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 2,
                             username = "traveler",
                             displayName = "여행자",
@@ -568,12 +568,12 @@ private fun CommentThreadItemSingleCommentNoImagePreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "좋은 글 감사합니다! 많은 도움이 됐어요.",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
@@ -587,11 +587,11 @@ private fun CommentThreadItemSingleCommentNoImagePreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "오늘 배운 Kotlin 코루틴 정리입니다. suspend 함수와 Flow에 대해 알아보았어요.",
                         mediaAttachments = emptyList(),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 3,
                             username = "developer",
                             displayName = "개발자",
@@ -623,12 +623,12 @@ private fun CommentThreadItemBlockedPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 2,
                                 username = "blocked_user",
                                 displayName = "차단된 사용자",
@@ -642,16 +642,16 @@ private fun CommentThreadItemBlockedPreview() {
                             isProfileUser = false,
                             isBlocked = true
                         ),
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 2,
                             content = "내 답글입니다.",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
                                 avatarUrl = null
                             ),
-                            replyTo = UserSummaryData(
+                            replyTo = ThreadUser(
                                 id = 2,
                                 username = "blocked_user",
                                 displayName = "차단된 사용자",
@@ -664,13 +664,13 @@ private fun CommentThreadItemBlockedPreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "포스트 내용입니다.",
                         mediaAttachments = listOf(
                             MediaItem(id = 1, type = MediaType.IMAGE, url = "https://example.com/image.jpg", thumbnailUrl = null)
                         ),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 3,
                             username = "author",
                             displayName = "작성자",
@@ -698,12 +698,12 @@ private fun CommentThreadItemDeletedPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 2,
                                 username = "deleted_user",
                                 displayName = "삭제된 댓글 작성자",
@@ -717,16 +717,16 @@ private fun CommentThreadItemDeletedPreview() {
                             isProfileUser = false,
                             isDeleted = true
                         ),
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 2,
                             content = "삭제된 댓글에 대한 내 답글입니다.",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
                                 avatarUrl = null
                             ),
-                            replyTo = UserSummaryData(
+                            replyTo = ThreadUser(
                                 id = 2,
                                 username = "deleted_user",
                                 displayName = "삭제된 댓글 작성자",
@@ -739,11 +739,11 @@ private fun CommentThreadItemDeletedPreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "포스트 내용입니다.",
                         mediaAttachments = emptyList(),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 3,
                             username = "author",
                             displayName = "작성자",
@@ -771,12 +771,12 @@ private fun CommentThreadItemDeletedPostPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "삭제된 포스트에 남긴 내 댓글입니다.",
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
@@ -790,11 +790,11 @@ private fun CommentThreadItemDeletedPostPreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "",
                         mediaAttachments = emptyList(),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 2,
                             username = "deleted_author",
                             displayName = "삭제된 포스트 작성자",
@@ -827,16 +827,16 @@ private fun CommentThreadItemCommentWithImagesPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "이미지가 포함된 댓글입니다!",
                             mediaAttachments = listOf(
                                 MediaItem(id = 1, type = MediaType.IMAGE, url = "https://picsum.photos/400/300", thumbnailUrl = null),
                                 MediaItem(id = 2, type = MediaType.IMAGE, url = "https://picsum.photos/400/301", thumbnailUrl = null)
                             ),
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
@@ -850,11 +850,11 @@ private fun CommentThreadItemCommentWithImagesPreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "오늘 새로운 프로젝트를 시작했습니다!",
                         mediaAttachments = emptyList(),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 2,
                             username = "developer",
                             displayName = "개발자",
@@ -886,15 +886,15 @@ private fun CommentThreadItemCommentWithVideoPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CommentThreadItem(
-                thread = CommentThreadData(
+                thread = CommentThread(
                     comments = listOf(
-                        ThreadCommentData(
+                        ThreadComment(
                             id = 1,
                             content = "비디오가 포함된 댓글입니다!",
                             mediaAttachments = listOf(
                                 MediaItem(id = 1, type = MediaType.VIDEO, url = "https://example.com/video.mp4", thumbnailUrl = null)
                             ),
-                            author = UserSummaryData(
+                            author = ThreadUser(
                                 id = 1,
                                 username = "me",
                                 displayName = "나",
@@ -908,11 +908,11 @@ private fun CommentThreadItemCommentWithVideoPreview() {
                             isProfileUser = true
                         )
                     ),
-                    post = PostSummaryData(
+                    post = ThreadPost(
                         id = 1,
                         excerpt = "오늘 새로운 프로젝트를 시작했습니다!",
                         mediaAttachments = emptyList(),
-                        author = UserSummaryData(
+                        author = ThreadUser(
                             id = 2,
                             username = "developer",
                             displayName = "개발자",

@@ -46,11 +46,9 @@ class FollowListViewModel @Inject constructor(
     private val subscriberCount: Int = savedStateHandle.get<Int>("subscriberCount") ?: 0
     private val isMyProfile: Boolean = savedStateHandle.get<Boolean>("isMyProfile") ?: false
     private val showSubscribers: Boolean = savedStateHandle.get<Boolean>("showSubscribers") ?: false
-
     private val followersSearchQueryFlow = MutableStateFlow(SearchInput(""))
     private val followingSearchQueryFlow = MutableStateFlow(SearchInput(""))
     private val subscribersSearchQueryFlow = MutableStateFlow(SearchInput(""))
-
     private val followersGeneration = ListGeneration()
     private val followingGeneration = ListGeneration()
     private val subscribersGeneration = ListGeneration()
@@ -87,29 +85,8 @@ class FollowListViewModel @Inject constructor(
         followEventBus.events
             .onEach { event ->
                 intent {
-                    val newIsFollowing = event is FollowEvent.Followed
-                    val targetId = event.userId
-                    val updatedFollowers = state.followers.map { user ->
-                        if (user.id == targetId) user.copy(isFollowing = newIsFollowing) else user
-                    }
-                    val updatedFollowing = state.following.map { user ->
-                        if (user.id == targetId) user.copy(isFollowing = newIsFollowing) else user
-                    }
-                    val updatedSubscribers = state.subscribers.map { user ->
-                        if (user.id == targetId) user.copy(isFollowing = newIsFollowing) else user
-                    }
-                    if (updatedFollowers != state.followers ||
-                        updatedFollowing != state.following ||
-                        updatedSubscribers != state.subscribers
-                    ) {
-                        reduce {
-                            state.copy(
-                                followers = updatedFollowers,
-                                following = updatedFollowing,
-                                subscribers = updatedSubscribers
-                            )
-                        }
-                    }
+                    val updated = state.withFollowing(event.userId, event is FollowEvent.Followed)
+                    if (updated != state) reduce { updated }
                 }
             }
             .launchIn(viewModelScope)
@@ -156,7 +133,8 @@ class FollowListViewModel @Inject constructor(
             is FollowListIntent.SelectTab -> selectTab(intent.tab)
             is FollowListIntent.UpdateSearchQuery -> updateSearchQuery(intent.query)
             is FollowListIntent.Search -> search()
-            is FollowListIntent.ClearSearch -> clearSearch()
+            is FollowListIntent.OpenSearch -> intent { reduce { state.copy(isSearchMode = true) } }
+            is FollowListIntent.CloseSearch -> closeSearch()
             is FollowListIntent.LoadMoreFollowers -> loadMoreFollowers()
             is FollowListIntent.LoadMoreFollowing -> loadMoreFollowing()
             is FollowListIntent.LoadMoreSubscribers -> loadMoreSubscribers()
@@ -220,8 +198,10 @@ class FollowListViewModel @Inject constructor(
         submitSearch { query -> SearchInput(query, immediate = true) }  // 기다리던 검색을 이것으로 대체
     }
 
-    private fun clearSearch() = intent {
-        submitSearch { SearchInput("", immediate = true) }  // 기다리던 검색을 이것으로 대체
+    /** 닫으면 검색어를 비우고 전체 목록으로 */
+    private fun closeSearch() = intent {
+        reduce { state.copy(isSearchMode = false) }
+        if (state.searchQueryOf(state.selectedTab).isNotEmpty()) submitSearch { SearchInput("", immediate = true) }  // 기다리던 검색을 이것으로 대체
     }
 
     /** 요청이 나갈 입력이면 300ms 대기 동안에도 가운데 로딩, 진행 중이던 응답은 버림 */
@@ -237,7 +217,7 @@ class FollowListViewModel @Inject constructor(
                     state.copy(
                         followersSearchQuery = input.query,
                         followers = if (sends) emptyList() else state.followers,
-                        followersHasMore = if (sends) false else state.followersHasMore,
+                        hasMoreFollowers = if (sends) false else state.hasMoreFollowers,
                         isFollowersLoading = sends
                     )
                 }
@@ -253,7 +233,7 @@ class FollowListViewModel @Inject constructor(
                     state.copy(
                         followingSearchQuery = input.query,
                         following = if (sends) emptyList() else state.following,
-                        followingHasMore = if (sends) false else state.followingHasMore,
+                        hasMoreFollowing = if (sends) false else state.hasMoreFollowing,
                         isFollowingLoading = sends
                     )
                 }
@@ -269,7 +249,7 @@ class FollowListViewModel @Inject constructor(
                     state.copy(
                         subscribersSearchQuery = input.query,
                         subscribers = if (sends) emptyList() else state.subscribers,
-                        subscribersHasMore = if (sends) false else state.subscribersHasMore,
+                        hasMoreSubscribers = if (sends) false else state.hasMoreSubscribers,
                         isSubscribersLoading = sends
                     )
                 }
@@ -282,7 +262,7 @@ class FollowListViewModel @Inject constructor(
     private fun loadFollowers(reset: Boolean) = intent {
         // 새 검색어는 기다리지 않음, 늦은 응답은 버림
         if (!reset && state.isFollowersLoading) return@intent
-        if (!reset && !state.followersHasMore) return@intent
+        if (!reset && !state.hasMoreFollowers) return@intent
 
         val cursor = if (reset) null else state.followersNextCursor
         val generation = if (reset) followersGeneration.next() else followersGeneration.current()  // 처음부터 받으면 진행 중이던 더보기 버림
@@ -305,7 +285,7 @@ class FollowListViewModel @Inject constructor(
                     // 서버 페이징 중복 행 제거, 중복 key는 크래시
                     followers = if (reset) listResult.items else (state.followers + listResult.items).distinctBy { it.id },
                     followersNextCursor = listResult.nextCursor,
-                    followersHasMore = listResult.nextCursor != null,
+                    hasMoreFollowers = listResult.nextCursor != null,
                     isFollowersLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
                     loadedTabs = state.loadedTabs + FollowTab.FOLLOWERS,
@@ -334,7 +314,7 @@ class FollowListViewModel @Inject constructor(
     private fun loadFollowing(reset: Boolean) = intent {
         // 새 검색어는 기다리지 않음, 늦은 응답은 버림
         if (!reset && state.isFollowingLoading) return@intent
-        if (!reset && !state.followingHasMore) return@intent
+        if (!reset && !state.hasMoreFollowing) return@intent
 
         val cursor = if (reset) null else state.followingNextCursor
         val generation = if (reset) followingGeneration.next() else followingGeneration.current()  // 처음부터 받으면 진행 중이던 더보기 버림
@@ -356,7 +336,7 @@ class FollowListViewModel @Inject constructor(
                 state.copy(
                     following = if (reset) listResult.items else (state.following + listResult.items).distinctBy { it.id },
                     followingNextCursor = listResult.nextCursor,
-                    followingHasMore = listResult.nextCursor != null,
+                    hasMoreFollowing = listResult.nextCursor != null,
                     isFollowingLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
                     loadedTabs = state.loadedTabs + FollowTab.FOLLOWING,
@@ -394,7 +374,7 @@ class FollowListViewModel @Inject constructor(
         if (!state.showSubscribers) return@intent  // 구독자 탭은 크리에이터 본인만
         // 새 검색어는 기다리지 않음, 늦은 응답은 버림
         if (!reset && state.isSubscribersLoading) return@intent
-        if (!reset && !state.subscribersHasMore) return@intent
+        if (!reset && !state.hasMoreSubscribers) return@intent
 
         val page = if (reset) 1 else state.subscribersPage
         val generation = if (reset) subscribersGeneration.next() else subscribersGeneration.current()  // 처음부터 받으면 진행 중이던 더보기 버림
@@ -412,7 +392,7 @@ class FollowListViewModel @Inject constructor(
                 state.copy(
                     subscribers = if (reset) listResult.items else (state.subscribers + listResult.items).distinctBy { it.id },
                     subscribersPage = page + 1,
-                    subscribersHasMore = listResult.hasNext,
+                    hasMoreSubscribers = listResult.hasNext,
                     isSubscribersLoading = false,
                     isInitialLoading = if (reset) false else state.isInitialLoading,
                     loadedTabs = state.loadedTabs + FollowTab.SUBSCRIBERS,
@@ -443,7 +423,7 @@ class FollowListViewModel @Inject constructor(
     }
 
     private fun toggleFollow(targetUserId: Int) = intent {
-        if (state.toggleLoadingUserIds.contains(targetUserId)) return@intent
+        if (state.followInProgressIds.contains(targetUserId)) return@intent
 
         val currentUser = state.followers.find { it.id == targetUserId }
             ?: state.following.find { it.id == targetUserId }
@@ -451,16 +431,20 @@ class FollowListViewModel @Inject constructor(
             ?: return@intent
         val shouldFollow = !currentUser.isFollowing
 
-        reduce { state.copy(toggleLoadingUserIds = state.toggleLoadingUserIds + targetUserId) }
+        // 버튼은 바로 바꾸고 실패하면 되돌림
+        reduce {
+            state.withFollowing(targetUserId, shouldFollow)
+                .copy(followInProgressIds = state.followInProgressIds + targetUserId)
+        }
 
         toggleAuthorFollowUseCase(targetUserId, shouldFollow)
             .onSuccess {
-                reduce { state.copy(toggleLoadingUserIds = state.toggleLoadingUserIds - targetUserId) }
+                reduce { state.copy(followInProgressIds = state.followInProgressIds - targetUserId) }
             }
             .onFailure { error ->
                 reduce {
-                    state.copy(
-                        toggleLoadingUserIds = state.toggleLoadingUserIds - targetUserId,
+                    state.withFollowing(targetUserId, !shouldFollow).copy(
+                        followInProgressIds = state.followInProgressIds - targetUserId,
                         snackbarState = SnackbarState(error.message ?: "팔로우 상태를 변경할 수 없습니다")
                     )
                 }
@@ -490,10 +474,10 @@ class FollowListViewModel @Inject constructor(
         val targetUserId = targetUser.id
 
         reduce {
-            state.copy(
+            state.withFollowing(targetUserId, false).copy(
                 showUnfollowConfirmDialog = false,
                 unfollowTargetUser = null,
-                toggleLoadingUserIds = state.toggleLoadingUserIds + targetUserId
+                followInProgressIds = state.followInProgressIds + targetUserId
             )
         }
 
@@ -502,15 +486,15 @@ class FollowListViewModel @Inject constructor(
                 reduce {
                     state.copy(
                         followingCount = (state.followingCount - 1).coerceAtLeast(0),
-                        toggleLoadingUserIds = state.toggleLoadingUserIds - targetUserId,
+                        followInProgressIds = state.followInProgressIds - targetUserId,
                         toastMessage = "팔로우를 취소했습니다"
                     )
                 }
             }
             .onFailure { error ->
                 reduce {
-                    state.copy(
-                        toggleLoadingUserIds = state.toggleLoadingUserIds - targetUserId,
+                    state.withFollowing(targetUserId, true).copy(
+                        followInProgressIds = state.followInProgressIds - targetUserId,
                         snackbarState = SnackbarState(error.message ?: "팔로우를 취소할 수 없습니다")
                     )
                 }

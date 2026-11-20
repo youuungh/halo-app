@@ -2,16 +2,15 @@ package com.ninezero.halo.feature.notification.fcm
 
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.ninezero.halo.core.di.ApplicationScope
 import com.ninezero.halo.core.fcm.ActiveChatRoomTracker
-import com.ninezero.halo.core.fcm.FcmRegistrationManager
+import com.ninezero.halo.core.fcm.FcmIdStore
 import com.ninezero.halo.core.fcm.FcmRegistrationRepository
 import com.ninezero.halo.core.network.auth.TokenProvider
 import com.ninezero.halo.feature.chat.domain.repository.ChatRepository
 import com.ninezero.halo.feature.notification.domain.model.NotificationType
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -31,16 +30,18 @@ class HaloFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var chatRepository: ChatRepository
 
     @Inject
-    lateinit var fcmRegistrationManager: FcmRegistrationManager
+    lateinit var fcmIdStore: FcmIdStore
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
     override fun onRegistered(token: String) {
         super.onRegistered(token)
         Timber.d("FCM 등록됨: ${token.take(10)}...")
 
-        serviceScope.launch {
-            fcmRegistrationManager.cache(token)
+        applicationScope.launch {
+            fcmIdStore.cache(token)
             val userId = tokenProvider.getUserId()
             if (userId != null) {
                 fcmRegistrationRepository.registerFid(token)
@@ -54,7 +55,7 @@ class HaloFirebaseMessagingService : FirebaseMessagingService() {
         super.onUnregistered(token)
         Timber.d("FCM 등록 해제됨")
 
-        serviceScope.launch { fcmRegistrationManager.clear() }
+        applicationScope.launch { fcmIdStore.clear() }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

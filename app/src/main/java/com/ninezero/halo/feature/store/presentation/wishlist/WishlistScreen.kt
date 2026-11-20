@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.store.presentation.wishlist.components.WishlistItem
@@ -93,6 +93,7 @@ internal fun WishlistScreenContent(
         hasMore = state.hasMore,
         isEmpty = state.items.isEmpty(),
         error = state.error,
+        errorTitle = "위시리스트를 불러오지 못했습니다",
         emptyTitle = "위시리스트가 비어있어요",
         emptyDescription = "마음에 드는 상품을 위시리스트에 담아보세요",
         onNavigateBack = onNavigateBack,

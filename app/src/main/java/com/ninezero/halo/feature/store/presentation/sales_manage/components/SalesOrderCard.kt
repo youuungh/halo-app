@@ -1,20 +1,10 @@
 package com.ninezero.halo.feature.store.presentation.sales_manage.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,381 +12,234 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.CardShape
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.feature.store.domain.model.Order
 import com.ninezero.halo.feature.store.domain.model.OrderItem
 import com.ninezero.halo.feature.store.domain.model.OrderStatus
+import com.ninezero.halo.feature.store.domain.model.PaymentStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatus
-import com.ninezero.halo.feature.store.domain.model.creatorGroupsOrFallback
+import com.ninezero.halo.feature.store.presentation.components.OrderGroupAction
+import com.ninezero.halo.feature.store.presentation.components.OrderGroupActionBar
 import com.ninezero.halo.feature.store.presentation.components.OrderStatusBadge
-import com.ninezero.halo.ui.theme.HaloTheme
 
+private val ProductImageSize = 60.dp
+
+/** 멤버십 관리 카드 틀 + 글자 버튼 바 */
 @Composable
 fun SalesOrderCard(
     order: Order,
-    isExpanded: Boolean,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     onRegisterShipping: () -> Unit,
     onEditShipping: () -> Unit,
-    onToggleExpand: () -> Unit,
+    onShowDeliveryInfo: () -> Unit,
+    onTrackShipping: () -> Unit,
     modifier: Modifier = Modifier,
     isStatusUpdating: Boolean = false,
+    isCancelling: Boolean = false,
 ) {
     val numberFormat = rememberKoreanNumberFormat()
-    val sellerGroup = remember(order) { order.creatorGroupsOrFallback().firstOrNull() }
-    val sellerShippingFee = remember(order, sellerGroup) {
-        sellerGroup?.shippingFee?.toLongOrNull()
-            ?: order.shippingFee.toLongOrNull()
-            ?: 0L
-    }
-    val sellerSubtotal = remember(order, sellerGroup) {
-        sellerGroup?.subtotal?.toLongOrNull()
-            ?: order.items.sumOf { it.subtotal.toLongOrNull() ?: 0L }
-    }
-    val sellerOrderAmount = remember(sellerSubtotal, sellerShippingFee) {
-        sellerSubtotal + sellerShippingFee
-    }
-    val chevronRotation by animateFloatAsState(
-        targetValue = if (isExpanded) 0f else -90f,
-        label = "recipient_chevron"
-    )
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
+            .cardBorder(CardShape)
+            .clip(CardShape)
     ) {
-        // 상태 뱃지 + 날짜/주문번호
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            OrderStatusBadge(order.status, order.shippingStatus, order.paymentStatus)
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = order.createdAt.toFormattedDate("yyyy.MM.dd HH:mm"),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = order.orderNumber,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // 주문 상품 목록
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            order.items.forEach { item ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (item.productImageUrl != null) {
-                        AsyncImage(
-                            model = item.productImageUrl,
-                            contentDescription = item.productName,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = item.productName,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "${numberFormat.format(item.price.toLongOrNull() ?: 0)}원 × ${item.quantity}개",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // 수령인 + 총액
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp)) {
+            // 상태 · 날짜
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable { onToggleExpand() }
-                    .padding(vertical = 2.dp, horizontal = 2.dp)
-            ) {
-                Text(
-                    text = order.shippingName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_down),
-                    contentDescription = if (isExpanded) "접기" else "펼치기",
-                    modifier = Modifier
-                        .size(14.dp)
-                        .rotate(chevronRotation),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                text = "${numberFormat.format(sellerOrderAmount)}원",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        // 수령인 상세 정보
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + expandVertically(
-                spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold),
-                expandFrom = Alignment.Top,
-                clip = false
-            ),
-            exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + shrinkVertically(
-                spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntSize.VisibilityThreshold),
-                shrinkTowards = Alignment.Top,
-                clip = false
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                RecipientInfoRow("연락처", order.shippingPhone)
-                RecipientInfoRow("주소", order.shippingAddress)
-                if (!order.memo.isNullOrBlank()) {
-                    RecipientInfoRow("메모", order.memo)
-                }
-            }
-        }
-
-        // 액션 버튼
-        when {
-            order.status == OrderStatus.PENDING -> {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onConfirm,
-                        enabled = !isStatusUpdating,
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(36.dp)
-                            .bounceClick()
-                    ) {
-                        Text(
-                            text = "주문 확인",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    OutlinedButton(
-                        onClick = onCancel,
-                        enabled = !isStatusUpdating,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(36.dp)
-                            .bounceClick()
-                    ) {
-                        Text(
-                            text = "판매 취소",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-
-            order.status == OrderStatus.CONFIRMED && order.shippingStatus == ShippingStatus.PREPARING -> {
-                if (order.trackingNumber == null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onRegisterShipping,
-                            enabled = !isStatusUpdating,
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(36.dp)
-                                .bounceClick()
-                        ) {
-                            Text(
-                                text = "송장번호 입력",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        OutlinedButton(
-                            onClick = onCancel,
-                            enabled = !isStatusUpdating,
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(36.dp)
-                                .bounceClick()
-                        ) {
-                            Text(
-                                text = "판매 취소",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 송장 정보 표시
-        if (order.trackingNumber != null && order.carrier != null) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                OrderStatusBadge(order.status, order.shippingStatus, order.paymentStatus)
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = order.carrier,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    text = order.createdAt.toFormattedDate("yyyy.MM.dd HH:mm"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = order.trackingNumber,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                    modifier = Modifier.weight(1f)
-                )
-                // 택배사 기록 전(SHIPPED)까지만 수정
-                if (order.shippingStatus == ShippingStatus.SHIPPED && order.status != OrderStatus.CANCELLED) {
-                    Text(
-                        text = "수정",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 대표 상품, '배송 정보 ›'를 사진 밑단에
+            val firstItem = order.items.firstOrNull()
+            val hasImage = firstItem?.productImageUrl != null
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (hasImage) {
+                    AsyncImage(
+                        model = firstItem.productImageUrl,
+                        contentDescription = firstItem.productName,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable(enabled = !isStatusUpdating, onClick = onEditShipping)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .size(ProductImageSize)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(if (hasImage) Modifier.height(ProductImageSize) else Modifier),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    if (firstItem != null) {
+                        // 이름 · 값은 위에 붙이고 '배송 정보 ›'만 아래 끝으로
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = firstItem.productName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                if (order.items.size > 1) {
+                                    Text(
+                                        text = " 외 ${order.items.size - 1}건",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "${numberFormat.format(firstItem.price)}원 × ${firstItem.quantity}개",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onShowDeliveryInfo
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "배송 정보",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.ic_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
+
+        // 할 일이 없으면 바도 없음
+        OrderGroupActionBar(
+            salesActions(
+                order = order,
+                isStatusUpdating = isStatusUpdating,
+                isCancelling = isCancelling,
+                onConfirm = onConfirm,
+                onCancel = onCancel,
+                onRegisterShipping = onRegisterShipping,
+                onEditShipping = onEditShipping,
+                onTrackShipping = onTrackShipping
+            )
+        )
     }
 }
 
+/** 판매 취소는 왼쪽 빨강, 할 일은 오른쪽 파랑 */
 @Composable
-private fun RecipientInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(48.dp)
+private fun salesActions(
+    order: Order,
+    isStatusUpdating: Boolean,
+    isCancelling: Boolean,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+    onRegisterShipping: () -> Unit,
+    onEditShipping: () -> Unit,
+    onTrackShipping: () -> Unit
+): List<OrderGroupAction> {
+    val colors = MaterialTheme.colorScheme
+    val enabled = !isStatusUpdating
+    val cancel = OrderGroupAction(
+        label = "판매 취소",
+        color = colors.error,
+        isLoading = isStatusUpdating && isCancelling,
+        enabled = enabled,
+        onClick = onCancel
+    )
+    // 결제가 확정되지 않았거나 환불된 주문은 처리할 일이 없음
+    val isNotPaid = order.paymentStatus == PaymentStatus.PENDING || order.paymentStatus == PaymentStatus.REFUNDED
+
+    return when {
+        isNotPaid || order.status == OrderStatus.CANCELLED -> emptyList()
+
+        order.status == OrderStatus.PENDING -> listOf(
+            cancel,
+            OrderGroupAction(
+                label = "주문 확인",
+                color = colors.primary,
+                isLoading = isStatusUpdating && !isCancelling,
+                enabled = enabled,
+                onClick = onConfirm
+            )
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurface
+
+        order.status == OrderStatus.CONFIRMED &&
+            order.shippingStatus == ShippingStatus.PREPARING &&
+            order.trackingNumber == null -> listOf(
+            cancel,
+            OrderGroupAction("송장번호 입력", colors.primary, enabled = enabled, onClick = onRegisterShipping)
         )
+
+        order.trackingNumber != null -> listOfNotNull(
+            // SHIPPED까지만 수정
+            OrderGroupAction("송장 수정", colors.onSurface, enabled = enabled, onClick = onEditShipping)
+                .takeIf { order.shippingStatus == ShippingStatus.SHIPPED },
+            OrderGroupAction("배송 조회", colors.primary, onClick = onTrackShipping)
+        )
+
+        else -> emptyList()
     }
 }
-
 
 private fun previewOrder(
     id: Int,
-    status: String,
-    shippingStatus: String,
+    status: OrderStatus,
+    shippingStatus: ShippingStatus,
     trackingNumber: String? = null
 ) = Order(
     id = id,
@@ -407,113 +250,71 @@ private fun previewOrder(
             productId = id * 10,
             productName = "프리미엄 무선 이어폰 Pro Max",
             productImageUrl = null,
-            price = "89000",
+            price = 89000L,
             quantity = 1,
-            subtotal = "89000",
+            subtotal = 89000L,
             creatorId = 1,
             creatorName = "크리에이터 샵"
         )
     ),
-    totalPrice = "92000",
+    totalPrice = 92000L,
     status = status,
     shippingAddress = "서울시 강남구 테헤란로 123",
     shippingPhone = "010-1234-5678",
     shippingName = "홍길동",
     paymentProvider = "TOSS",
-    paymentStatus = "COMPLETED",
+    paymentStatus = PaymentStatus.COMPLETED,
     memo = null,
-    pointsUsed = "0",
-    couponDiscount = "0",
+    pointsUsed = 0L,
+    couponDiscount = 0L,
     trackingNumber = trackingNumber,
     carrier = if (trackingNumber != null) "CJ대한통운" else null,
-    shippingFee = "3000",
+    shippingFee = 3000L,
     shippingStatus = shippingStatus,
     createdAt = System.currentTimeMillis() - 86_400_000L,
     updatedAt = System.currentTimeMillis()
 )
 
-@HaloLightDarkPreview
 @Composable
-private fun SalesOrderCardPendingPreview() {
+private fun PreviewCard(order: Order, isStatusUpdating: Boolean = false) {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(vertical = 12.dp)) {
                 SalesOrderCard(
-                    order = previewOrder(1, OrderStatus.PENDING, ShippingStatus.PREPARING),
-                    isExpanded = false,
+                    order = order,
                     onConfirm = {},
                     onCancel = {},
                     onRegisterShipping = {},
                     onEditShipping = {},
-                    onToggleExpand = {}
+                    onShowDeliveryInfo = {},
+                    onTrackShipping = {},
+                    isStatusUpdating = isStatusUpdating
                 )
             }
         }
     }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun SalesOrderCardPendingPreview() {
+    PreviewCard(previewOrder(1, OrderStatus.PENDING, ShippingStatus.PREPARING))
 }
 
 @HaloLightDarkPreview
 @Composable
 private fun SalesOrderCardAwaitingShippingPreview() {
-    HaloTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                SalesOrderCard(
-                    order = previewOrder(2, OrderStatus.CONFIRMED, ShippingStatus.PREPARING),
-                    isExpanded = true,
-                    onConfirm = {},
-                    onCancel = {},
-                    onRegisterShipping = {},
-                    onEditShipping = {},
-                    onToggleExpand = {}
-                )
-            }
-        }
-    }
+    PreviewCard(previewOrder(2, OrderStatus.CONFIRMED, ShippingStatus.PREPARING))
 }
 
 @HaloLightDarkPreview
 @Composable
 private fun SalesOrderCardShippingPreview() {
-    HaloTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                SalesOrderCard(
-                    order = previewOrder(
-                        id = 3,
-                        status = OrderStatus.CONFIRMED,
-                        shippingStatus = ShippingStatus.IN_TRANSIT,
-                        trackingNumber = "1234567890"
-                    ),
-                    isExpanded = true,
-                    onConfirm = {},
-                    onCancel = {},
-                    onRegisterShipping = {},
-                    onEditShipping = {},
-                    onToggleExpand = {}
-                )
-            }
-        }
-    }
+    PreviewCard(previewOrder(3, OrderStatus.CONFIRMED, ShippingStatus.SHIPPED, trackingNumber = "601234567890"))
 }
 
 @HaloLightDarkPreview
 @Composable
 private fun SalesOrderCardUpdatingPreview() {
-    HaloTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                SalesOrderCard(
-                    order = previewOrder(4, OrderStatus.PENDING, ShippingStatus.PREPARING),
-                    isExpanded = false,
-                    onConfirm = {},
-                    onCancel = {},
-                    onRegisterShipping = {},
-                    onEditShipping = {},
-                    onToggleExpand = {},
-                    isStatusUpdating = true
-                )
-            }
-        }
-    }
+    PreviewCard(previewOrder(4, OrderStatus.PENDING, ShippingStatus.PREPARING), isStatusUpdating = true)
 }

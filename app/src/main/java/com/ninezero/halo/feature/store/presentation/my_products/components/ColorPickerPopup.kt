@@ -10,9 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,13 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.popup.HaloPopupMenu
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import dev.chrisbanes.haze.HazeState
 
 val GroupColors = listOf(
     Color(0xFFEF5350),  // Red
@@ -72,80 +72,75 @@ fun barColorFor(color: Color): Color {
 
 @Composable
 fun ColorPickerPopup(
+    hazeState: HazeState?,
     selectedColor: Color?,
     onColorSelected: (Color?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
 
-    Popup(
+    HaloPopupMenu(
+        hazeState = hazeState,
         alignment = Alignment.TopEnd,
-        onDismissRequest = onDismiss,
-        properties = PopupProperties(focusable = true)
+        onDismiss = onDismiss,
+        offset = IntOffset(0, with(LocalDensity.current) { 32.dp.roundToPx() })
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp,
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.padding(top = 32.dp)
+        FlowRow(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            // 폭을 칸 수에 맞춰 좌우 여백을 같게
+            maxItemsInEachRow = 5
         ) {
-            FlowRow(
+            val isNoneSelected = selectedColor == null
+            Box(
                 modifier = Modifier
-                    .widthIn(max = 250.dp)
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, outlineColor, CircleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onColorSelected(null) },
+                contentAlignment = Alignment.Center
             ) {
-                val isNoneSelected = selectedColor == null
+                if (isNoneSelected) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_check),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            GroupColors.forEach { color ->
+                val isSelected = selectedColor == color
                 Box(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .border(1.dp, outlineColor, CircleShape)
+                        .background(color, CircleShape)
+                        .then(
+                            if (isSelected) Modifier.border(
+                                1.5.dp,
+                                MaterialTheme.colorScheme.onSurface,
+                                CircleShape
+                            ) else Modifier
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { onColorSelected(null) },
+                        ) { onColorSelected(color) },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isNoneSelected) {
+                    if (isSelected) {
                         Icon(
                             painter = painterResource(R.drawable.ic_check),
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = Color.White
                         )
-                    }
-                }
-
-                GroupColors.forEach { color ->
-                    val isSelected = selectedColor == color
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(color, CircleShape)
-                            .then(
-                                if (isSelected) Modifier.border(
-                                    1.5.dp,
-                                    MaterialTheme.colorScheme.onSurface,
-                                    CircleShape
-                                ) else Modifier
-                            )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onColorSelected(color) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isSelected) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_check),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = Color.White
-                            )
-                        }
                     }
                 }
             }
@@ -160,6 +155,7 @@ private fun ColorPickerPopupPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.padding(16.dp)) {
                 ColorPickerPopup(
+                    hazeState = null,
                     selectedColor = GroupColors.first(),
                     onColorSelected = {},
                     onDismiss = {}

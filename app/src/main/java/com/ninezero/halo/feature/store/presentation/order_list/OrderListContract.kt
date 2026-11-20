@@ -3,6 +3,7 @@ package com.ninezero.halo.feature.store.presentation.order_list
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.feature.store.domain.model.Order
 import com.ninezero.halo.feature.store.domain.model.OrderItem
+import com.ninezero.halo.feature.store.domain.model.ShippingStatusResponse
 
 data class OrderListState(
     val isLoading: Boolean = true,
@@ -13,7 +14,12 @@ data class OrderListState(
     val hasMore: Boolean = true,
     val error: String? = null,
     val snackbarState: SnackbarState? = null,
-    val expandedOrderIds: Set<Int> = emptySet()
+    val expandedOrderIds: Set<Int> = emptySet(),
+    // 배송조회 시트
+    val shippingSheetOrderId: Int? = null,
+    val shippingSheetCreatorId: Int? = null,
+    val shippingStatus: ShippingStatusResponse? = null,
+    val isShippingStatusLoading: Boolean = false
 )
 
 sealed interface OrderListIntent {
@@ -22,12 +28,14 @@ sealed interface OrderListIntent {
     data object LoadMore : OrderListIntent
     data object Refresh : OrderListIntent
     data object ScreenResumed : OrderListIntent
-
     data class ToggleOrderExpand(val orderId: Int) : OrderListIntent
     data class WriteReview(val item: OrderItem, val orderId: Int) : OrderListIntent
     data class AddToCart(val item: OrderItem) : OrderListIntent
+    data class ShowShippingSheet(val orderId: Int, val creatorId: Int?) : OrderListIntent
+    data object DismissShippingSheet : OrderListIntent
     data object NavigateBack : OrderListIntent
     data class NavigateToDetail(val orderId: Int) : OrderListIntent
+    // Snackbar
     data object SnackbarDismissed : OrderListIntent
 }
 

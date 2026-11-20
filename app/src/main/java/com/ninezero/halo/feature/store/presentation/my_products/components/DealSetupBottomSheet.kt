@@ -1,9 +1,7 @@
 package com.ninezero.halo.feature.store.presentation.my_products.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,10 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -30,27 +26,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
 import com.ninezero.halo.core.ui.components.bottomsheet.DatePickerBottomSheet
-import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.bottomsheet.SheetHeader
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.input.FormSection
 import com.ninezero.halo.core.ui.components.input.FormTextField
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.input.inputBorder
+import com.ninezero.halo.core.ui.components.selector.SegmentedTabRow
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.feature.store.domain.model.Product
-import dev.chrisbanes.haze.HazeProgressive
+import com.ninezero.halo.feature.store.presentation.components.discountRatePercent
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import java.math.BigDecimal
@@ -58,6 +53,8 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 @Composable
 fun DealSetupBottomSheet(
@@ -71,9 +68,7 @@ fun DealSetupBottomSheet(
     val zone = remember { ZoneId.systemDefault() }
 
     // 딜 진행 중엔 price가 딜가라 basePrice 기준
-    val sellingPrice = remember(product.basePrice, product.price) {
-        product.basePrice.ifBlank { product.price }.toBigDecimalOrNull()
-    }
+    val sellingPrice = product.basePrice ?: product.price
 
     // 만료된 딜 값은 안 채움
     val existingStart = remember(product.dealStartAt) {
@@ -86,20 +81,24 @@ fun DealSetupBottomSheet(
 
     var dealPrice by remember {
         mutableStateOf(
-            if (dealNotExpired) product.dealPrice?.toBigDecimalOrNull()?.toLong()?.toString() ?: "" else ""
+            if (dealNotExpired) product.dealPrice?.toString() ?: "" else ""
         )
     }
+    // 새 딜은 지금부터 1일, 분 단위
     var startDateTime by remember {
-        mutableStateOf(if (dealNotExpired && existingStart != null) existingStart else LocalDateTime.now())
+        mutableStateOf(
+            if (dealNotExpired && existingStart != null) existingStart
+            else LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES)
+        )
     }
     var endDateTime by remember {
-        mutableStateOf(if (dealNotExpired) existingEnd else LocalDateTime.now().plusDays(1))
+        mutableStateOf(if (dealNotExpired) existingEnd else startDateTime.plusDays(1))
     }
     var showErrors by remember { mutableStateOf(false) }
 
     val dealPriceValue = dealPrice.toBigDecimalOrNull()
     val priceValid = dealPriceValue != null && dealPriceValue > BigDecimal.ZERO &&
-            (sellingPrice == null || dealPriceValue < sellingPrice)
+            dealPriceValue < BigDecimal.valueOf(sellingPrice)
     val periodValid = endDateTime.isAfter(startDateTime) && endDateTime.isAfter(LocalDateTime.now())
     val isValid = dealPrice.isNotBlank() && priceValid && periodValid
 
@@ -107,11 +106,10 @@ fun DealSetupBottomSheet(
         LoadingDialog()
     }
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        showDragHandle = false  // 헤더 안에 있음
     ) {
         val density = LocalDensity.current
         val hazeState = remember { HazeState() }
@@ -138,53 +136,86 @@ fun DealSetupBottomSheet(
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = 24.dp)  // 태그 · 상세설정 시트와 같은 아래 여백
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(10.dp)
+                // 어떤 상품인지: 사진 · 이름 · 판매가
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = product.imageUrls.firstOrNull(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(MaterialTheme.shapes.small),
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(R.drawable.ic_image_placeholder),
+                        error = painterResource(R.drawable.ic_image_placeholder),
+                        fallback = painterResource(R.drawable.ic_image_placeholder)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = product.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "현재 판매가",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "${sellingPrice?.let { numberFormat.format(it) } ?: product.price}원",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                        Text(
+                            text = "판매가 ${numberFormat.format(sellingPrice)}원",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 FormSection(title = "딜 가격") {
                     FormTextField(
                         value = dealPrice,
                         onValueChange = { raw -> dealPrice = raw.filter { it.isDigit() } },
-                        placeholder = "예: 15,000",
+                        placeholder = "0",
                         keyboardType = KeyboardType.Number,
                         prefix = "₩",
                         numberFormat = true,
                         isError = showErrors && !priceValid,
-                        errorMessage = "딜 가격은 판매가보다 낮아야 합니다"
+                        errorMessage = "판매가보다 낮게 입력해주세요"
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // 상품 등록과 같은 할인율 줄
+                sellingPrice.let { base ->
+                    discountRatePercent(base.toString(), dealPrice)?.let { rate ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 2.dp, end = 2.dp, top = 10.dp),
+                            // 이름과 숫자를 붙이고 숫자는 상품 상세 할인율과 같은 빨강
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "할인율",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.alignByBaseline()
+                            )
+                            Text(
+                                text = "$rate%",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.alignByBaseline()
+                            )
+                        }
+                    }
+                }
 
-                FormSection(title = "딜 기간") {
-                    DealDateRangeField(
+                Spacer(modifier = Modifier.height(20.dp))
+
+                FormSection(title = "기간") {
+                    DealPeriodField(
                         startDate = startDateTime,
                         endDate = endDateTime,
                         onStartDateChange = { startDateTime = it },
@@ -195,112 +226,66 @@ fun DealSetupBottomSheet(
                 if (showErrors && !periodValid) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "종료는 시작과 현재 시각보다 뒤여야 합니다",
+                        text = "종료는 시작과 지금보다 뒤여야 합니다",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
             }
 
-            // 헤더
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = backgroundColor,
-                            tint = HaloBlurTint(backgroundColor),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 1f,
-                            endIntensity = 0f
-                        )
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures { }
-                    }
-                    .onGloballyPositioned { coordinates ->
-                        headerHeight = with(density) { coordinates.size.height.toDp() }
-                    }
-            ) {
-                BottomSheetDragHandle()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    GlassIconButton(
-                        onClick = onDismiss,
-                        icon = painterResource(R.drawable.ic_close),
-                        contentDescription = "취소",
-                        hazeState = hazeState,
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        size = 36.dp,
-                        iconSize = 20.dp
-                    )
-
-                    Text(
-                        text = "타임딜 설정",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center
-                    )
-
-                    GlassIconButton(
-                        onClick = onSave,
-                        icon = painterResource(R.drawable.ic_check),
-                        contentDescription = "저장",
-                        hazeState = hazeState,
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        size = 36.dp,
-                        iconSize = 20.dp
-                    )
-                }
-            }
+            SheetHeader(
+                title = "타임딜",
+                onClose = onDismiss,
+                hazeState = hazeState,
+                onHeightChange = { headerHeight = it },
+                closeDescription = "취소",
+                onConfirm = onSave,
+                confirmDescription = "저장"
+            )
         }
     }
 }
 
+private val DealPresetDays = listOf(1L, 3L, 7L)
+
+/** 기간 탭 + 시작 · 종료 칸, 탭은 시작 + N일 */
 @Composable
-private fun DealDateRangeField(
+private fun DealPeriodField(
     startDate: LocalDateTime,
     endDate: LocalDateTime,
     onStartDateChange: (LocalDateTime) -> Unit,
     onEndDateChange: (LocalDateTime) -> Unit
 ) {
-    val formatter = remember { DateTimeFormatter.ofPattern("yyyy.MM.dd  HH:mm") }
+    val formatter = remember { DateTimeFormatter.ofPattern("MM.dd (E) HH:mm", Locale.KOREAN) }
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
+    // 차이가 딱 N일이면 그 탭, 아니면 직접
+    val selectedIndex = DealPresetDays.indexOfFirst { endDate == startDate.plusDays(it) }
+        .takeIf { it >= 0 } ?: DealPresetDays.size
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(10.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SegmentedTabRow(
+            tabs = listOf("1일", "3일", "7일", "직접"),
+            selectedIndex = selectedIndex,
+            onTabSelected = { index ->
+                DealPresetDays.getOrNull(index)?.let { onEndDateChange(startDate.plusDays(it)) }
+            }
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DealDateTimeBox(
+                label = "시작",
+                value = startDate.format(formatter),
+                onClick = { showStartPicker = true },
+                modifier = Modifier.weight(1f)
             )
-            .clip(RoundedCornerShape(10.dp))
-    ) {
-        DealDateTimeRow(
-            label = "시작",
-            value = startDate.format(formatter),
-            onClick = { showStartPicker = true }
-        )
-        HorizontalDivider(
-            thickness = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-        )
-        DealDateTimeRow(
-            label = "종료",
-            value = endDate.format(formatter),
-            onClick = { showEndPicker = true }
-        )
+            DealDateTimeBox(
+                label = "종료",
+                value = endDate.format(formatter),
+                onClick = { showEndPicker = true },
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 
     if (showStartPicker) {
@@ -310,6 +295,8 @@ private fun DealDateRangeField(
             title = "시작 일시",
             includeTime = true,
             onConfirm = { dateTime ->
+                // 기간 탭을 고른 상태면 길이를 유지한 채 함께 옮김
+                DealPresetDays.getOrNull(selectedIndex)?.let { onEndDateChange(dateTime.plusDays(it)) }
                 onStartDateChange(dateTime)
                 showStartPicker = false
             },
@@ -332,32 +319,36 @@ private fun DealDateRangeField(
     }
 }
 
+/** 칸 안 작은 이름 + 일시 + 화살표 */
 @Composable
-private fun DealDateTimeRow(
+private fun DealDateTimeBox(
     label: String,
     value: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(10.dp)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 14.dp),
+        modifier = modifier
+            .clip(shape)
+            .inputBorder(shape)
+            .clickable(onClick = onClick)
+            .padding(start = 14.dp, end = 10.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+        }
         Icon(
             painter = painterResource(R.drawable.ic_chevron_right),
             contentDescription = null,

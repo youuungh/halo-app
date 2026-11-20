@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -21,7 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.shimmer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 @Composable
 fun PostContentSkeleton(
@@ -57,7 +56,7 @@ fun PostContentSkeleton(
                     modifier = Modifier
                         .width(100.dp)
                         .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -65,7 +64,7 @@ fun PostContentSkeleton(
                     modifier = Modifier
                         .width(60.dp)
                         .height(12.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
             }
@@ -79,7 +78,7 @@ fun PostContentSkeleton(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -87,7 +86,7 @@ fun PostContentSkeleton(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -95,7 +94,7 @@ fun PostContentSkeleton(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
                     .height(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
         }
@@ -112,14 +111,14 @@ fun PostContentSkeleton(
                 modifier = Modifier
                     .width(50.dp)
                     .height(20.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Box(
                 modifier = Modifier
                     .width(50.dp)
                     .height(20.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
         }

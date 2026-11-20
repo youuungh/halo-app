@@ -9,6 +9,7 @@ import com.ninezero.halo.core.util.showToast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/** 시트 안에서도 화면 스낵바로 띄우는 중계 */
 @Stable
 class SnackbarRelay {
     // 호스트 쪽 scope로 띄워야 요청한 카드가 사라져도 스낵바가 남음
@@ -41,4 +42,5 @@ fun SnackbarRelay.showOrToast(context: Context, message: String) {
     if (!show(message)) context.showToast(message)
 }
 
+/** 화면 트리에 주는 스낵바 중계 */
 val LocalSnackbarRelay = staticCompositionLocalOf { SnackbarRelay() }

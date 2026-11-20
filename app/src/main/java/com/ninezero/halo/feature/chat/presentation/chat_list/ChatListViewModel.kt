@@ -35,7 +35,7 @@ class ChatListViewModel @Inject constructor(
                         state.copy(
                             chatRooms = rooms,
                             // 빈 캐시 첫 방출엔 동기화 끝까지 로딩 유지
-                            isLoading = if (rooms.isEmpty()) state.isLoading else false,
+                            isLoading = rooms.isEmpty() && state.isLoading,
                             error = null
                         )
                     }

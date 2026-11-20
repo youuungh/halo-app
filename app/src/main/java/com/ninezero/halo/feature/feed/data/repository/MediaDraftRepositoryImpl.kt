@@ -3,11 +3,11 @@ package com.ninezero.halo.feature.feed.data.repository
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.network.ApiException
 import com.ninezero.halo.core.network.dto.toDomain
 import com.ninezero.halo.core.network.safeApiCall
 import com.ninezero.halo.core.network.upload.DirectUploader
-import com.ninezero.halo.core.util.MediaUtils
 import com.ninezero.halo.feature.feed.data.remote.api.MediaDraftApi
 import com.ninezero.halo.feature.feed.data.remote.dto.VideoDraftRequest
 import com.ninezero.halo.feature.feed.data.remote.dto.VideoUploadPrepareRequest

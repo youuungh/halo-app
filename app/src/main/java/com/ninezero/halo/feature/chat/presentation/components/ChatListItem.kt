@@ -1,6 +1,5 @@
 package com.ninezero.halo.feature.chat.presentation.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,10 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -23,23 +20,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import com.ninezero.halo.R
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
+import com.ninezero.halo.core.ui.components.media.Avatar
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.chat.domain.model.Chat
 import com.ninezero.halo.feature.chat.domain.model.LastMessageInfo
-import com.ninezero.halo.ui.theme.HaloTheme
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatListItem(
     chat: Chat,
@@ -52,7 +45,7 @@ fun ChatListItem(
             .padding(horizontal = 8.dp)
             .fillMaxWidth()
             .bounceClick()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(bounded = true),
@@ -62,17 +55,10 @@ fun ChatListItem(
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
+        Avatar(
             model = chat.otherUser.avatarThumbUrl ?: chat.otherUser.avatarUrl,
-            contentDescription = "${chat.otherUser.displayName} 프로필",
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(R.drawable.ic_profile_placeholder),
-            error = painterResource(R.drawable.ic_profile_placeholder),
-            fallback = painterResource(R.drawable.ic_profile_placeholder)
+            size = 56.dp,
+            contentDescription = "${chat.otherUser.displayName} 프로필"
         )
 
         Spacer(modifier = Modifier.width(12.dp))

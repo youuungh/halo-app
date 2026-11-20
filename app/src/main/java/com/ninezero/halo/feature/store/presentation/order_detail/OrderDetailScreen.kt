@@ -1,14 +1,11 @@
 package com.ninezero.halo.feature.store.presentation.order_detail
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,11 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,29 +35,35 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
-import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.core.util.toFormattedDate
+import com.ninezero.halo.feature.store.domain.model.OrderCreatorGroup
 import com.ninezero.halo.feature.store.domain.model.OrderItem
 import com.ninezero.halo.feature.store.domain.model.OrderStatus
 import com.ninezero.halo.feature.store.domain.model.PaymentStatus
+import com.ninezero.halo.feature.store.domain.model.ShippingStatus
 import com.ninezero.halo.feature.store.domain.model.creatorGroupsOrFallback
+import com.ninezero.halo.feature.store.domain.model.isCancellable
+import com.ninezero.halo.feature.store.presentation.components.CartCircleButton
 import com.ninezero.halo.feature.store.presentation.components.OrderCreatorGroupHeader
 import com.ninezero.halo.feature.store.presentation.components.OrderDetailItemRow
+import com.ninezero.halo.feature.store.presentation.components.OrderGroupAction
+import com.ninezero.halo.feature.store.presentation.components.OrderGroupActionBar
+import com.ninezero.halo.feature.store.presentation.components.ShippingTrackingBottomSheet
 import com.ninezero.halo.feature.store.presentation.order_detail.components.CancelOrderBottomSheet
 import com.ninezero.halo.feature.store.presentation.order_detail.components.InfoRow
-import com.ninezero.halo.feature.store.presentation.order_detail.components.OrderEarnPointsSection
+import com.ninezero.halo.feature.store.presentation.order_detail.components.OrderPaymentAmounts
+import com.ninezero.halo.feature.store.presentation.order_detail.components.OrderPaymentSection
 import com.ninezero.halo.feature.store.presentation.order_detail.components.OrderSectionDivider
 import com.ninezero.halo.feature.store.presentation.order_detail.components.OrderSectionHeader
-import com.ninezero.halo.feature.store.presentation.order_detail.components.ShippingTrackingBottomSheet
+import com.ninezero.halo.feature.store.presentation.order_detail.components.OrderShippingInfo
+import com.ninezero.halo.feature.store.presentation.order_detail.components.ReviewPickerSheet
 import com.ninezero.halo.feature.store.presentation.order_detail.components.getPaymentProviderText
-import com.ninezero.halo.feature.store.presentation.order_detail.components.isCancellable
 import com.ninezero.halo.feature.store.presentation.order_detail.components.orderDetailSkeleton
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -82,8 +82,7 @@ fun OrderDetailScreen(
     val state = viewModel.collectAsState().value
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 복귀 시 자동 새로고침, 첫 진입은 스킵
-    // saveable 가드로 복귀 새로고침 보장
+    // 복귀 시 자동 새로고침, 첫 진입은 스킵. saveable 가드로 복귀 새로고침 보장
     var hasInitialResumeHandled by rememberSaveable { mutableStateOf(false) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (hasInitialResumeHandled) {
@@ -129,13 +128,13 @@ fun OrderDetailScreen(
         },
         onDismissCancelSheet = { viewModel.onIntent(OrderDetailIntent.DismissCancelSheet) },
         onSelectCancelReason = { viewModel.onIntent(OrderDetailIntent.SelectCancelReason(it)) },
-        onUpdateCancelReasonEtc = { viewModel.onIntent(OrderDetailIntent.UpdateCancelReasonEtc(it)) },
+        onUpdateOtherCancelReason = { viewModel.onIntent(OrderDetailIntent.UpdateOtherCancelReason(it)) },
         onProceedCancel = { viewModel.onIntent(OrderDetailIntent.ProceedCancelFromSheet) },
         onConfirmCancel = { viewModel.onIntent(OrderDetailIntent.ConfirmCancel) },
         onDismissCancel = { viewModel.onIntent(OrderDetailIntent.DismissCancelConfirm) },
         onRetry = { viewModel.onIntent(OrderDetailIntent.Load) },
         onWriteReview = { item -> viewModel.onIntent(OrderDetailIntent.WriteReview(item)) },
-        onShippingInquiry = { item -> viewModel.onIntent(OrderDetailIntent.ShowShippingSheet(item)) },
+        onTrackShipping = { item -> viewModel.onIntent(OrderDetailIntent.ShowShippingSheet(item)) },
         onAddToCart = { item -> viewModel.onIntent(OrderDetailIntent.AddToCart(item)) },
         onProductImageClick = { item -> viewModel.onIntent(OrderDetailIntent.OpenProduct(item)) },
         onDismissShippingSheet = { viewModel.onIntent(OrderDetailIntent.DismissShippingSheet) }
@@ -150,13 +149,13 @@ internal fun OrderDetailScreenContent(
     onCancelOrder: (Int) -> Unit = {},
     onDismissCancelSheet: () -> Unit = {},
     onSelectCancelReason: (CancelReason) -> Unit = {},
-    onUpdateCancelReasonEtc: (String) -> Unit = {},
+    onUpdateOtherCancelReason: (String) -> Unit = {},
     onProceedCancel: () -> Unit = {},
     onConfirmCancel: () -> Unit = {},
     onDismissCancel: () -> Unit = {},
     onRetry: () -> Unit = {},
     onWriteReview: (OrderItem) -> Unit = {},
-    onShippingInquiry: (OrderItem) -> Unit = {},
+    onTrackShipping: (OrderItem) -> Unit = {},
     onAddToCart: (OrderItem) -> Unit = {},
     onProductImageClick: (OrderItem) -> Unit = {},
     onDismissShippingSheet: () -> Unit = {}
@@ -167,6 +166,7 @@ internal fun OrderDetailScreenContent(
     var headerHeight by rememberSaveableDp()
     val numberFormat = rememberKoreanNumberFormat()
     val order = state.order
+    var reviewPickerItems by remember { mutableStateOf<List<OrderItem>>(emptyList()) }
 
     Box(
         modifier = Modifier
@@ -199,21 +199,11 @@ internal fun OrderDetailScreenContent(
                             .padding(top = headerHeight),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = onRetry,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "주문 정보를 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = onRetry
+                        )
                     }
                 }
 
@@ -235,9 +225,9 @@ internal fun OrderDetailScreenContent(
                     val reviewDeadlineLabel = remember(reviewDeadlineBaseMillis) {
                         reviewDeadlineBaseMillis?.let { base ->
                             val now = System.currentTimeMillis()
-                            val elapsedDays = TimeUnit.MILLISECONDS.toDays(now - base).toInt()
+                            val daysPassed = TimeUnit.MILLISECONDS.toDays(now - base).toInt()
                             val daysLeft =
-                                Constants.Commerce.REVIEW_WRITE_DEADLINE_DAYS - elapsedDays
+                                Constants.Commerce.REVIEW_WRITE_DEADLINE_DAYS - daysPassed
                             when {
                                 daysLeft < 0 -> "만료"
                                 daysLeft == 0 -> "D-Day"
@@ -268,13 +258,14 @@ internal fun OrderDetailScreenContent(
 
                         // 주문 상품
                         item(key = "items_header") {
-                            OrderSectionHeader("주문 상품")
+                            OrderSectionHeader("주문 상품", count = displayOrderItems.size)
                         }
 
                         creatorGroups.forEachIndexed { groupIndex, group ->
                             val creatorName = group.creatorName
                             val creatorAvatar = group.creatorAvatarUrl
                             val creatorId = group.creatorId ?: 0
+                            val isGroupCancelled = group.status == OrderStatus.CANCELLED
 
                             item(key = "creator_group_$creatorId") {
                                 Column(
@@ -289,9 +280,9 @@ internal fun OrderDetailScreenContent(
                                             color = MaterialTheme.colorScheme.outlineVariant.copy(
                                                 alpha = 0.5f
                                             ),
-                                            shape = RoundedCornerShape(12.dp)
+                                            shape = MaterialTheme.shapes.medium
                                         )
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(MaterialTheme.shapes.medium)
                                 ) {
                                     if (creatorName != null) {
                                         OrderCreatorGroupHeader(
@@ -310,31 +301,21 @@ internal fun OrderDetailScreenContent(
                                         )
                                     }
 
-                                    group.items.forEachIndexed { index, item ->
+                                    // 상품 사이는 선 없이 여백만
+                                    group.items.forEach { item ->
                                         OrderDetailItemRow(
                                             item = item,
                                             numberFormat = numberFormat,
-                                            // 삭제된 상품은 진입 자체를 막음
-                                            canWriteReview = canWriteReview && !item.hasReview && item.isProductActive,
-                                            reviewDeadlineLabel = reviewDeadlineLabel,
-                                            // 취소된 주문 그룹은 배송조회·장바구니 담기 액션을 숨김
-                                            showActionButtons = group.status != OrderStatus.CANCELLED,
                                             // 영수증이라 라인 합계만
                                             showLineTotal = true,
-                                            onWriteReview = { onWriteReview(item) },
-                                            onShippingInquiry = { onShippingInquiry(item) },
-                                            onAddToCart = { onAddToCart(item) },
-                                            onImageClick = { onProductImageClick(item) }
+                                            onImageClick = { onProductImageClick(item) },
+                                            // 취소된 그룹·삭제된 상품은 다시 담기 없음
+                                            trailing = if (!isGroupCancelled && item.isProductActive) {
+                                                { CartCircleButton(onClick = { onAddToCart(item) }) }
+                                            } else {
+                                                null
+                                            }
                                         )
-                                        if (index < group.items.lastIndex) {
-                                            HorizontalDivider(
-                                                thickness = 0.5.dp,
-                                                color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                                    alpha = 0.3f
-                                                ),
-                                                modifier = Modifier.padding(horizontal = 16.dp)
-                                            )
-                                        }
                                     }
 
                                     val groupRefundedAt = group.refundedAt
@@ -358,8 +339,7 @@ internal fun OrderDetailScreenContent(
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
-                                            val groupRefundValue =
-                                                group.refundAmount?.toLongOrNull()
+                                            val groupRefundValue = group.refundAmount
                                             if (groupRefundValue != null) {
                                                 InfoRow(
                                                     "환불 금액",
@@ -375,50 +355,27 @@ internal fun OrderDetailScreenContent(
                                                 groupRefundedAt.toFormattedDate("yyyy.MM.dd HH:mm")
                                             )
                                         }
-                                    } else if (group.isCancellable() && order.paymentStatus != PaymentStatus.PENDING) {  // 결제 확인 중엔 청구 여부가 정해진 뒤
-                                        HorizontalDivider(
-                                            thickness = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                                alpha = 0.5f
+                                    } else if (!isGroupCancelled) {
+                                        OrderGroupActionBar(
+                                            groupActions(
+                                                group = group,
+                                                // 결제 확인 중엔 청구 여부가 정해진 뒤
+                                                canCancel = group.isCancellable() && order.paymentStatus != PaymentStatus.PENDING,
+                                                reviewItems = if (canWriteReview) {
+                                                    group.items.filter { !it.hasReview && it.isProductActive }
+                                                } else {
+                                                    emptyList()
+                                                },
+                                                reviewDeadlineLabel = reviewDeadlineLabel,
+                                                isCancelling = state.isCancelling && state.cancelConfirmCreatorId == group.creatorId,
+                                                cancelEnabled = !state.isCancelling,
+                                                onCancel = { group.creatorId?.let(onCancelOrder) },
+                                                onTrackShipping = { onTrackShipping(group.items.first()) },
+                                                onWriteReview = { items ->
+                                                    if (items.size == 1) onWriteReview(items.first()) else reviewPickerItems = items
+                                                }
                                             )
                                         )
-                                        OutlinedButton(
-                                            onClick = { group.creatorId?.let(onCancelOrder) },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 10.dp)
-                                                .height(36.dp)
-                                                .bounceClick(),
-                                            shape = RoundedCornerShape(10.dp),
-                                            border = BorderStroke(
-                                                0.5.dp,
-                                                MaterialTheme.colorScheme.outlineVariant
-                                            ),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.error
-                                            ),
-                                            contentPadding = PaddingValues(0.dp),
-                                            enabled = !state.isCancelling
-                                        ) {
-                                            Box(modifier = Modifier.fillMaxWidth()) {
-                                                Text(
-                                                    text = "주문 취소",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    modifier = Modifier.align(Alignment.Center)
-                                                )
-
-                                                if (state.isCancelling && state.cancelConfirmCreatorId == group.creatorId) {
-                                                    LoadingIndicator(
-                                                        modifier = Modifier
-                                                            .align(Alignment.CenterEnd)
-                                                            .padding(end = 12.dp),
-                                                        size = LoadingIndicatorSize.Small,
-                                                        color = MaterialTheme.colorScheme.error
-                                                    )
-                                                }
-                                            }
-                                        }
                                     }
                                 }
                             }
@@ -432,101 +389,39 @@ internal fun OrderDetailScreenContent(
                         // 배송지 정보
                         item(key = "shipping_info") {
                             OrderSectionHeader("배송 정보")
-                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                InfoRow("수취인", order.shippingName)
-                                InfoRow("연락처", order.shippingPhone)
-                                InfoRow("주소", order.shippingAddress)
-                                if (order.memo != null) {
-                                    InfoRow("배송메모", order.memo)
-                                }
-                            }
+                            OrderShippingInfo(
+                                name = order.shippingName,
+                                phone = order.shippingPhone,
+                                address = order.shippingAddress,
+                                memo = order.memo
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
                             OrderSectionDivider()
                         }
 
                         // 결제 요약
                         item(key = "payment_summary") {
-                            OrderSectionHeader("결제정보")
-                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                val originalTotal = displayOrderItems.sumOf { item ->
-                                    val orig = item.originalPrice?.toLongOrNull()
-                                        ?: (item.price.toLongOrNull() ?: 0)
-                                    orig * item.quantity
-                                }
-                                val subtotal =
-                                    displayOrderItems.sumOf { it.subtotal.toLongOrNull() ?: 0 }
-                                val productDiscount = originalTotal - subtotal
-                                InfoRow("상품금액", "${numberFormat.format(originalTotal)}원")
-                                if (productDiscount > 0) {
-                                    InfoRow("상품할인", "-${numberFormat.format(productDiscount)}원")
-                                }
-                                displayCreatorGroups.forEach { group ->
-                                    val shippingFee = group.shippingFee.toLongOrNull() ?: 0
-                                    val label = if (displayCreatorGroups.size == 1) {
-                                        "배송비"
-                                    } else {
-                                        "배송비 · ${group.creatorName ?: "스토어"}"
-                                    }
-                                    InfoRow(
-                                        label,
-                                        if (shippingFee > 0) "${numberFormat.format(shippingFee)}원" else "무료"
-                                    )
-                                }
-                                val points = order.pointsUsed.toLongOrNull() ?: 0
-                                if (points > 0) {
-                                    InfoRow("포인트 사용", "-${numberFormat.format(points)}원")
-                                }
-                                val coupon = order.couponDiscount.toLongOrNull() ?: 0
-                                if (coupon > 0) {
-                                    InfoRow("쿠폰할인", "-${numberFormat.format(coupon)}원")
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-                                HorizontalDivider(
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "최종 결제금액",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "${numberFormat.format(order.totalPrice.toLongOrNull() ?: 0)}원",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                if (order.paymentProvider != null) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    InfoRow(
-                                        "결제방식",
-                                        getPaymentProviderText(order.paymentProvider)
-                                    )
-                                }
+                            OrderSectionHeader("결제 정보")
+                            val originalTotal = displayOrderItems.sumOf { item ->
+                                val originalPrice = item.originalPrice ?: item.price
+                                originalPrice * item.quantity
                             }
+                            val subtotal = displayOrderItems.sumOf { it.subtotal }
+                            OrderPaymentSection(
+                                amounts = OrderPaymentAmounts(
+                                    productAmount = originalTotal,
+                                    productDiscount = originalTotal - subtotal,
+                                    couponDiscount = order.couponDiscount,
+                                    pointsUsed = order.pointsUsed,
+                                    totalPrice = order.totalPrice,
+                                    paymentProviderText = order.paymentProvider?.let(::getPaymentProviderText)
+                                ),
+                                groups = displayCreatorGroups,
+                                showEarn = order.status != OrderStatus.CANCELLED && order.paymentStatus != PaymentStatus.REFUNDED,
+                                numberFormat = numberFormat
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
-
-                        // 적립 포인트
-                        if (order.status != OrderStatus.CANCELLED && order.paymentStatus != PaymentStatus.REFUNDED) {
-                            item(key = "earn_points") {
-                                OrderSectionDivider()
-                                OrderEarnPointsSection(
-                                    creatorGroups = order.creatorGroupsOrFallback(),
-                                    numberFormat = numberFormat
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
-
                     }
                 }
             }
@@ -561,11 +456,11 @@ internal fun OrderDetailScreenContent(
             order = order,
             creatorId = state.cancelConfirmCreatorId,
             selectedReason = state.selectedCancelReason,
-            reasonEtc = state.cancelReasonEtc,
+            otherReason = state.otherCancelReason,
             isCancelling = state.isCancelling,
             numberFormat = numberFormat,
             onSelectReason = onSelectCancelReason,
-            onUpdateReasonEtc = onUpdateCancelReasonEtc,
+            onUpdateOtherReason = onUpdateOtherCancelReason,
             onProceed = onProceedCancel,
             onDismiss = onDismissCancelSheet
         )
@@ -584,6 +479,18 @@ internal fun OrderDetailScreenContent(
         )
     }
 
+    if (reviewPickerItems.isNotEmpty()) {
+        ReviewPickerSheet(
+            items = reviewPickerItems,
+            numberFormat = numberFormat,
+            onPick = { item ->
+                reviewPickerItems = emptyList()
+                onWriteReview(item)
+            },
+            onDismiss = { reviewPickerItems = emptyList() }
+        )
+    }
+
     if (state.showShippingSheet && state.order != null) {
         val selectedGroup = state.order.creatorGroupsOrFallback()
             .firstOrNull { it.creatorId == state.shippingSheetCreatorId }
@@ -597,3 +504,43 @@ internal fun OrderDetailScreenContent(
     }
 }
 
+/** 그룹 아래 글자 버튼: 취소 · 배송조회 · 리뷰 */
+@Composable
+private fun groupActions(
+    group: OrderCreatorGroup,
+    canCancel: Boolean,
+    reviewItems: List<OrderItem>,
+    reviewDeadlineLabel: String?,
+    isCancelling: Boolean,
+    cancelEnabled: Boolean,
+    onCancel: () -> Unit,
+    onTrackShipping: () -> Unit,
+    onWriteReview: (List<OrderItem>) -> Unit
+): List<OrderGroupAction> {
+    val colors = MaterialTheme.colorScheme
+    if (canCancel) {
+        return listOf(
+            OrderGroupAction(
+                label = "주문 취소",
+                color = colors.error,
+                isLoading = isCancelling,
+                enabled = cancelEnabled,
+                onClick = onCancel
+            )
+        )
+    }
+    val isMoving = group.shippingStatus in setOf(ShippingStatus.SHIPPED, ShippingStatus.IN_TRANSIT, ShippingStatus.OUT_FOR_DELIVERY)
+    val tracking = OrderGroupAction(
+        label = "배송조회",
+        color = if (isMoving) colors.primary else colors.onSurface,
+        onClick = onTrackShipping
+    )
+    if (reviewItems.isEmpty()) return listOf(tracking)
+    val review = OrderGroupAction(
+        label = if (reviewItems.size > 1) "리뷰 쓰기 ${reviewItems.size}" else "리뷰 쓰기",
+        color = colors.primary,
+        badge = reviewDeadlineLabel,
+        onClick = { onWriteReview(reviewItems) }
+    )
+    return listOf(tracking, review)
+}

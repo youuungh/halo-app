@@ -16,7 +16,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 import dev.chrisbanes.haze.HazeState
 
 @Composable
@@ -33,23 +32,17 @@ fun ScrollToBottomFAB(
         enter = fadeIn() + scaleIn(),
         exit = fadeOut() + scaleOut()
     ) {
+        // 입력창 위 12dp, 오른쪽은 입력창 끝과 같게
         Box(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(end = 12.dp, bottom = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            val hazeTintColor = if (LocalIsDarkTheme.current) {
-                Color.White.copy(alpha = 0.08f)
-            } else {
-                Color.Black.copy(alpha = 0.08f)
-            }
-
             GlassIconButton(
                 onClick = onClick,
                 icon = painterResource(R.drawable.ic_chevron_down),
                 contentDescription = "맨 아래로 스크롤",
                 hazeState = hazeState,
                 backgroundColor = backgroundColor,
-                hazeTintColor = hazeTintColor,
                 size = 40.dp,
                 iconSize = 24.dp
             )

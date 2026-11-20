@@ -1,14 +1,13 @@
 package com.ninezero.halo.feature.feed.presentation.create_post
 
-import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ninezero.halo.core.media.MediaFileReader
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.Constants.Content.MAX_POST_CONTENT_LENGTH
-import com.ninezero.halo.core.util.MediaUtils
 import com.ninezero.halo.feature.feed.domain.model.NewMediaItem
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
 import com.ninezero.halo.feature.feed.domain.model.PostDraft
@@ -18,6 +17,7 @@ import com.ninezero.halo.feature.feed.domain.repository.PostDraftRepository
 import com.ninezero.halo.feature.feed.domain.repository.PostRepository
 import com.ninezero.halo.feature.feed.domain.usecase.GetCachedPostUseCase
 import com.ninezero.halo.feature.feed.domain.usecase.UpdatePostUseCase
+import com.ninezero.halo.feature.feed.presentation.checkMediaSelection
 import com.ninezero.halo.feature.profile.domain.usecase.GetCachedMyProfileUseCase
 import com.ninezero.halo.feature.profile.domain.usecase.GetMyProfileUseCase
 import com.ninezero.halo.feature.profile.domain.usecase.ObserveMyProfileUseCase
@@ -29,17 +29,15 @@ import com.ninezero.halo.feature.tag.domain.usecase.DeleteTagUseCase
 import com.ninezero.halo.feature.tag.domain.usecase.GetCreatorTagsUseCase
 import com.ninezero.halo.feature.tag.domain.usecase.UpdateTagUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import okhttp3.MultipartBody
 import org.orbitmvi.orbit.OrbitContainer
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.blockingIntent
 import org.orbitmvi.orbit.viewmodel.orbitContainer
+import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -57,7 +55,7 @@ class CreatePostViewModel @Inject constructor(
     private val createTagUseCase: CreateTagUseCase,
     private val updateTagUseCase: UpdateTagUseCase,
     private val deleteTagUseCase: DeleteTagUseCase,
-    @param:ApplicationContext private val context: Context,
+    private val mediaFileReader: MediaFileReader,
     private val getMyPlanTiersUseCase: GetMyPlanTiersUseCase
 ) : ViewModel(), OrbitContainerHost<CreatePostState, CreatePostState, CreatePostSideEffect> {
 
@@ -187,25 +185,11 @@ class CreatePostViewModel @Inject constructor(
             return@intent
         }
 
-        val validUris = uris.take(availableSlots).filter { uri ->
-            val fileInfo = MediaUtils.getFileInfo(context, uri) ?: return@filter false
-
-            if (fileInfo.fileSize > MAX_POST_MEDIA_SIZE) {
-                reduce {
-                    state.copy(snackbarState = SnackbarState("파일은 최대 10MB까지 업로드 가능합니다"))
-                }
-                return@filter false
-            }
-            // 영상은 서버가 받는 형식만
-            val mimeType = MediaUtils.resolveMimeType(context, uri)
-            if (mimeType.startsWith("video/") && mimeType !in MediaUtils.ALLOWED_VIDEO_TYPES) {
-                reduce {
-                    state.copy(snackbarState = SnackbarState("지원하지 않는 비디오 형식입니다"))
-                }
-                return@filter false
-            }
-            true
+        val selection = checkMediaSelection(mediaFileReader, uris.take(availableSlots), MAX_POST_MEDIA_SIZE)
+        selection.errors.forEach { message ->
+            reduce { state.copy(snackbarState = SnackbarState(message)) }
         }
+        val validUris = selection.validUris
 
         if (validUris.isEmpty()) return@intent
 
@@ -234,7 +218,7 @@ class CreatePostViewModel @Inject constructor(
     }
 
     private fun submitPost() = intent {
-        if (state.isSubmitting) return@intent  // 연타/중복 제출 가드
+        if (state.isSubmitting) return@intent  // 연타·중복 제출 가드
 
         val content = state.content.trim()
         if (content.isBlank()) return@intent
@@ -335,11 +319,10 @@ class CreatePostViewModel @Inject constructor(
             val value = uri.toString()
             value.startsWith("http://") || value.startsWith("https://")
         }
-        // 사진은 파일 파트, 새 영상은 먼저 업로드
-        val newMediaParts = mutableListOf<MultipartBody.Part>()
+        // 사진은 Repository가 파일로 올림, 새 영상은 먼저 업로드
         val newItems = mutableListOf<NewMediaItem>()
         for (uri in newMediaUris) {
-            if (MediaUtils.resolveMimeType(context, uri).startsWith("video/")) {
+            if (mediaFileReader.resolveMimeType(uri).startsWith("video/")) {
                 val uploadId = postRepository.uploadPostVideo(postId, uri.toString()).getOrElse { error ->
                     reduce {
                         state.copy(
@@ -351,9 +334,7 @@ class CreatePostViewModel @Inject constructor(
                 }
                 newItems += NewMediaItem.DirectUpload(uploadId)
             } else {
-                val part = MediaUtils.createUploadPart(context, uri, "mediaFiles", "image_${newMediaParts.size}") ?: continue
-                newItems += NewMediaItem.FilePart(newMediaParts.size)
-                newMediaParts += part
+                newItems += NewMediaItem.Image(uri)
             }
         }
         // 커뮤니티 글도 일반 수정 API
@@ -361,7 +342,6 @@ class CreatePostViewModel @Inject constructor(
             postId = postId,
             content = content,
             keepMediaIds = keepMediaIds,
-            newFiles = newMediaParts,
             reorder = keepMediaIds,
             items = newItems
         )
@@ -465,7 +445,7 @@ class CreatePostViewModel @Inject constructor(
                 tags = emptyList(),
                 selectedSectionTagId = null,
                 isSecret = false,
-                requiredTier = SubscriptionPlanTier.FREE.name,
+                requiredTier = SubscriptionPlanTier.FREE,
                 // 방금 저장한 초안까지 든 목록으로 열기
                 showDraftBottomSheet = if (openDrafts && !exit) true else state.showDraftBottomSheet
             )
@@ -716,7 +696,7 @@ class CreatePostViewModel @Inject constructor(
         reduce { state.copy(isSecret = isSecret) }
     }
 
-    private fun setRequiredTier(tier: String) = intent {
+    private fun setRequiredTier(tier: SubscriptionPlanTier) = intent {
         reduce { state.copy(requiredTier = tier) }
     }
 

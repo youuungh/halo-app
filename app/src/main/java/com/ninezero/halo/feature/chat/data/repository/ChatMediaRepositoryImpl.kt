@@ -5,11 +5,11 @@ import androidx.core.net.toUri
 import com.ninezero.halo.core.database.dao.PendingChatMessageDao
 import com.ninezero.halo.core.database.entity.PendingChatMessageEntity
 import com.ninezero.halo.core.database.entity.UploadStatus
-import com.ninezero.halo.core.util.MediaPersistenceManager
-import com.ninezero.halo.feature.chat.data.worker.ChatDownloadResultManager
+import com.ninezero.halo.core.media.MediaCopyStore
+import com.ninezero.halo.feature.chat.data.worker.ChatDownloadEventBus
 import com.ninezero.halo.feature.chat.data.worker.ChatFileDownloadWorker
 import com.ninezero.halo.feature.chat.data.worker.ChatMediaUploadWorker
-import com.ninezero.halo.feature.chat.data.worker.ChatUploadResultManager
+import com.ninezero.halo.feature.chat.data.worker.ChatUploadEventBus
 import com.ninezero.halo.feature.chat.domain.model.ChatDownloadEvent
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.feature.chat.domain.model.ChatUploadEvent
@@ -24,14 +24,14 @@ import javax.inject.Singleton
 @Singleton
 class ChatMediaRepositoryImpl @Inject constructor(
     private val pendingChatMessageDao: PendingChatMessageDao,
-    private val uploadResultManager: ChatUploadResultManager,
-    private val downloadResultManager: ChatDownloadResultManager,
-    private val mediaPersistence: MediaPersistenceManager,
+    private val uploadEventBus: ChatUploadEventBus,
+    private val downloadEventBus: ChatDownloadEventBus,
+    private val mediaCopyStore: MediaCopyStore,
     @param:ApplicationContext private val context: Context
 ) : ChatMediaRepository {
 
-    override val uploadEvents: SharedFlow<ChatUploadEvent> = uploadResultManager.uploadResults
-    override val downloadEvents: SharedFlow<ChatDownloadEvent> = downloadResultManager.downloadResults
+    override val uploadEvents: SharedFlow<ChatUploadEvent> = uploadEventBus.uploadResults
+    override val downloadEvents: SharedFlow<ChatDownloadEvent> = downloadEventBus.downloadResults
 
     override suspend fun enqueueUpload(
         roomId: Int,
@@ -48,26 +48,26 @@ class ChatMediaRepositoryImpl @Inject constructor(
         val pendingId = pendingChatMessageDao.insert(pendingMessage)
 
         // content 권한이 사라지기 전에 앱 저장소로 복사
-        val staged = mediaPersistence.persistForOwner(
+        val copied = mediaCopyStore.copyForOwner(
             sourceUris = mediaUris.map { it.toUri() },
-            ownerType = MediaPersistenceManager.OwnerType.PENDING_CHAT,
+            ownerType = MediaCopyStore.OwnerType.PENDING_CHAT,
             ownerId = pendingId
         )
-        val effectiveUris = if (staged.size == mediaUris.size) {
-            staged.map { it.toString() }
+        val actualUris = if (copied.size == mediaUris.size) {
+            copied.map { it.toString() }
         } else {
             // 일부 실패 시 원본 URI 폴백
-            mediaPersistence.cleanupOwner(MediaPersistenceManager.OwnerType.PENDING_CHAT, pendingId)
+            mediaCopyStore.cleanupOwner(MediaCopyStore.OwnerType.PENDING_CHAT, pendingId)
             mediaUris
         }
-        if (effectiveUris !== mediaUris) {
+        if (actualUris !== mediaUris) {
             pendingChatMessageDao.update(
-                pendingMessage.copy(id = pendingId, mediaUris = Json.encodeToString(effectiveUris))
+                pendingMessage.copy(id = pendingId, mediaUris = Json.encodeToString(actualUris))
             )
         }
 
         ChatMediaUploadWorker.enqueue(context, pendingId)
-        return MediaUploadHandle(pendingMessageId = pendingId, mediaUris = effectiveUris)
+        return MediaUploadHandle(pendingMessageId = pendingId, mediaUris = actualUris)
     }
 
     override suspend fun retryUpload(pendingMessageId: Long): Boolean {
@@ -79,7 +79,7 @@ class ChatMediaRepositoryImpl @Inject constructor(
 
     override suspend fun discardUpload(pendingMessageId: Long) {
         pendingChatMessageDao.deleteById(pendingMessageId)
-        mediaPersistence.cleanupOwner(MediaPersistenceManager.OwnerType.PENDING_CHAT, pendingMessageId)
+        mediaCopyStore.cleanupOwner(MediaCopyStore.OwnerType.PENDING_CHAT, pendingMessageId)
     }
 
     override fun enqueueFileDownload(fileUrl: String, fileName: String) {
@@ -88,5 +88,9 @@ class ChatMediaRepositoryImpl @Inject constructor(
             fileUrl = fileUrl,
             fileName = fileName
         )
+    }
+
+    override fun cancelFileDownload(fileUrl: String) {
+        ChatFileDownloadWorker.cancel(context, fileUrl)
     }
 }

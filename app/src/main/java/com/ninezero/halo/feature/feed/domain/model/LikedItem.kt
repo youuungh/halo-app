@@ -12,7 +12,6 @@ data class LikedItem(
     val comment: Comment? = null
 )
 
-/** 좋아요 토글 결과 */
 data class LikeResult(
     val isLiked: Boolean,
     val likeCount: Int

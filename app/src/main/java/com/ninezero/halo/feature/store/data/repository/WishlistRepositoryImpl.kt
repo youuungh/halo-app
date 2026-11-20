@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.store.data.repository
 
+import com.ninezero.halo.core.di.ApplicationScope
 import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.core.network.safeApiCall
 import com.ninezero.halo.core.network.safeApiCallNoData
@@ -9,8 +10,6 @@ import com.ninezero.halo.feature.store.domain.event.StoreEventBus
 import com.ninezero.halo.feature.store.domain.model.Wishlist
 import com.ninezero.halo.feature.store.domain.repository.WishlistRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,11 +17,9 @@ import javax.inject.Singleton
 @Singleton
 class WishlistRepositoryImpl @Inject constructor(
     private val api: WishlistApi,
-    private val storeEventBus: StoreEventBus
+    private val storeEventBus: StoreEventBus,
+    @param:ApplicationScope private val commitScope: CoroutineScope  // 스낵바 소멸 시 커밋이라 화면을 나가도 끝까지 진행
 ) : WishlistRepository {
-
-    // 스낵바 소멸 시 커밋이라 화면을 나가도 끝까지 진행
-    private val commitScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override suspend fun getWishlist(cursor: String?, limit: Int): Result<CursorPage<Wishlist>> {
         return safeApiCall { api.getWishlist(cursor, limit) }

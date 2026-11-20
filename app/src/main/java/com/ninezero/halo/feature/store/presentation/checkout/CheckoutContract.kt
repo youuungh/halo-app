@@ -67,16 +67,12 @@ sealed interface CheckoutIntent {
     // 데이터 로딩
     data object LoadCheckout : CheckoutIntent
     data object RefreshAddresses : CheckoutIntent
-
     // 주문
     data object PlaceOrder : CheckoutIntent
-
     // 배송지
     data object NavigateToAddressManage : CheckoutIntent
-
     data object NavigateBack : CheckoutIntent
     data object SnackbarDismissed : CheckoutIntent
-
     // 쿠폰
     data object ShowCouponSheet : CheckoutIntent
     data object DismissCouponSheet : CheckoutIntent

@@ -8,10 +8,9 @@ data class RegisterState(
     val password: String = "",
     val confirmPassword: String = "",
     val isPasswordVisible: Boolean = false,
-    val isConfirmPwVisible: Boolean = false,
+    val isConfirmPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val snackbarState: SnackbarState? = null,
-
     // 입력값 검증 에러
     val emailError: String? = null,
     val usernameError: String? = null,
@@ -25,7 +24,7 @@ sealed interface RegisterIntent {
     data class PasswordChanged(val password: String) : RegisterIntent
     data class ConfirmPasswordChanged(val confirmPassword: String) : RegisterIntent
     data object TogglePasswordVisibility : RegisterIntent
-    data object ToggleConfirmPwVisibility : RegisterIntent
+    data object ToggleConfirmPasswordVisibility : RegisterIntent
     data object RegisterClicked : RegisterIntent
     data object LoginClicked : RegisterIntent
     data object SnackbarDismissed : RegisterIntent

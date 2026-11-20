@@ -1,5 +1,3 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-
 package com.ninezero.halo.feature.store.presentation.create_review
 
 import androidx.activity.compose.BackHandler
@@ -12,9 +10,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -27,13 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,9 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -80,14 +70,15 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.media.MediaDisplayPolicy
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.media.Avatar
+import com.ninezero.halo.core.ui.components.media.MediaPreviewSizes
+import com.ninezero.halo.core.ui.components.media.SelectedMediaRow
+import com.ninezero.halo.core.ui.components.modifiers.BringIntoViewGap
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.store.presentation.create_review.components.RatingSelector
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
@@ -141,8 +132,6 @@ internal fun CreateReviewScreenContent(
     val avatarSize = 40.dp
     val avatarSpacing = 12.dp
     val contentStartPadding = horizontalPadding + avatarSize + avatarSpacing
-    val multiSelectionHeight = MediaDisplayPolicy.FEED_MULTI_ITEM_HEIGHT
-    val cornerShape = RoundedCornerShape(12.dp)
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -186,11 +175,11 @@ internal fun CreateReviewScreenContent(
                         contentDescription = state.productName,
                         modifier = Modifier
                             .size(productImageSize)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .clip(MaterialTheme.shapes.small),
                         contentScale = ContentScale.Crop,
-                        placeholder = painterResource(R.drawable.ic_img_placeholder),
-                        error = painterResource(R.drawable.ic_img_placeholder),
-                        fallback = painterResource(R.drawable.ic_img_placeholder)
+                        placeholder = painterResource(R.drawable.ic_image_placeholder),
+                        error = painterResource(R.drawable.ic_image_placeholder),
+                        fallback = painterResource(R.drawable.ic_image_placeholder)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(
@@ -229,17 +218,10 @@ internal fun CreateReviewScreenContent(
                     .fillMaxWidth()
                     .padding(horizontal = horizontalPadding)
             ) {
-                AsyncImage(
+                Avatar(
                     model = state.myAvatarUrl,
-                    contentDescription = "내 프로필",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.ic_profile_placeholder),
-                    error = painterResource(R.drawable.ic_profile_placeholder),
-                    fallback = painterResource(R.drawable.ic_profile_placeholder)
+                    size = 40.dp,
+                    contentDescription = "내 프로필"
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -285,7 +267,7 @@ internal fun CreateReviewScreenContent(
                         } ?: return@LaunchedEffect
                         // 미디어 프리뷰가 끼어 있으면 커서만 보장
                         val attachReserve = if (state.selectedMediaUris.isEmpty()) 36.dp else 0.dp
-                        val reservePx = with(density) { (attachReserve + 8.dp).toPx() }
+                        val reservePx = with(density) { (attachReserve + BringIntoViewGap).toPx() }
                         bringIntoViewRequester.bringIntoView(
                             Rect(cursorRect.left, cursorRect.top, cursorRect.right, cursorRect.bottom + reservePx)
                         )
@@ -346,7 +328,7 @@ internal fun CreateReviewScreenContent(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
@@ -358,115 +340,14 @@ internal fun CreateReviewScreenContent(
 
             // 선택한 미디어 미리보기
             if (state.selectedMediaUris.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                val isSingleSelection = state.selectedMediaUris.size == 1
-
-                if (isSingleSelection) {
-                    val singleUri = state.selectedMediaUris.first()
-                    BoxWithConstraints(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = contentStartPadding, end = horizontalPadding)
-                    ) {
-                        val clampedRatio = 1f.coerceIn(
-                            MediaDisplayPolicy.FEED_SINGLE_MIN_RATIO,
-                            MediaDisplayPolicy.FEED_SINGLE_MAX_RATIO
-                        )
-                        val mediaHeight = maxWidth / clampedRatio
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(mediaHeight)
-                                .clip(cornerShape)
-                        ) {
-                            AsyncImage(
-                                model = singleUri,
-                                contentDescription = "선택된 이미지",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                placeholder = ColorPainter(placeholderColor),
-                                error = ColorPainter(placeholderColor)
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(8.dp)
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.5f))
-                                    .clickable { onIntent(CreateReviewIntent.RemoveMedia(singleUri)) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_close),
-                                    contentDescription = "이미지 삭제",
-                                    modifier = Modifier.size(16.dp),
-                                    tint = Color.White
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val maxItemWidth = (maxWidth - contentStartPadding - horizontalPadding).coerceAtLeast(1.dp)
-                        val maxVisibleRatio = (maxItemWidth / multiSelectionHeight).coerceIn(
-                            MediaDisplayPolicy.FEED_MULTI_MIN_RATIO,
-                            MediaDisplayPolicy.FEED_MULTI_MAX_RATIO
-                        )
-
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(start = contentStartPadding, end = horizontalPadding),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(
-                                items = state.selectedMediaUris,
-                                key = { it.toString() }
-                            ) { uri ->
-                                val itemRatio = 1f.coerceIn(
-                                    MediaDisplayPolicy.FEED_MULTI_MIN_RATIO,
-                                    maxVisibleRatio
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .width(multiSelectionHeight * itemRatio)
-                                        .height(multiSelectionHeight)
-                                        .clip(cornerShape)
-                                ) {
-                                    AsyncImage(
-                                        model = uri,
-                                        contentDescription = "선택된 이미지",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop,
-                                        placeholder = ColorPainter(placeholderColor),
-                                        error = ColorPainter(placeholderColor)
-                                    )
-
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(8.dp)
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black.copy(alpha = 0.5f))
-                                            .clickable { onIntent(CreateReviewIntent.RemoveMedia(uri)) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_close),
-                                            contentDescription = "이미지 삭제",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = Color.White
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                SelectedMediaRow(
+                    uris = state.selectedMediaUris,
+                    startPadding = contentStartPadding,
+                    endPadding = horizontalPadding,
+                    placeholderColor = placeholderColor,
+                    sizes = MediaPreviewSizes.Post,
+                    onRemove = { onIntent(CreateReviewIntent.RemoveMedia(it)) }
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -497,17 +378,7 @@ internal fun CreateReviewScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 0.5f,
-                        endIntensity = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }

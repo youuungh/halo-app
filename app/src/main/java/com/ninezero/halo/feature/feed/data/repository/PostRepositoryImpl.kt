@@ -1,6 +1,8 @@
 package com.ninezero.halo.feature.feed.data.repository
 
+import android.content.Context
 import androidx.core.net.toUri
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.core.network.dto.toDomain
 import com.ninezero.halo.core.network.safeApiCall
@@ -8,6 +10,7 @@ import com.ninezero.halo.core.network.safeApiCallUnit
 import com.ninezero.halo.core.network.upload.DirectUploader
 import com.ninezero.halo.feature.feed.data.cache.PostStateStore
 import com.ninezero.halo.feature.feed.data.remote.api.PostApi
+import com.ninezero.halo.feature.feed.data.remote.dto.MediaItemRefDto
 import com.ninezero.halo.feature.feed.data.remote.dto.PostRequest
 import com.ninezero.halo.feature.feed.data.remote.dto.UpdatePostRequest
 import com.ninezero.halo.feature.feed.data.remote.dto.VideoUploadPrepareRequest
@@ -17,6 +20,8 @@ import com.ninezero.halo.feature.feed.domain.model.NewMediaItem
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.domain.model.PostType
 import com.ninezero.halo.feature.feed.domain.repository.PostRepository
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -26,6 +31,7 @@ import javax.inject.Singleton
 
 @Singleton
 class PostRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: PostApi,
     private val postStateStore: PostStateStore,
     private val directUploader: DirectUploader
@@ -74,7 +80,7 @@ class PostRepositoryImpl @Inject constructor(
         content: String,
         postType: PostType,
         productId: Int?,
-        requiredTier: String,
+        requiredTier: SubscriptionPlanTier,
         tagIds: List<Int>?,
         sectionTagId: Int?,
         mediaDraftIds: List<Int>,
@@ -86,7 +92,7 @@ class PostRepositoryImpl @Inject constructor(
                     content = content,
                     postType = postType.name,
                     productId = productId,
-                    requiredTier = requiredTier,
+                    requiredTier = requiredTier.name,
                     tagIds = tagIds,
                     sectionTagId = sectionTagId,
                     mediaDraftIds = mediaDraftIds,
@@ -120,11 +126,23 @@ class PostRepositoryImpl @Inject constructor(
         postId: Int,
         content: String?,
         keepMediaIds: List<Int>?,
-        newFiles: List<MultipartBody.Part>,
         reorder: List<Int>?,
         items: List<NewMediaItem>?
     ): Result<Post> {
         fun String.toTextBody() = toRequestBody("text/plain".toMediaType())
+
+        // 사진은 읽은 순서로 파일 파트 번호, 못 읽은 사진은 뺌
+        val files = mutableListOf<MultipartBody.Part>()
+        val refs = items?.mapNotNull { item ->
+            when (item) {
+                is NewMediaItem.Image ->
+                    MediaUtils.createUploadPart(context, item.uri, "mediaFiles", "image_${files.size}")?.let { part ->
+                        files += part
+                        MediaItemRefDto(fileIndex = files.lastIndex)
+                    }
+                is NewMediaItem.DirectUpload -> MediaItemRefDto(uploadId = item.uploadId)
+            }
+        }
 
         return safeApiCall {
             api.updatePostWithMedia(
@@ -132,8 +150,8 @@ class PostRepositoryImpl @Inject constructor(
                 content = content?.toTextBody(),
                 keepMediaIds = keepMediaIds?.joinToString(",")?.toTextBody(),
                 reorder = reorder?.joinToString(",")?.toTextBody(),
-                items = items?.toItemsPart(),
-                mediaFiles = newFiles
+                items = refs?.toItemsPart(),
+                mediaFiles = files
             )
         }.map { it.toDomain() }.also { result ->
             result.getOrNull()?.let { updateCachedPost(it) }

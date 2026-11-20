@@ -4,7 +4,7 @@ import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.Comment as FeedComment
 
 /** 답글 탭 댓글을 피드 댓글로 변환 */
-fun ThreadCommentData.toFeedComment(postId: Int, parentCommentId: Int?): FeedComment {
+fun ThreadComment.toFeedComment(postId: Int, parentCommentId: Int?): FeedComment {
     return FeedComment(
         id = id,
         postId = postId,
@@ -34,12 +34,12 @@ fun ThreadCommentData.toFeedComment(postId: Int, parentCommentId: Int?): FeedCom
     )
 }
 
-fun CommentThreadData.toCacheableFeedComments(): List<FeedComment> {  // 맨 앞 부모는 자기 부모를 모름
+fun CommentThread.toCacheableFeedComments(): List<FeedComment> {  // 맨 앞 부모는 자기 부모를 모름
     if (comments.size == 1) return listOf(comments.first().toFeedComment(post.id, parentCommentId = null))
     return comments.zipWithNext { parent, reply -> reply.toFeedComment(post.id, parentCommentId = parent.id) }
 }
 
-fun ThreadCommentData.mergeCached(cached: FeedComment?): ThreadCommentData {
+fun ThreadComment.mergeCached(cached: FeedComment?): ThreadComment {
     if (cached == null) return this
     return copy(
         content = cached.content,

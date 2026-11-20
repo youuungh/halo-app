@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 data class ProfileMenuItemData(
     val iconRes: Int,

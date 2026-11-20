@@ -8,7 +8,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 /** 로딩 다이얼로그 */
 @Composable

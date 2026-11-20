@@ -24,13 +24,13 @@ data class CachedMessageEntity(
     // 메시지 데이터
     val chatMessageType: String,
     val content: String?,
-    val mediaAttachments: String?,          // JSON array
-    val mediaThumbnails: String? = null,    // JSON array, 썸네일
+    val mediaAttachments: String?,
+    val mediaThumbnails: String? = null,
     val thumbnailUrl: String? = null,       // 비디오 포스터 썸네일
     val duration: Long? = null,             // 비디오 길이 ms
     val mediaWidth: Int? = null,            // 원본 너비, 로드 전 비율 예약
     val mediaHeight: Int? = null,           // 단일 이미지/비디오 원본 높이
-    val fileSize: Long? = null,             // 파일 크기 bytes
+    val fileSize: Long? = null,
     val fileName: String? = null,
     // 상품 정보
     val productId: Int?,
@@ -49,11 +49,11 @@ data class CachedMessageEntity(
     val postAuthorName: String? = null,
     val postAuthorAvatarUrl: String? = null,
     val postCanAccess: Boolean? = null,
-    val postMediaAttachments: String? = null,   // JSON array
+    val postMediaAttachments: String? = null,
     val postMediaType: String? = null,
     val postThumbnailUrl: String? = null,
-    val postMediaThumbnails: String? = null,    // JSON array, 타일별 썸네일
-    val postMediaTypes: String? = null,         // JSON array, 타일별 IMAGE·VIDEO
+    val postMediaThumbnails: String? = null,
+    val postMediaTypes: String? = null,         // IMAGE·VIDEO
     val postLikeCount: Int? = null,
     val postCommentCount: Int? = null,
     val postShareCount: Int? = null,
@@ -66,8 +66,8 @@ data class CachedMessageEntity(
     val createdAt: Long,
     val isFromMe: Boolean,
     val isDeleted: Boolean = false,
-    val status: String = "SENT",                // SENT / SENDING / FAILED
+    val status: String = "SENT",                // SENT·SENDING·FAILED
     val clientTempId: String? = null,           // 임시 id, 서버 응답 시 교체
-    val uploadProgress: Float = 1f,             // 업로드 진행률 0~1
+    val uploadProgress: Float = 1f,
     val cachedAt: Long = System.currentTimeMillis()
 )

@@ -6,20 +6,20 @@ data class Order(
     val id: Int,
     val orderNumber: String,
     val items: List<OrderItem>,
-    val totalPrice: String,
-    val status: String,
+    val totalPrice: Long,
+    val status: OrderStatus,
     val shippingAddress: String,
     val shippingPhone: String,
     val shippingName: String,
     val paymentProvider: String?,
-    val paymentStatus: String?,
+    val paymentStatus: PaymentStatus?,
     val memo: String?,
-    val pointsUsed: String,
-    val couponDiscount: String,
+    val pointsUsed: Long,
+    val couponDiscount: Long,
     val trackingNumber: String?,
     val carrier: String?,
-    val shippingFee: String = "0",
-    val shippingStatus: String,
+    val shippingFee: Long = 0L,
+    val shippingStatus: ShippingStatus,
     val actualDeliveryDate: Long? = null,
     val createdAt: Long,
     val updatedAt: Long,
@@ -31,20 +31,20 @@ data class OrderCreatorGroup(
     val creatorName: String? = null,
     val creatorAvatarUrl: String? = null,
     val creatorRole: String? = null,
-    val status: String,
+    val status: OrderStatus,
     val items: List<OrderItem>,
-    val subtotal: String,
+    val subtotal: Long,
     // 적립은 서버 계산값
     val earnTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
     val earnRate: Double = 0.0,
     val earnPoints: Long = 0,
     val isSubscribed: Boolean = false,
-    val shippingFee: String = "0",
-    val couponDiscount: String = "0",
+    val shippingFee: Long = 0L,
+    val couponDiscount: Long = 0L,
     val trackingNumber: String? = null,
     val carrier: String? = null,
-    val shippingStatus: String,
-    val refundAmount: String? = null,
+    val shippingStatus: ShippingStatus,
+    val refundAmount: Long? = null,
     val refundReason: String? = null,
     val refundedAt: Long? = null
 )
@@ -54,22 +54,22 @@ data class OrderItem(
     val productId: Int,
     val productName: String,
     val productImageUrl: String?,
-    val price: String,
-    val originalPrice: String? = null,
+    val price: Long,
+    val originalPrice: Long? = null,
     val quantity: Int,
-    val subtotal: String,
+    val subtotal: Long,
     val creatorId: Int? = null,
     val creatorName: String? = null,
     val creatorAvatarUrl: String? = null,
     val hasReview: Boolean = false,
     val isProductActive: Boolean = true,
-    val requiredTier: String = "FREE",
+    val requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
     val canAccess: Boolean = true
 )
 
 // 배송 추적 시각 3개는 외부 API
 data class ShippingStatusResponse(
-    val shippingStatus: String,
+    val shippingStatus: ShippingStatus,
     val trackingNumber: String?,
     val carrier: String?,
     val courierName: String? = null,
@@ -79,6 +79,14 @@ data class ShippingStatusResponse(
     val progresses: List<ShippingProgress> = emptyList()
 )
 
+/** 아직 송장 전이고 준비 중인 그룹만 취소 가능 */
+fun OrderCreatorGroup.isCancellable(): Boolean {
+    return creatorId != null &&
+        status in setOf(OrderStatus.PENDING, OrderStatus.CONFIRMED) &&
+        trackingNumber.isNullOrBlank() &&
+        shippingStatus == ShippingStatus.PREPARING
+}
+
 fun Order.creatorGroupsOrFallback(): List<OrderCreatorGroup> {
     if (creatorGroups.isNotEmpty()) return creatorGroups
 
@@ -86,18 +94,18 @@ fun Order.creatorGroupsOrFallback(): List<OrderCreatorGroup> {
     val singleGroup = groupedItems.size <= 1
 
     return groupedItems.map { (creatorId, grouped) ->
-        val subtotal = grouped.sumOf { it.subtotal.toLongOrNull() ?: 0L }.toString()
+        val subtotal = grouped.sumOf { it.subtotal }
         OrderCreatorGroup(
             creatorId = creatorId,
             creatorName = grouped.firstOrNull()?.creatorName,
             creatorAvatarUrl = grouped.firstOrNull()?.creatorAvatarUrl,
-            status = if (singleGroup) status else "PENDING",
+            status = if (singleGroup) status else OrderStatus.PENDING,
             items = grouped,
             subtotal = subtotal,
-            shippingFee = if (singleGroup) shippingFee else "0",
+            shippingFee = if (singleGroup) shippingFee else 0L,
             trackingNumber = if (singleGroup) trackingNumber else null,
             carrier = if (singleGroup) carrier else null,
-            shippingStatus = if (singleGroup) shippingStatus else "PREPARING",
+            shippingStatus = if (singleGroup) shippingStatus else ShippingStatus.PREPARING,
         )
     }
 }

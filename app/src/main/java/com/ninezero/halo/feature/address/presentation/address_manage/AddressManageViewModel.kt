@@ -160,11 +160,11 @@ class AddressManageViewModel @Inject constructor(
         ).onSuccess {
             reduce {
                 state.copy(
-                    addresses = state.addresses.map { addr ->
+                    addresses = state.addresses.map { address ->
                         when {
-                            addr.id == addressId -> addr.copy(isDefault = newDefault)
-                            newDefault && addr.isDefault -> addr.copy(isDefault = false)
-                            else -> addr
+                            address.id == addressId -> address.copy(isDefault = newDefault)
+                            newDefault && address.isDefault -> address.copy(isDefault = false)
+                            else -> address
                         }
                     },
                     toastMessage = if (newDefault) "기본 배송지로 설정되었습니다" else "기본 배송지가 해제되었습니다"

@@ -23,7 +23,6 @@ sealed interface MyReviewsIntent {
     data object LoadMore : MyReviewsIntent
     data object Refresh : MyReviewsIntent
     data object ScreenResumed : MyReviewsIntent
-
     // 리뷰 옵션 시트
     data class ShowOptions(val review: Review) : MyReviewsIntent
     data object DismissOptions : MyReviewsIntent
@@ -34,6 +33,7 @@ sealed interface MyReviewsIntent {
     data object NavigateBack : MyReviewsIntent
     data class NavigateToProductDetail(val review: Review) : MyReviewsIntent
     data class EditReview(val review: Review) : MyReviewsIntent
+    // Snackbar
     data object SnackbarDismissed : MyReviewsIntent
 }
 

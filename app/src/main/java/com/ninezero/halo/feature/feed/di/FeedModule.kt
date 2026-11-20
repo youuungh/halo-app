@@ -16,6 +16,7 @@ import com.ninezero.halo.feature.feed.data.remote.api.ReportApi
 import com.ninezero.halo.feature.feed.data.repository.BlockRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.BookmarkRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.CommentRepositoryImpl
+import com.ninezero.halo.feature.feed.data.repository.CommentUploadEventRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.FeedRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.HiddenPostRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.LikeRepositoryImpl
@@ -24,9 +25,8 @@ import com.ninezero.halo.feature.feed.data.repository.PendingCommentRepositoryIm
 import com.ninezero.halo.feature.feed.data.repository.PendingPostRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.PostDraftRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.PostRepositoryImpl
+import com.ninezero.halo.feature.feed.data.repository.PostUploadEventRepositoryImpl
 import com.ninezero.halo.feature.feed.data.repository.ReportRepositoryImpl
-import com.ninezero.halo.feature.feed.data.worker.CommentUploadResultManager
-import com.ninezero.halo.feature.feed.data.worker.PostUploadResultManager
 import com.ninezero.halo.feature.feed.domain.repository.BlockRepository
 import com.ninezero.halo.feature.feed.domain.repository.BookmarkRepository
 import com.ninezero.halo.feature.feed.domain.repository.CommentRepository
@@ -128,13 +128,13 @@ abstract class FeedModule {
     @Binds
     @Singleton
     abstract fun bindPostUploadEventRepository(
-        postUploadResultManager: PostUploadResultManager
+        postUploadEventRepository: PostUploadEventRepositoryImpl
     ): PostUploadEventRepository
 
     @Binds
     @Singleton
     abstract fun bindCommentUploadEventRepository(
-        commentUploadResultManager: CommentUploadResultManager
+        commentUploadEventRepository: CommentUploadEventRepositoryImpl
     ): CommentUploadEventRepository
 
     @Binds

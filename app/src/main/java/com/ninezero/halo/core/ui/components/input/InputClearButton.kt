@@ -3,6 +3,7 @@ package com.ninezero.halo.core.ui.components.input
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -14,6 +15,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
 /** 입력 지우기 버튼 */
 @Composable
@@ -35,5 +38,13 @@ fun InputClearButton(
             modifier = Modifier.size(12.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun InputClearButtonPreview() {
+    HaloSurfacePreview {
+        InputClearButton(onClick = {}, modifier = Modifier.padding(16.dp))
     }
 }

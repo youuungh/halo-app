@@ -1,5 +1,8 @@
 package com.ninezero.halo.feature.profile.presentation.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -15,25 +18,35 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.selector.CapsuleTabDefaults
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
 import dev.chrisbanes.haze.HazeState
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 enum class ProfileTab(val displayName: String) {
@@ -46,7 +59,9 @@ enum class ProfileTab(val displayName: String) {
     STORE("스토어")
 }
 
-val ProfileTabRowHeight = 56.dp
+val ProfileTabRowHeight = CapsuleTabDefaults.Height + 16.dp
+
+private const val INDICATOR_JUMP_THRESHOLD = 0.5f
 
 @Composable
 fun ProfileTabRow(
@@ -56,17 +71,27 @@ fun ProfileTabRow(
     tabs: List<ProfileTab> = listOf(ProfileTab.POSTS, ProfileTab.REPLIES),
     hazeState: HazeState? = null,
     hazeBackgroundColor: Color = MaterialTheme.colorScheme.background,
-    scrollFraction: Float = tabs.indexOf(selectedTab).toFloat().coerceAtLeast(0f)
+    scrollFraction: () -> Float = { tabs.indexOf(selectedTab).toFloat().coerceAtLeast(0f) }
 ) {
     val density = LocalDensity.current
 
     val tabSize = remember { mutableStateOf(IntSize.Zero) }
 
-    // pager 실제 위치 따라 대칭 전환
-    val indicatorOffset = with(density) { (tabSize.value.width * scrollFraction).toDp() }
-
-    val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    val indicatorGlassTint = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+    // 탭을 눌러 건너뛸 때만 미끄러짐
+    val currentFraction by rememberUpdatedState(scrollFraction)
+    val indicatorFraction = remember { Animatable(scrollFraction()) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentFraction() }.collectLatest { fraction ->
+            if (abs(fraction - indicatorFraction.targetValue) >= INDICATOR_JUMP_THRESHOLD) {
+                indicatorFraction.animateTo(fraction, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow))
+            } else {
+                indicatorFraction.snapTo(fraction)
+            }
+        }
+    }
+    val currentSelectedIndex by remember(tabs) {
+        derivedStateOf { currentFraction().roundToInt().coerceIn(0, tabs.lastIndex) }
+    }
 
     Box(
         modifier = modifier
@@ -77,40 +102,37 @@ fun ProfileTabRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
-                .clip(CircleShape)
+                .height(CapsuleTabDefaults.Height)
                 .then(
                     if (hazeState != null) {
-                        Modifier.haloBlur(state = hazeState) {
-                            style = HaloBlurStyle(
-                                backgroundColor = hazeBackgroundColor,
-                                tint = HaloBlurTint(glassTint),
-                                blurRadius = 20.dp,
-                                noiseFactor = 0f
-                            )
-                        }
+                        Modifier
+                            .clip(CircleShape)
+                            .haloBlur(hazeState, HaloBlurs.glassField(hazeBackgroundColor))
                     } else {
-                        Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                        Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     }
                 )
         ) {
             // 선택 인디케이터
             Box(
                 modifier = Modifier
-                    .offset(x = indicatorOffset + 2.dp)
+                    .offset { IntOffset((tabSize.value.width * indicatorFraction.value).roundToInt() + 2.dp.roundToPx(), 0) }
                     .padding(vertical = 2.dp)
                     .width(with(density) { tabSize.value.width.toDp() } - 4.dp)
-                    .height(36.dp)
+                    .height(CapsuleTabDefaults.Height - 4.dp)
+                    .then(
+                        // 밝은 블러 위에서 경계가 보이게 살짝 띄움
+                        if (!LocalIsDarkTheme.current) Modifier.dropShadow(CircleShape, CapsuleTabDefaults.IndicatorShadow) else Modifier
+                    )
                     .clip(CircleShape)
                     .then(
                         if (hazeState != null) {
-                            Modifier.haloBlur(state = hazeState) {
-                                style = HaloBlurStyle(
-                                    backgroundColor = hazeBackgroundColor,
-                                    tint = HaloBlurTint(indicatorGlassTint),
-                                    blurRadius = 20.dp,
-                                    noiseFactor = 0f
-                                )
+                            if (LocalIsDarkTheme.current) {
+                                Modifier.background(CapsuleTabDefaults.DarkIndicatorColor)
+                            } else {
+                                Modifier.haloBlur(hazeState, HaloBlurs.glassIndicator(hazeBackgroundColor))
                             }
                         } else {
                             Modifier.background(MaterialTheme.colorScheme.surface)
@@ -122,19 +144,15 @@ fun ProfileTabRow(
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // 가까운 탭 기준으로 굵기·색 전환
-                val currentSelectedIndex = scrollFraction.roundToInt().coerceIn(0, tabs.lastIndex)
 
                 tabs.forEachIndexed { index, tab ->
                     val isSelected = index == currentSelectedIndex
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .height(CapsuleTabDefaults.Height)
                             .onSizeChanged { size ->
-                                if (tabSize.value.width == 0) {
-                                    tabSize.value = size
-                                }
+                                tabSize.value = size
                             }
                             .pointerInput(tab) {
                                 awaitEachGesture {

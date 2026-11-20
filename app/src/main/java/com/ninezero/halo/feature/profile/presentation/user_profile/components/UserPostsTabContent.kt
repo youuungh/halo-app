@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -19,15 +18,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.media.PrefetchUpcomingPostImages
+import com.ninezero.halo.core.ui.components.media.VideoPreloader
 import com.ninezero.halo.core.ui.components.media.rememberSettledVideoPostId
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.post.PostCard
 import com.ninezero.halo.core.ui.components.post.PostCardSkeleton
-import com.ninezero.halo.core.ui.components.video_player.VideoPreloader
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.nextVideoUrlsAfter
@@ -39,6 +39,7 @@ import com.ninezero.halo.feature.profile.presentation.user_profile.UserProfileSt
 @Composable
 fun UserPostsTabContent(
     state: UserProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit,
     onProfileClick: (Author, IntOffset) -> Unit,
@@ -68,7 +69,7 @@ fun UserPostsTabContent(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+        contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
     ) {
         if (isBlocked) {
             item(key = "blocked_message") { BlockedUserPlaceholder() }

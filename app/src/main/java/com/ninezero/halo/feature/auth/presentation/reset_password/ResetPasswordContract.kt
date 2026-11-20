@@ -6,10 +6,9 @@ data class ResetPasswordState(
     val password: String = "",
     val confirmPassword: String = "",
     val isPasswordVisible: Boolean = false,
-    val isConfirmPwVisible: Boolean = false,
+    val isConfirmPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val snackbarState: SnackbarState? = null,
-
     // 입력값 검증 에러
     val passwordError: String? = null,
     val confirmPasswordError: String? = null
@@ -19,7 +18,7 @@ sealed interface ResetPasswordIntent {
     data class PasswordChanged(val password: String) : ResetPasswordIntent
     data class ConfirmPasswordChanged(val confirmPassword: String) : ResetPasswordIntent
     data object TogglePasswordVisibility : ResetPasswordIntent
-    data object ToggleConfirmPwVisibility : ResetPasswordIntent
+    data object ToggleConfirmPasswordVisibility : ResetPasswordIntent
     data object Submit : ResetPasswordIntent
     data object NavigateBack : ResetPasswordIntent
     data object SnackbarDismissed : ResetPasswordIntent

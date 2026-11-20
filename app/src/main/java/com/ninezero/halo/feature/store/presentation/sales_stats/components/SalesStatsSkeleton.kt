@@ -27,15 +27,14 @@ private fun SalesStatsSkeletonContent() {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        CardSilhouette(height = 188.dp)  // hero
-        CardSilhouette(height = 150.dp)  // 매출 추이
-        CardSilhouette(height = 184.dp)  // 핵심 지표
-        CardSilhouette(height = 92.dp)   // 주문 상태
+        CardFrame(height = 188.dp)  // hero
+        CardFrame(height = 150.dp)  // 매출 추이
+        CardFrame(height = 168.dp)  // 핵심 지표
     }
 }
 
 @Composable
-private fun CardSilhouette(height: Dp) {
+private fun CardFrame(height: Dp) {
     Box(
         modifier = Modifier
             .fillMaxWidth()

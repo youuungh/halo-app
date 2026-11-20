@@ -26,10 +26,10 @@ import com.ninezero.halo.feature.feed.domain.usecase.DeletePostUseCase
 import com.ninezero.halo.feature.feed.domain.usecase.ObserveCachedCommentsUseCase
 import com.ninezero.halo.feature.feed.domain.usecase.ObserveCachedPostsUseCase
 import com.ninezero.halo.feature.feed.domain.usecase.ToggleAuthorFollowUseCase
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
-import com.ninezero.halo.feature.profile.domain.model.PostSummaryData
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
 import com.ninezero.halo.feature.profile.domain.model.SectionType
-import com.ninezero.halo.feature.profile.domain.model.ThreadCommentData
+import com.ninezero.halo.feature.profile.domain.model.ThreadComment
+import com.ninezero.halo.feature.profile.domain.model.ThreadPost
 import com.ninezero.halo.feature.profile.domain.model.applyFollow
 import com.ninezero.halo.feature.profile.domain.model.mergeCached
 import com.ninezero.halo.feature.profile.domain.model.syncWithCache
@@ -87,7 +87,7 @@ class UserProfileViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel(), OrbitContainerHost<UserProfileState, UserProfileState, UserProfileSideEffect> {
 
-    // Optimistic UI 중복 요청 방지 플래그
+    // 중복 요청 방지 플래그
     private var isFollowInProgress = false
     private val cachedPostsTracker = CachedPostsTracker()
     private var isBlockingFromHere = false  // 곧 나갈 화면이라 차단 이벤트로 다시 부르지 않음
@@ -368,7 +368,7 @@ class UserProfileViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun cacheThreadComments(threads: List<CommentThreadData>) {
+    private fun cacheThreadComments(threads: List<CommentThread>) {
         val comments = threads
             .flatMap { it.toCacheableFeedComments() }
             .distinctBy { it.id }
@@ -573,10 +573,10 @@ class UserProfileViewModel @Inject constructor(
             reduce { state.copy(profile = ownProfile) }
 
             when (state.selectedTab) {
-                ProfileTab.POSTS -> refreshPostsQuietly()
-                ProfileTab.REPLIES -> refreshCommentThreadsQuietly()
+                ProfileTab.POSTS -> refreshPostsSilently()
+                ProfileTab.REPLIES -> refreshCommentThreadsSilently()
                 ProfileTab.HOME -> loadHomeSections(quiet = true)  // 홈 스켈레톤은 비었을 때만
-                ProfileTab.COMMUNITY -> refreshCommunityPostsQuietly()
+                ProfileTab.COMMUNITY -> refreshCommunityPostsSilently()
                 ProfileTab.STORE -> reloadLoadedStoreProducts()
             }
         }
@@ -914,7 +914,7 @@ class UserProfileViewModel @Inject constructor(
                         userPosts = posts,
                         isPostsLoading = false,
                         postsNextCursor = nextCursor,
-                        postsHasMore = nextCursor != null
+                        hasMorePosts = nextCursor != null
                     )
                 }
             }
@@ -929,7 +929,7 @@ class UserProfileViewModel @Inject constructor(
     }
 
     private fun loadMorePosts(): Job = intent {  // 자기를 다시 불러 타입 명시
-        if (state.isPostsLoading || !state.postsHasMore) return@intent
+        if (state.isPostsLoading || !state.hasMorePosts) return@intent
 
         val targetUserId = userId ?: state.profile?.userId ?: return@intent
         val cursor = state.postsNextCursor
@@ -958,7 +958,7 @@ class UserProfileViewModel @Inject constructor(
                         userPosts = (state.userPosts + posts).distinctBy { it.id },
                         isPostsLoading = false,
                         postsNextCursor = nextCursor,
-                        postsHasMore = nextCursor != null
+                        hasMorePosts = nextCursor != null
                     )
                 }
             }
@@ -974,8 +974,7 @@ class UserProfileViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-
-    private fun refreshPostsQuietly() = intent {
+    private fun refreshPostsSilently() = intent {
         val targetUserId = userId ?: state.profile?.userId ?: return@intent
         if (state.isPostsLoading) return@intent
         val sort = state.postsSortType.apiValue
@@ -994,7 +993,7 @@ class UserProfileViewModel @Inject constructor(
                 val keepsTail = merged.size > posts.size
                 state.copy(
                     userPosts = merged,
-                    postsHasMore = if (keepsTail) state.postsHasMore else nextCursor != null,
+                    hasMorePosts = if (keepsTail) state.hasMorePosts else nextCursor != null,
                     postsNextCursor = if (keepsTail) state.postsNextCursor else nextCursor
                 )
             }
@@ -1009,7 +1008,7 @@ class UserProfileViewModel @Inject constructor(
                 postsSortType = sortType,
                 userPosts = emptyList(),
                 postsNextCursor = null,
-                postsHasMore = true
+                hasMorePosts = true
             )
         }
         loadUserPosts()
@@ -1023,7 +1022,7 @@ class UserProfileViewModel @Inject constructor(
                 postsContextType = contextType,
                 userPosts = emptyList(),
                 postsNextCursor = null,
-                postsHasMore = true
+                hasMorePosts = true
             )
         }
         loadUserPosts()
@@ -1189,7 +1188,7 @@ class UserProfileViewModel @Inject constructor(
                         },
                         isRepliesLoading = chain,
                         repliesNextCursor = nextCursor,
-                        repliesHasMore = nextCursor != null
+                        hasMoreReplies = nextCursor != null
                     )
                 }
                 if (chain) loadMoreCommentThreads(chained = true)
@@ -1207,7 +1206,7 @@ class UserProfileViewModel @Inject constructor(
     // 다 걸러진 페이지 이어 받기면 로딩 가드 건너뜀
 
     private fun loadMoreCommentThreads(chained: Boolean = false): Job = intent {  // 자기를 다시 불러 타입 명시
-        if ((state.isRepliesLoading && !chained) || !state.repliesHasMore) return@intent
+        if ((state.isRepliesLoading && !chained) || !state.hasMoreReplies) return@intent
 
         val targetUserId = userId ?: state.profile?.userId ?: return@intent
         val cursor = state.repliesNextCursor
@@ -1240,7 +1239,7 @@ class UserProfileViewModel @Inject constructor(
                         },
                         isRepliesLoading = chain,
                         repliesNextCursor = nextCursor,
-                        repliesHasMore = nextCursor != null
+                        hasMoreReplies = nextCursor != null
                     )
                 }
                 if (chain) loadMoreCommentThreads(chained = true)
@@ -1257,8 +1256,7 @@ class UserProfileViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-
-    private fun refreshCommentThreadsQuietly() = intent {
+    private fun refreshCommentThreadsSilently() = intent {
         val targetUserId = userId ?: state.profile?.userId ?: return@intent
         if (state.isRepliesLoading) return@intent
         val sort = state.repliesSortType.apiValue
@@ -1273,7 +1271,7 @@ class UserProfileViewModel @Inject constructor(
             if (state.isRepliesLoading) return@intent  // 그사이 더보기·새로고침이 시작됨
             if (threads.isEmpty() && nextCursor != null) return@intent  // 첫 페이지가 다 걸러짐, 받아 둔 목록 유지
             cacheThreadComments(threads)
-            val threadKey = { thread: CommentThreadData -> thread.post.id to (thread.comments.lastOrNull()?.id ?: 0) }
+            val threadKey = { thread: CommentThread -> thread.post.id to (thread.comments.lastOrNull()?.id ?: 0) }
             reduce {
                 val fresh = threads.distinctBy(threadKey)
                 val merged = state.userCommentThreads.mergeFreshHead(fresh, threadKey)
@@ -1281,7 +1279,7 @@ class UserProfileViewModel @Inject constructor(
                 val keepsTail = merged.size > fresh.size
                 state.copy(
                     userCommentThreads = merged,
-                    repliesHasMore = if (keepsTail) state.repliesHasMore else nextCursor != null,
+                    hasMoreReplies = if (keepsTail) state.hasMoreReplies else nextCursor != null,
                     repliesNextCursor = if (keepsTail) state.repliesNextCursor else nextCursor
                 )
             }
@@ -1296,7 +1294,7 @@ class UserProfileViewModel @Inject constructor(
                 repliesSortType = sortType,
                 userCommentThreads = emptyList(),
                 repliesNextCursor = null,
-                repliesHasMore = true
+                hasMoreReplies = true
             )
         }
         loadUserCommentThreads()
@@ -1310,7 +1308,7 @@ class UserProfileViewModel @Inject constructor(
                 repliesContextType = contextType,
                 userCommentThreads = emptyList(),
                 repliesNextCursor = null,
-                repliesHasMore = true
+                hasMoreReplies = true
             )
         }
         loadUserCommentThreads()
@@ -1408,8 +1406,8 @@ class UserProfileViewModel @Inject constructor(
     // 댓글 옵션
 
     private fun showCommentOptions(
-        comment: ThreadCommentData,
-        thread: CommentThreadData
+        comment: ThreadComment,
+        thread: CommentThread
     ) = intent {
         reduce {
             state.copy(
@@ -1501,7 +1499,7 @@ class UserProfileViewModel @Inject constructor(
     // 스레드 포스트 옵션
 
     private fun showThreadPostOptions(
-        post: PostSummaryData
+        post: ThreadPost
     ) = intent {
         reduce {
             state.copy(
@@ -1683,7 +1681,7 @@ class UserProfileViewModel @Inject constructor(
                         communityPosts = normalPosts,
                         isCommunityLoading = false,
                         communityNextCursor = nextCursor,
-                        communityHasMore = nextCursor != null
+                        hasMoreCommunityPosts = nextCursor != null
                     )
                 }
             }
@@ -1698,7 +1696,7 @@ class UserProfileViewModel @Inject constructor(
     }
 
     private fun loadMoreCommunityPosts(): Job = intent {  // 자기를 다시 불러 타입 명시
-        if (state.isCommunityLoading || !state.communityHasMore) return@intent
+        if (state.isCommunityLoading || !state.hasMoreCommunityPosts) return@intent
 
         val creatorId = state.profile?.userId ?: return@intent
         val cursor = state.communityNextCursor
@@ -1719,7 +1717,7 @@ class UserProfileViewModel @Inject constructor(
                         communityPosts = (state.communityPosts + normalPosts).distinctBy { it.id },
                         isCommunityLoading = false,
                         communityNextCursor = nextCursor,
-                        communityHasMore = nextCursor != null
+                        hasMoreCommunityPosts = nextCursor != null
                     )
                 }
             }
@@ -1735,8 +1733,7 @@ class UserProfileViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-
-    private fun refreshCommunityPostsQuietly() = intent {
+    private fun refreshCommunityPostsSilently() = intent {
         val profile = state.profile ?: return@intent
         if (!profile.isCreator || state.isCommunityLoading) return@intent
         getCommunityPostsUseCase(profile.userId, limit = PAGE_SIZE)
@@ -1752,7 +1749,7 @@ class UserProfileViewModel @Inject constructor(
                     state.copy(
                         communityPinnedPosts = pinnedPosts,
                         communityPosts = merged,
-                        communityHasMore = if (keepsTail) state.communityHasMore else nextCursor != null,
+                        hasMoreCommunityPosts = if (keepsTail) state.hasMoreCommunityPosts else nextCursor != null,
                         communityNextCursor = if (keepsTail) state.communityNextCursor else nextCursor
                     )
                 }
@@ -1885,7 +1882,7 @@ class UserProfileViewModel @Inject constructor(
                         storeProducts = storeSection.allProducts,
                         isStoreLoading = false,
                         storePage = 1,
-                        storeHasMore = storeSection.hasNext
+                        hasMoreStoreProducts = storeSection.hasNext
                     )
                 }
             }
@@ -1918,7 +1915,7 @@ class UserProfileViewModel @Inject constructor(
                     state.copy(
                         storeProductSections = storeSection.tagSections,
                         storeProducts = storeSection.allProducts,
-                        storeHasMore = storeSection.hasNext
+                        hasMoreStoreProducts = storeSection.hasNext
                     )
                 } else {
                     // 순위가 바뀌는 목록이라 받아 둔 목록 유지
@@ -1936,14 +1933,14 @@ class UserProfileViewModel @Inject constructor(
                 storeSortType = sortType,
                 storeProducts = emptyList(),
                 storePage = 1,
-                storeHasMore = true
+                hasMoreStoreProducts = true
             )
         }
         loadStoreProducts(sortType)
     }
 
     private fun loadMoreStoreProducts(): Job = intent {  // 자기를 다시 불러 타입 명시
-        if (state.isStoreLoading || !state.storeHasMore) return@intent
+        if (state.isStoreLoading || !state.hasMoreStoreProducts) return@intent
 
         val creatorId = state.profile?.userId ?: return@intent
         val basePage = state.storePage
@@ -1968,7 +1965,7 @@ class UserProfileViewModel @Inject constructor(
                         storeProducts = (state.storeProducts + storeSection.allProducts).distinctBy { it.id },
                         isStoreLoading = false,
                         storePage = nextPage,
-                        storeHasMore = storeSection.hasNext
+                        hasMoreStoreProducts = storeSection.hasNext
                     )
                 }
             }

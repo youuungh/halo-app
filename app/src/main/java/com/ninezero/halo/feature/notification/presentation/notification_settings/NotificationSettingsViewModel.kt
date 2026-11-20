@@ -61,7 +61,7 @@ class NotificationSettingsViewModel @Inject constructor(
                     previousState.savedSystemEnabled
 
             val restored = previousState.copy(
-                masterEnabled = true,
+                mainEnabled = true,
                 socialEnabled = if (shouldRestoreSavedState) previousState.savedSocialEnabled else true,
                 creatorActivityEnabled = if (shouldRestoreSavedState) previousState.savedCreatorActivityEnabled else true,
                 commerceEnabled = if (shouldRestoreSavedState) previousState.savedCommerceEnabled else true,
@@ -83,7 +83,7 @@ class NotificationSettingsViewModel @Inject constructor(
             }
         } else {
             val cleared = previousState.copy(
-                masterEnabled = false,
+                mainEnabled = false,
                 savedSocialEnabled = previousState.socialEnabled,
                 savedCreatorActivityEnabled = previousState.creatorActivityEnabled,
                 savedCommerceEnabled = previousState.commerceEnabled,
@@ -127,7 +127,7 @@ class NotificationSettingsViewModel @Inject constructor(
         savedChatEnabled = previous.savedChatEnabled,
         savedSystemEnabled = previous.savedSystemEnabled,
         snackbarState = SnackbarState(ERROR_UPDATE_FAILED)
-    ).withMasterSynced()
+    ).withMainSynced()
 
     private fun loadPreferences() = intent {
         reduce { state.copy(isLoading = true, error = null) }
@@ -139,7 +139,7 @@ class NotificationSettingsViewModel @Inject constructor(
                 reduce {
                     state.copy(
                         isLoading = false,
-                        masterEnabled = !allOff,
+                        mainEnabled = !allOff,
                         socialEnabled = prefs.socialEnabled,
                         creatorActivityEnabled = prefs.creatorActivityEnabled,
                         commerceEnabled = prefs.commerceEnabled,
@@ -177,7 +177,7 @@ class NotificationSettingsViewModel @Inject constructor(
                 commerceEnabled = commerceEnabled ?: state.commerceEnabled,
                 chatEnabled = chatEnabled ?: state.chatEnabled,
                 systemEnabled = systemEnabled ?: state.systemEnabled
-            ).withMasterSynced()
+            ).withMainSynced()
         }
 
         repository.updatePreferences(
@@ -197,13 +197,13 @@ class NotificationSettingsViewModel @Inject constructor(
                     chatEnabled = if (chatEnabled != null) previousState.chatEnabled else state.chatEnabled,
                     systemEnabled = if (systemEnabled != null) previousState.systemEnabled else state.systemEnabled,
                     snackbarState = SnackbarState(ERROR_UPDATE_FAILED)
-                ).withMasterSynced()
+                ).withMainSynced()
             }
         }
     }
 
-    private fun NotificationSettingsState.withMasterSynced(): NotificationSettingsState =
-        copy(masterEnabled = socialEnabled || creatorActivityEnabled || commerceEnabled || chatEnabled || systemEnabled)
+    private fun NotificationSettingsState.withMainSynced(): NotificationSettingsState =
+        copy(mainEnabled = socialEnabled || creatorActivityEnabled || commerceEnabled || chatEnabled || systemEnabled)
 
     private fun dismissSnackbar() = intent {
         reduce { state.copy(snackbarState = null) }

@@ -110,14 +110,14 @@ class FeedViewModel @Inject constructor(
             .onEach { event ->
                 // 커뮤니티 글은 피드에 없어 재로드 불필요
                 if (event is PostUploadEvent.Success && event.creatorId == null) {
-                    mergeFirstPageQuietly()
+                    mergeFirstPageSilently()
                 }
             }
             .launchIn(viewModelScope)
     }
 
     // 새 1페이지를 앞에 합쳐 받아 둔 글과 스크롤 위치 유지
-    private fun mergeFirstPageQuietly() = intent {
+    private fun mergeFirstPageSilently() = intent {
         getHomeFeedUseCase(limit = PAGE_SIZE)
             .onSuccess { result ->
                 reduce { state.copy(posts = (result.items + state.posts).distinctBy { it.id }) }

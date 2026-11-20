@@ -19,7 +19,6 @@ data class FollowResponseDto(
     val userId: Int? = null
 )
 
-/** 커서 목록 + 탭 숫자용 전체 수 */
 @Serializable
 data class FollowListResponseDto(
     val items: List<UserSummaryDto>,

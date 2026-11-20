@@ -17,7 +17,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,12 +28,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -52,19 +49,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.deeplink.DeepLinks
 import com.ninezero.halo.core.model.ReportTargetType
@@ -75,41 +71,41 @@ import com.ninezero.halo.core.ui.components.comment.CommentItemSkeleton
 import com.ninezero.halo.core.ui.components.dialog.AlertDialog
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.media.Avatar
+import com.ninezero.halo.core.ui.components.media.VideoPreloader
 import com.ninezero.halo.core.ui.components.media.rememberAutoplayTarget
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.LocalActiveViewerMediaKey
 import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransitionScope
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.modifiers.statusBarsPaddingIgnoringVisibility
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import com.ninezero.halo.core.ui.components.popup.SortPopupMenu
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
 import com.ninezero.halo.core.ui.components.post.LocalSubscribeRequester
 import com.ninezero.halo.core.ui.components.post.LockedPostCard
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.components.snackbar.showOrToast
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
-import com.ninezero.halo.core.ui.components.video_player.VideoPreloader
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
 import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.feature.feed.domain.model.Comment
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
+import com.ninezero.halo.feature.feed.presentation.CommentSortType
 import com.ninezero.halo.feature.feed.presentation.components.CommentInputBar
-import com.ninezero.halo.feature.feed.presentation.components.SortPopupMenu
 import com.ninezero.halo.feature.feed.presentation.post_detail.components.PostCommentThreadItem
 import com.ninezero.halo.feature.feed.presentation.post_detail.components.PostContentSection
 import com.ninezero.halo.feature.feed.presentation.post_detail.components.PostContentSkeleton
 import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.delay
@@ -233,8 +229,8 @@ internal fun PostDetailScreenContent(
         }
     }
     LaunchedEffect(activeVideoItemKey, orderedVideoUrls) {
-        val idx = orderedVideoUrls.indexOfFirst { it.first == activeVideoItemKey }
-        val start = if (idx >= 0) idx + 1 else 0
+        val activeIndex = orderedVideoUrls.indexOfFirst { it.first == activeVideoItemKey }
+        val start = if (activeIndex >= 0) activeIndex + 1 else 0
         VideoPreloader.prefetch(context, orderedVideoUrls.drop(start).take(2).map { it.second })
     }
 
@@ -324,87 +320,14 @@ internal fun PostDetailScreenContent(
 
             // 포스트 본문
             item(key = "post_content") {
-                if (state.isLoading) {
-                    PostContentSkeleton()
-                } else if (state.post == null) {
-                    // 로드 실패: 빈화면 대신 에러 메시지 + 재시도
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = state.error ?: "포스트를 불러올 수 없습니다",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "재시도",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { onIntent(PostDetailIntent.RefreshPost) }
-                        )
-                    }
-                } else {
-                    state.post.let { post ->
-                        if (post.isRestricted) {
-                            // 잠금 글은 잠금 카드 + 구독 동선
-                            val snackbarRelay = LocalSnackbarRelay.current
-                            val subscribeRequester = LocalSubscribeRequester.current
-                            LockedPostCard(
-                                post = post,
-                                onClick = {
-                                    if (post.isSecret) {
-                                        snackbarRelay.showOrToast(context, "크리에이터만 볼 수 있습니다")
-                                    } else {
-                                        subscribeRequester(
-                                            post.author.id,
-                                            post.author.displayName ?: post.author.username
-                                        )
-                                    }
-                                }
-                            )
-                            return@let
-                        }
-                        PostContentSection(
-                            post = post,
-                            isFollowing = state.isFollowing,
-                            isOwnPost = post.author.id == state.myUserId,
-                            onAuthorSectionPositioned = { bottom ->
-                                authorSectionBottom = bottom
-                            },
-                            onProfileClick = {
-                                onIntent(PostDetailIntent.NavigateToUserProfile(post.author.id))
-                            },
-                            onFollowClick = {
-                                if (state.isFollowing) {
-                                    onIntent(PostDetailIntent.UnfollowAuthor)
-                                } else {
-                                    onIntent(PostDetailIntent.FollowAuthor)
-                                }
-                            },
-                            onLikeClick = {
-                                if (post.isLiked) {
-                                    onIntent(PostDetailIntent.UnlikePost)
-                                } else {
-                                    onIntent(PostDetailIntent.LikePost)
-                                }
-                            },
-                            onCommentClick = {
-                                onNavigateToReply(post.id, null)
-                            },
-                            onShareClick = {
-                                onIntent(PostDetailIntent.SharePost)
-                            },
-                            onMediaClick = { index ->
-                                onShowMediaViewer(post.mediaAttachments.toViewerItems(), index)
-                            },
-                            isVideoPlaying = activeVideoItemKey == "post_content"
-                        )
-                    }
-                }
+                PostContentItem(
+                    state = state,
+                    isVideoPlaying = activeVideoItemKey == "post_content",
+                    onAuthorSectionPositioned = { authorSectionBottom = it },
+                    onIntent = onIntent,
+                    onNavigateToReply = onNavigateToReply,
+                    onShowMediaViewer = onShowMediaViewer
+                )
             }
 
             // 댓글이 있거나 로딩 중이면 구분선, 정렬은 댓글이 있거나 정렬을 바꾸는 중일 때만
@@ -421,7 +344,10 @@ internal fun PostDetailScreenContent(
                     // 정렬 드롭다운
                     item {
                         SortPopupMenu(
+                            hazeState = hazeState,
+                            options = CommentSortType.entries,
                             currentSort = state.commentSortBy,
+                            label = { it.displayName },
                             onSortChange = { onIntent(PostDetailIntent.ChangeSortType(it)) }
                         )
                     }
@@ -454,60 +380,19 @@ internal fun PostDetailScreenContent(
                 // COMMENT 알림 진입 하이라이트 배경
                 val isHighlightTarget =
                     !comment.isUploading && comment.id == state.highlightCommentId
-                val highlightColor = MaterialTheme.colorScheme.primary
-                Column(
-                    modifier = if (isHighlightTarget) {
-                        Modifier.drawBehind {
-                            val alpha = commentHighlight.value * 0.04f
-                            if (alpha > 0f) drawRect(highlightColor.copy(alpha = alpha))
-                        }
+                CommentListItem(
+                    comment = comment,
+                    state = state,
+                    showTopDivider = index > 0,
+                    isVideoPlaying = activeVideoItemKey == comment.listKey(),
+                    highlightProgress = if (isHighlightTarget) {
+                        { commentHighlight.value }
                     } else {
-                        Modifier
-                    }
-                ) {
-                    // 댓글 스레드 사이 구분선
-                    if (index > 0) {
-                        HorizontalDivider(
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                    }
-
-                    PostCommentThreadItem(
-                        comment = comment,
-                        expandedReplies = state.expandedCommentReplies[comment.id],
-                        isLoadingReplies = state.loadingRepliesCommentIds.contains(comment.id),
-                        hasMoreReplies = state.repliesHasMore[comment.id] == true,
-                        onExpandReplies = { onIntent(PostDetailIntent.ExpandReplies(comment.id)) },
-                        onLoadMoreReplies = { onIntent(PostDetailIntent.LoadMoreReplies(comment.id)) },
-                        onLikeClick = { commentId ->
-                            if (comment.isUploading) return@PostCommentThreadItem
-                            onIntent(PostDetailIntent.ToggleCommentLike(commentId))
-                        },
-                        onReplyClick = { commentId ->
-                            if (comment.isUploading) return@PostCommentThreadItem
-                            onIntent(PostDetailIntent.NavigateToCommentDetail(commentId))
-                        },
-                        onMoreClick = { commentId ->
-                            if (comment.isUploading) return@PostCommentThreadItem
-                            onIntent(PostDetailIntent.ShowCommentOptions(commentId))
-                        },
-                        onProfileClick = { userId, _ ->
-                            if (comment.isUploading) return@PostCommentThreadItem
-                            // 댓글/답글 프로필은 팝업 없이 바로 프로필로 이동
-                            onIntent(PostDetailIntent.NavigateToUserProfile(userId))
-                        },
-                        onCommentClick = { commentId ->
-                            if (comment.isUploading) return@PostCommentThreadItem
-                            onIntent(PostDetailIntent.NavigateToCommentDetail(commentId))
-                        },
-                        isUploading = comment.isUploading,
-                        postAuthorId = state.post?.author?.id,
-                        pendingReplies = state.pendingReplies[comment.id] ?: emptyList(),
-                        onMediaClick = onShowMediaViewer,
-                        isVideoPlaying = activeVideoItemKey == comment.listKey()
-                    )
-                }
+                        null
+                    },
+                    onIntent = onIntent,
+                    onShowMediaViewer = onShowMediaViewer
+                )
             }
 
             // 마지막 댓글 뒤 구분선
@@ -563,153 +448,20 @@ internal fun PostDetailScreenContent(
         InfiniteScrollTrigger(
             listState = listState,
             isLoading = state.isCommentsLoading,
-            hasMore = state.commentsHasMore,
+            hasMore = state.hasMoreComments,
             onLoadMore = { onIntent(PostDetailIntent.LoadMoreComments) }
         )
 
         // 헤더
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 0.5f,
-                        endIntensity = 0f
-                    )
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { /* 터치 이벤트 소비 */ }
-                }
-                .onGloballyPositioned { coordinates ->
-                    headerHeight = with(density) { coordinates.size.height.toDp() }
-                }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPaddingIgnoringVisibility()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 뒤로가기 버튼
-                GlassIconButton(
-                    onClick = onNavigateBack,
-                    icon = painterResource(id = R.drawable.ic_chevron_left),
-                    contentDescription = "뒤로가기",
-                    hazeState = hazeState,
-                    backgroundColor = backgroundColor
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // 타이틀 영역
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 프로필 사진, 스크롤 시 표시
-                    AnimatedVisibility(
-                        visible = showHeaderProfile && state.post != null,
-                        enter = scaleIn(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ) + expandHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            ),
-                            expandFrom = Alignment.Start,
-                            clip = false
-                        ),
-                        exit = scaleOut(animationSpec = tween(150)) +
-                                shrinkHorizontally(
-                                    animationSpec = tween(150),
-                                    shrinkTowards = Alignment.Start,
-                                    clip = false
-                                )
-                    ) {
-                        Row {
-                            AsyncImage(
-                                model = state.post?.author?.avatarThumbUrl
-                                    ?: state.post?.author?.avatarUrl,
-                                contentDescription = "프로필",
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                contentScale = ContentScale.Crop,
-                                placeholder = painterResource(R.drawable.ic_profile_placeholder),
-                                error = painterResource(R.drawable.ic_profile_placeholder),
-                                fallback = painterResource(R.drawable.ic_profile_placeholder)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                    }
-
-                    // 타이틀 + 조회수
-                    Column {
-                        val numberFormat = rememberKoreanNumberFormat()
-
-                        // 타이틀
-                        Text(
-                            text = if (showHeaderProfile && state.post != null) {
-                                state.post.author.displayName ?: state.post.author.username
-                            } else {
-                                "포스트"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        // 조회수, 로드 후 슬라이드업
-                        AnimatedVisibility(
-                            visible = state.isViewCountLoaded && state.post != null,
-                            enter = expandVertically(
-                                animationSpec = tween(300),
-                                expandFrom = Alignment.Top
-                            ) + slideInVertically(
-                                animationSpec = tween(300),
-                                initialOffsetY = { it }
-                            ) + fadeIn(animationSpec = tween(300)),
-                            exit = shrinkVertically(
-                                animationSpec = tween(200),
-                                shrinkTowards = Alignment.Top
-                            ) + slideOutVertically(
-                                animationSpec = tween(200),
-                                targetOffsetY = { it }
-                            ) + fadeOut(animationSpec = tween(200))
-                        ) {
-                            state.post?.let { post ->
-                                Text(
-                                    text = "조회 ${numberFormat.format(post.viewCount)}회",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // 더보기 버튼
-                GlassIconButton(
-                    onClick = { onIntent(PostDetailIntent.ShowPostOptions) },
-                    icon = painterResource(id = R.drawable.ic_ellipsis_horizontal_circle),
-                    contentDescription = "더보기",
-                    hazeState = hazeState,
-                    backgroundColor = backgroundColor
-                )
-            }
-        }
+        PostDetailHeader(
+            state = state,
+            showAuthor = showHeaderProfile,
+            hazeState = hazeState,
+            backgroundColor = backgroundColor,
+            onHeightMeasured = { headerHeight = it },
+            onNavigateBack = onNavigateBack,
+            onMoreClick = { onIntent(PostDetailIntent.ShowPostOptions) }
+        )
 
         // 댓글 입력창, 로드 성공 시에만
         if (!(state.isCommentsLoading && state.comments.isEmpty() && !state.isChangingSort) && state.commentsError == null) {
@@ -756,6 +508,309 @@ internal fun PostDetailScreenContent(
         )
     }
 
+    PostDetailSheets(state = state, onIntent = onIntent)
+}
+
+/** 상단 바: 스크롤하면 작성자 사진 · 이름, 조회수 */
+@Composable
+private fun PostDetailHeader(
+    state: PostDetailState,
+    showAuthor: Boolean,
+    hazeState: HazeState,
+    backgroundColor: Color,
+    onHeightMeasured: (Dp) -> Unit,
+    onNavigateBack: () -> Unit,
+    onMoreClick: () -> Unit
+) {
+    val density = LocalDensity.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))
+            .pointerInput(Unit) {
+                detectTapGestures { /* 터치 이벤트 소비 */ }
+            }
+            .onGloballyPositioned { coordinates ->
+                onHeightMeasured(with(density) { coordinates.size.height.toDp() })
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPaddingIgnoringVisibility()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 뒤로가기 버튼
+            GlassIconButton(
+                onClick = onNavigateBack,
+                icon = painterResource(id = R.drawable.ic_chevron_left),
+                contentDescription = "뒤로가기",
+                hazeState = hazeState,
+                backgroundColor = backgroundColor
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // 타이틀 영역
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 프로필 사진, 스크롤 시 표시
+                AnimatedVisibility(
+                    visible = showAuthor && state.post != null,
+                    enter = scaleIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + expandHorizontally(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        expandFrom = Alignment.Start,
+                        clip = false
+                    ),
+                    exit = scaleOut(animationSpec = tween(150)) +
+                            shrinkHorizontally(
+                                animationSpec = tween(150),
+                                shrinkTowards = Alignment.Start,
+                                clip = false
+                            )
+                ) {
+                    Row {
+                        Avatar(
+                            model = state.post?.author?.avatarThumbUrl
+                                ?: state.post?.author?.avatarUrl,
+                            size = 32.dp,
+                            contentDescription = "프로필"
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                }
+
+                // 타이틀 + 조회수
+                Column {
+                    val numberFormat = rememberKoreanNumberFormat()
+
+                    // 타이틀
+                    Text(
+                        text = if (showAuthor && state.post != null) {
+                            state.post.author.displayName ?: state.post.author.username
+                        } else {
+                            "포스트"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // 조회수, 로드 후 슬라이드업
+                    AnimatedVisibility(
+                        visible = state.isViewCountLoaded && state.post != null,
+                        enter = expandVertically(
+                            animationSpec = tween(300),
+                            expandFrom = Alignment.Top
+                        ) + slideInVertically(
+                            animationSpec = tween(300),
+                            initialOffsetY = { it }
+                        ) + fadeIn(animationSpec = tween(300)),
+                        exit = shrinkVertically(
+                            animationSpec = tween(200),
+                            shrinkTowards = Alignment.Top
+                        ) + slideOutVertically(
+                            animationSpec = tween(200),
+                            targetOffsetY = { it }
+                        ) + fadeOut(animationSpec = tween(200))
+                    ) {
+                        state.post?.let { post ->
+                            Text(
+                                text = "조회 ${numberFormat.format(post.viewCount)}회",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // 더보기 버튼
+            GlassIconButton(
+                onClick = onMoreClick,
+                icon = painterResource(id = R.drawable.ic_ellipsis_horizontal_circle),
+                contentDescription = "더보기",
+                hazeState = hazeState,
+                backgroundColor = backgroundColor
+            )
+        }
+    }
+}
+
+/** 포스트 본문 칸, 잠금 글은 잠금 카드 */
+@Composable
+private fun PostContentItem(
+    state: PostDetailState,
+    isVideoPlaying: Boolean,
+    onAuthorSectionPositioned: (Int) -> Unit,
+    onIntent: (PostDetailIntent) -> Unit,
+    onNavigateToReply: (Int, Int?) -> Unit,
+    onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit
+) {
+    val context = LocalContext.current
+    if (state.isLoading) {
+        PostContentSkeleton()
+    } else if (state.post == null) {
+        // 삭제·차단된 글, 네트워크 실패는 스켈레톤 유지
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = state.error ?: "포스트를 불러올 수 없습니다",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        state.post.let { post ->
+            if (post.isRestricted) {
+                // 잠금 글은 잠금 카드 + 구독 동선
+                val snackbarRelay = LocalSnackbarRelay.current
+                val subscribeRequester = LocalSubscribeRequester.current
+                LockedPostCard(
+                    post = post,
+                    onClick = {
+                        if (post.isSecret) {
+                            snackbarRelay.showOrToast(context, "크리에이터만 볼 수 있습니다")
+                        } else {
+                            subscribeRequester(
+                                post.author.id,
+                                post.author.displayName ?: post.author.username
+                            )
+                        }
+                    }
+                )
+                return@let
+            }
+            PostContentSection(
+                post = post,
+                isFollowing = state.isFollowing,
+                showFollowingButton = state.showFollowingButton,
+                isOwnPost = post.author.id == state.myUserId,
+                onAuthorSectionPositioned = { bottom ->
+                    onAuthorSectionPositioned(bottom)
+                },
+                onProfileClick = {
+                    onIntent(PostDetailIntent.NavigateToUserProfile(post.author.id))
+                },
+                onFollowClick = {
+                    if (state.isFollowing) {
+                        onIntent(PostDetailIntent.UnfollowAuthor)
+                    } else {
+                        onIntent(PostDetailIntent.FollowAuthor)
+                    }
+                },
+                onLikeClick = {
+                    if (post.isLiked) {
+                        onIntent(PostDetailIntent.UnlikePost)
+                    } else {
+                        onIntent(PostDetailIntent.LikePost)
+                    }
+                },
+                onCommentClick = {
+                    onNavigateToReply(post.id, null)
+                },
+                onShareClick = {
+                    onIntent(PostDetailIntent.SharePost)
+                },
+                onMediaClick = { index ->
+                    onShowMediaViewer(post.mediaAttachments.toViewerItems(), index)
+                },
+                isVideoPlaying = isVideoPlaying
+            )
+        }
+    }
+}
+
+/** 댓글 스레드 한 줄, 알림으로 들어온 댓글은 잠깐 강조 */
+@Composable
+private fun CommentListItem(
+    comment: Comment,
+    state: PostDetailState,
+    showTopDivider: Boolean,
+    isVideoPlaying: Boolean,
+    highlightProgress: (() -> Float)?,
+    onIntent: (PostDetailIntent) -> Unit,
+    onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit
+) {
+    val highlightColor = MaterialTheme.colorScheme.primary
+    Column(
+        modifier = if (highlightProgress != null) {
+            Modifier.drawBehind {
+                val alpha = highlightProgress() * 0.08f
+                if (alpha > 0f) drawRect(highlightColor.copy(alpha = alpha))
+            }
+        } else {
+            Modifier
+        }
+    ) {
+        // 댓글 스레드 사이 구분선
+        if (showTopDivider) {
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+        }
+
+        PostCommentThreadItem(
+            comment = comment,
+            expandedReplies = state.expandedCommentReplies[comment.id],
+            isLoadingReplies = state.loadingRepliesCommentIds.contains(comment.id),
+            hasMoreReplies = state.hasMoreReplies[comment.id] == true,
+            onExpandReplies = { onIntent(PostDetailIntent.ExpandReplies(comment.id)) },
+            onLoadMoreReplies = { onIntent(PostDetailIntent.LoadMoreReplies(comment.id)) },
+            onLikeClick = { commentId ->
+                if (comment.isUploading) return@PostCommentThreadItem
+                onIntent(PostDetailIntent.ToggleCommentLike(commentId))
+            },
+            onReplyClick = { commentId ->
+                if (comment.isUploading) return@PostCommentThreadItem
+                onIntent(PostDetailIntent.NavigateToCommentDetail(commentId))
+            },
+            onMoreClick = { commentId ->
+                if (comment.isUploading) return@PostCommentThreadItem
+                onIntent(PostDetailIntent.ShowCommentOptions(commentId))
+            },
+            onProfileClick = { userId, _ ->
+                if (comment.isUploading) return@PostCommentThreadItem
+                // 댓글/답글 프로필은 팝업 없이 바로 프로필로 이동
+                onIntent(PostDetailIntent.NavigateToUserProfile(userId))
+            },
+            onCommentClick = { commentId ->
+                if (comment.isUploading) return@PostCommentThreadItem
+                onIntent(PostDetailIntent.NavigateToCommentDetail(commentId))
+            },
+            isUploading = comment.isUploading,
+            postAuthorId = state.post?.author?.id,
+            pendingReplies = state.pendingReplies[comment.id] ?: emptyList(),
+            onMediaClick = onShowMediaViewer,
+            isVideoPlaying = isVideoPlaying
+        )
+    }
+}
+
+/** 포스트 · 댓글 옵션 시트, 차단 확인, 공유 시트 */
+@Composable
+private fun PostDetailSheets(
+    state: PostDetailState,
+    onIntent: (PostDetailIntent) -> Unit
+) {
     if (state.showPostOptionsSheet && state.post != null) {
         val reportRequester = LocalReportRequester.current
         PostOptionBottomSheet(
@@ -811,7 +866,7 @@ internal fun PostDetailScreenContent(
 
     ShareSheetHost(
         visible = state.showShareSheet && state.post != null,
-        shareAction = { vm -> vm.onIntent(ShareIntent.SharePost(state.post!!.id)) },
+        shareAction = { shareViewModel -> state.post?.let { shareViewModel.onIntent(ShareIntent.SharePost(it.id)) } },
         onDismiss = { onIntent(PostDetailIntent.DismissShareSheet) },
         onShareSuccess = { roomIds, count ->
             onIntent(

@@ -40,7 +40,7 @@ internal fun ReplyCurveContainer(
                 drawPath(
                     path = path,
                     color = lineColor,
-                    // 캡 Butt로 부모 직선 끝과 맞물림
+                    // 부모 직선 끝과 맞물림
                     style = Stroke(width = lineWidth.toPx(), cap = StrokeCap.Butt)
                 )
             }

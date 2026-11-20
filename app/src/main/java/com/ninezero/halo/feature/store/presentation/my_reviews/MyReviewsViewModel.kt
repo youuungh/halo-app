@@ -70,7 +70,7 @@ class MyReviewsViewModel @Inject constructor(
             is MyReviewsIntent.LoadReviews -> loadReviews()
             is MyReviewsIntent.LoadMore -> loadMore()
             is MyReviewsIntent.Refresh -> refresh()
-            is MyReviewsIntent.ScreenResumed -> refreshReviewsQuietly()
+            is MyReviewsIntent.ScreenResumed -> refreshReviewsSilently()
             is MyReviewsIntent.ShowOptions -> showOptions(intent.review)
             is MyReviewsIntent.DismissOptions -> dismissOptions()
             is MyReviewsIntent.ShowDeleteConfirm -> showDeleteConfirm()
@@ -109,7 +109,7 @@ class MyReviewsViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-    private fun refreshReviewsQuietly() = intent {
+    private fun refreshReviewsSilently() = intent {
         if (state.isLoading || state.isRefreshing) return@intent
         reviewRepository.getMyReviews(cursor = null, limit = 20)
             .onSuccess { result ->

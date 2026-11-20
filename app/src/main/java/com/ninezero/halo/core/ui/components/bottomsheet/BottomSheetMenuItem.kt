@@ -27,6 +27,7 @@ import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
 private val MenuItemShape = RoundedCornerShape(20.dp)
 
+/** 시트 메뉴 한 줄의 글자 · 아이콘 · 동작 */
 data class BottomSheetMenuItemData(
     val text: String,
     @param:DrawableRes val iconRes: Int,

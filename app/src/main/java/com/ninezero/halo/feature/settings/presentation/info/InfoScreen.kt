@@ -19,9 +19,9 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.launchCustomTab
 import com.ninezero.halo.feature.settings.presentation.components.SettingsMenuItem
-import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 

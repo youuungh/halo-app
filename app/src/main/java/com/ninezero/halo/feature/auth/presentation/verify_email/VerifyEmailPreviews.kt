@@ -26,7 +26,7 @@ private fun VerifyEmailScreenErrorPreview() {
                 email = "test@example.com",
                 codeError = "인증 코드가 올바르지 않습니다.",
                 remainingSeconds = 42,
-                resendCooldownSeconds = 0
+                resendWaitSeconds = 0
             ),
             onIntent = {}
         )

@@ -15,19 +15,22 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -36,19 +39,18 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.input.CouponCodeInputField
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.coupon.presentation.my_coupons.components.CouponCard
 import com.ninezero.halo.feature.coupon.presentation.my_coupons.components.CouponCardSkeleton
-import com.ninezero.halo.feature.coupon.presentation.my_coupons.components.CouponCodeInputField
 import com.ninezero.halo.feature.coupon.presentation.my_coupons.components.CouponFilterChips
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -95,8 +97,17 @@ internal fun MyCouponsScreenContent(
     val density = LocalDensity.current
     val listState = rememberLazyListState()
     var headerHeight by rememberSaveableDp()
+    // 칩이 톱바에 붙었을 때만 블러, 가장자리 얼룩 방지
+    val isChipsPinned by remember(listState, density) {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val slot = info.visibleItemsInfo.firstOrNull { it.key == CHIP_SLOT_KEY }
+            slot == null || slot.offset - info.viewportStartOffset <= with(density) { headerHeight.roundToPx() }
+        }
+    }
 
     var chipsHeight by rememberSaveableDp()
+    var inputHeightPx by remember { mutableIntStateOf(0) }
 
     InfiniteScrollTrigger(
         listState = listState,
@@ -133,7 +144,9 @@ internal fun MyCouponsScreenContent(
                         onValueChange = { onIntent(MyCouponsIntent.UpdateCouponCode(it)) },
                         onClaimClick = { onIntent(MyCouponsIntent.ClaimCoupon) },
                         isClaiming = state.isClaiming,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        modifier = Modifier
+                            .onSizeChanged { inputHeightPx = it.height }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
 
@@ -147,25 +160,16 @@ internal fun MyCouponsScreenContent(
                     item {
                         Box(
                             modifier = Modifier
+                                .excludeHeightAbove(inputHeightPx + with(density) { chipsHeight.roundToPx() })
                                 .fillParentMaxSize()
                                 .padding(bottom = 174.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = state.error,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                OutlinedButton(
-                                    onClick = { onIntent(MyCouponsIntent.LoadCoupons) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.bounceClick()
-                                ) {
-                                    Text("재시도")
-                                }
-                            }
+                            ListErrorState(
+                                title = "쿠폰 목록을 불러오지 못했습니다",
+                                reason = state.error,
+                                onRetry = { onIntent(MyCouponsIntent.LoadCoupons) }
+                            )
                         }
                     }
                 }
@@ -173,9 +177,7 @@ internal fun MyCouponsScreenContent(
                 // 초기 로딩 스켈레톤
                 if (state.isLoading && state.coupons.isEmpty()) {
                     items(5) {
-                        CouponCardSkeleton(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
+                        CouponCardSkeleton()
                     }
                 }
 
@@ -184,12 +186,13 @@ internal fun MyCouponsScreenContent(
                     item {
                         Box(
                             modifier = Modifier
+                                .excludeHeightAbove(inputHeightPx + with(density) { chipsHeight.roundToPx() })
                                 .fillParentMaxSize()
                                 .padding(bottom = 174.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "쿠폰이 없습니다",
+                                text = "쿠폰이 없어요",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -200,19 +203,17 @@ internal fun MyCouponsScreenContent(
                         items = state.coupons,
                         key = { it.id }
                     ) { coupon ->
-                        CouponCard(
-                            coupon = coupon,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        CouponCard(coupon = coupon)
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
                     }
 
                     // 추가 로딩 스켈레톤
                     if (state.isLoading && state.coupons.isNotEmpty()) {
                         items(3) {
-                            CouponCardSkeleton(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
+                            CouponCardSkeleton()
                         }
                     }
                 }
@@ -229,14 +230,13 @@ internal fun MyCouponsScreenContent(
                         val y = slot?.let { it.offset - info.viewportStartOffset } ?: headerPx
                         IntOffset(0, y.coerceAtLeast(headerPx))
                     }
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = backgroundColor,
-                            tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0f
-                        )
-                    }
+                    .then(
+                        if (isChipsPinned) {
+                            Modifier.haloBlur(hazeState, HaloBlurs.floatingHeader(backgroundColor))
+                        } else {
+                            Modifier.background(backgroundColor)
+                        }
+                    )
                     .onGloballyPositioned { coordinates ->
                         chipsHeight = with(density) { coordinates.size.height.toDp() }
                     }
@@ -253,14 +253,7 @@ internal fun MyCouponsScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.floatingHeader(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
@@ -304,5 +297,13 @@ internal fun MyCouponsScreenContent(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
+    }
+}
+
+// 위 입력칸과 칩만큼 줄여 내용이 없을 때 스크롤되지 않게
+private fun Modifier.excludeHeightAbove(heightPx: Int): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    layout(placeable.width, (placeable.height - heightPx).coerceAtLeast(0)) {
+        placeable.place(0, 0)
     }
 }

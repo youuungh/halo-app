@@ -32,9 +32,9 @@ class CreatorRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun revokeCreator(): Result<Unit> {
+    override suspend fun leaveCreator(): Result<Unit> {
         return safeApiCallNoData {
-            api.revokeCreator()
+            api.leaveCreator()
         }
     }
 }

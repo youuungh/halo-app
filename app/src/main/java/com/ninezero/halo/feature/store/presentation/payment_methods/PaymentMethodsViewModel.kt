@@ -7,6 +7,8 @@ import com.ninezero.halo.feature.store.domain.model.BillingCard
 import com.ninezero.halo.feature.store.domain.model.billingAuthFailMessage
 import com.ninezero.halo.feature.store.domain.model.isBillingAuthCanceled
 import com.ninezero.halo.feature.store.domain.repository.BillingRepository
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionStatus
+import com.ninezero.halo.feature.subscription.domain.repository.SubscriptionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.OrbitContainer
 import org.orbitmvi.orbit.OrbitContainerHost
@@ -15,7 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PaymentMethodsViewModel @Inject constructor(
-    private val billingRepository: BillingRepository
+    private val billingRepository: BillingRepository,
+    private val subscriptionRepository: SubscriptionRepository
 ) : ViewModel(), OrbitContainerHost<PaymentMethodsState, PaymentMethodsState, PaymentMethodsSideEffect> {
 
     override val container: OrbitContainer<PaymentMethodsState, PaymentMethodsState, PaymentMethodsSideEffect> =
@@ -65,7 +68,10 @@ class PaymentMethodsViewModel @Inject constructor(
     private fun load() = intent {
         reduce { state.copy(isLoading = true, error = null) }
         billingRepository.getMyBillingKey()
-            .onSuccess { card -> reduce { state.copy(isLoading = false, billingCard = card) } }
+            .onSuccess { card ->
+                val autoRenew = hasAutoRenew()
+                reduce { state.copy(isLoading = false, billingCard = card, hasAutoRenew = autoRenew) }
+            }
             .onFailure { e ->
                 reduce {
                     state.copy(
@@ -80,10 +86,12 @@ class PaymentMethodsViewModel @Inject constructor(
         reduce { state.copy(isRefreshing = true) }
         billingRepository.getMyBillingKey()
             .onSuccess { card ->
+                val autoRenew = hasAutoRenew()
                 reduce {
                     state.copy(
                         isRefreshing = false,
                         billingCard = card,
+                        hasAutoRenew = autoRenew,
                         error = null
                     )
                 }
@@ -114,13 +122,15 @@ class PaymentMethodsViewModel @Inject constructor(
 
     private fun registerReturned(authKey: String) = intent {
         reduce { state.copy(showRegisterWebView = false, isRegistering = true) }
+        // 서버가 기존 카드를 비활성화하고 새 카드로 교체
+        val replaced = state.billingCard?.registered == true
         billingRepository.issueBillingKey(authKey)
             .onSuccess { card ->
                 reduce {
                     state.copy(
                         isRegistering = false,
                         billingCard = card,
-                        snackbarState = SnackbarState("결제수단이 등록되었습니다")
+                        snackbarState = SnackbarState(if (replaced) "카드가 변경되었습니다" else "카드가 등록되었습니다")
                     )
                 }
             }
@@ -140,6 +150,14 @@ class PaymentMethodsViewModel @Inject constructor(
         reduce { state.copy(snackbarState = SnackbarState(billingAuthFailMessage(message))) }
     }
 
+    /** 조회 실패는 칩만 숨김 */
+    private suspend fun hasAutoRenew(): Boolean =
+        subscriptionRepository.getMySubscriptions(SubscriptionStatus.ACTIVE, page = 1, limit = 50)
+            .getOrNull()
+            ?.items
+            ?.any { it.autoRenew }
+            ?: false
+
     private fun confirmDelete() = intent {
         reduce { state.copy(showDeleteDialog = false) }
         billingRepository.deleteBillingKey()
@@ -147,7 +165,7 @@ class PaymentMethodsViewModel @Inject constructor(
                 reduce {
                     state.copy(
                         billingCard = BillingCard(registered = false),
-                        snackbarState = SnackbarState("결제수단이 삭제되었습니다")
+                        snackbarState = SnackbarState("카드가 삭제되었습니다")
                     )
                 }
             }

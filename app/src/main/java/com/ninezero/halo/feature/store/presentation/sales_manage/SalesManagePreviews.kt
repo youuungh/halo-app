@@ -7,6 +7,7 @@ import com.ninezero.halo.feature.store.domain.model.Order
 import com.ninezero.halo.feature.store.domain.model.OrderCreatorGroup
 import com.ninezero.halo.feature.store.domain.model.OrderItem
 import com.ninezero.halo.feature.store.domain.model.OrderStatus
+import com.ninezero.halo.feature.store.domain.model.PaymentStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatus
 
 internal fun previewSalesManageState(): SalesManageState {
@@ -16,11 +17,11 @@ internal fun previewSalesManageState(): SalesManageState {
     )
 }
 
-internal fun previewSalesManageExpandedState(): SalesManageState {
+internal fun previewSalesManageDeliveryInfoState(): SalesManageState {
     return SalesManageState(
         isLoading = false,
         orders = previewOrders,
-        expandedOrderIds = setOf(1, 3)
+        deliveryInfoOrderId = 1
     )
 }
 
@@ -61,21 +62,21 @@ private val previewOrders = listOf(
                 id = 1,
                 productId = 1,
                 productName = "프리미엄 블루투스 이어폰 Pro Max",
-                price = "89000",
-                originalPrice = "110000",
+                price = 89000L,
+                originalPrice = 110000L,
                 quantity = 1,
-                subtotal = "89000"
+                subtotal = 89000L
             ),
             previewOrderItem(
                 id = 2,
                 productId = 2,
                 productName = "기계식 키보드 청축",
-                price = "65000",
+                price = 65000L,
                 quantity = 2,
-                subtotal = "130000"
+                subtotal = 130000L
             )
         ),
-        totalPrice = "219000",
+        totalPrice = 219000L,
         status = OrderStatus.PENDING,
         shippingAddress = "서울시 강남구 테헤란로 123",
         shippingPhone = "010-1234-5678",
@@ -94,18 +95,18 @@ private val previewOrders = listOf(
                 id = 3,
                 productId = 3,
                 productName = "오가닉 코튼 티셔츠",
-                price = "39000",
-                originalPrice = "49000",
+                price = 39000L,
+                originalPrice = 49000L,
                 quantity = 1,
-                subtotal = "39000"
+                subtotal = 39000L
             )
         ),
-        totalPrice = "39000",
+        totalPrice = 39000L,
         status = OrderStatus.CONFIRMED,
         shippingAddress = "서울시 마포구 연남로 45",
         shippingPhone = "010-9876-5432",
         shippingName = "김철수",
-        shippingFee = "3000",
+        shippingFee = 3000L,
         shippingStatus = ShippingStatus.PREPARING,
         createdAtOffset = 86_400_000L,
         updatedAtOffset = 86_400_000L
@@ -119,13 +120,13 @@ private val previewOrders = listOf(
                 id = 4,
                 productId = 4,
                 productName = "핸드메이드 가죽 지갑",
-                price = "85000",
-                originalPrice = "95000",
+                price = 85000L,
+                originalPrice = 95000L,
                 quantity = 1,
-                subtotal = "85000"
+                subtotal = 85000L
             )
         ),
-        totalPrice = "85000",
+        totalPrice = 85000L,
         status = OrderStatus.CONFIRMED,
         shippingAddress = "서울시 서초구 반포대로 200",
         shippingPhone = "010-5555-6666",
@@ -145,23 +146,23 @@ private val previewOrders = listOf(
                 id = 5,
                 productId = 5,
                 productName = "미니 세라믹 화병",
-                price = "28000",
-                originalPrice = "32000",
+                price = 28000L,
+                originalPrice = 32000L,
                 quantity = 1,
-                subtotal = "28000"
+                subtotal = 28000L
             )
         ),
-        totalPrice = "31000",
+        totalPrice = 31000L,
         status = OrderStatus.CANCELLED,
         shippingAddress = "서울시 송파구 올림픽로 300",
         shippingPhone = "010-2222-3333",
         shippingName = "박민지",
         memo = "배송 전 연락 부탁드려요",
-        pointsUsed = "1000",
-        couponDiscount = "2000",
-        shippingFee = "3000",
+        pointsUsed = 1000L,
+        couponDiscount = 2000L,
+        shippingFee = 3000L,
         shippingStatus = ShippingStatus.PREPARING,
-        paymentStatus = "CANCELLED",
+        paymentStatus = PaymentStatus.CANCELLED,
         createdAtOffset = 345_600_000L,
         updatedAtOffset = 259_200_000L
     )
@@ -172,21 +173,21 @@ private fun previewOrder(
     userId: Int,
     orderNumber: String,
     items: List<OrderItem>,
-    totalPrice: String,
-    status: String,
+    totalPrice: Long,
+    status: OrderStatus,
     shippingAddress: String,
     shippingPhone: String,
     shippingName: String,
-    shippingStatus: String,
+    shippingStatus: ShippingStatus,
     createdAtOffset: Long,
     updatedAtOffset: Long,
     memo: String? = null,
-    pointsUsed: String = "0",
-    couponDiscount: String = "0",
+    pointsUsed: Long = 0L,
+    couponDiscount: Long = 0L,
     trackingNumber: String? = null,
     carrier: String? = null,
-    shippingFee: String = "0",
-    paymentStatus: String = "COMPLETED",
+    shippingFee: Long = 0L,
+    paymentStatus: PaymentStatus = PaymentStatus.COMPLETED,
     now: Long = System.currentTimeMillis()
 ): Order {
     val creatorGroup = OrderCreatorGroup(
@@ -229,10 +230,10 @@ private fun previewOrderItem(
     id: Int,
     productId: Int,
     productName: String,
-    price: String,
+    price: Long,
     quantity: Int,
-    subtotal: String,
-    originalPrice: String? = null
+    subtotal: Long,
+    originalPrice: Long? = null
 ): OrderItem {
     return OrderItem(
         id = id,
@@ -261,10 +262,10 @@ private fun SalesManageScreenPreview() {
 
 @HaloLightDarkPreview
 @Composable
-private fun SalesManageScreenExpandedPreview() {
+private fun SalesManageScreenDeliveryInfoPreview() {
     HaloScreenPreview {
         SalesManageScreenContent(
-            state = previewSalesManageExpandedState()
+            state = previewSalesManageDeliveryInfoState()
         )
     }
 }

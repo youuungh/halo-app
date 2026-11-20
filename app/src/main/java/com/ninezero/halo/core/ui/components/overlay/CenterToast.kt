@@ -8,7 +8,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,8 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.Pretendard
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Pretendard
 import kotlinx.coroutines.delay
 
 /** 화면 중앙 토스트 */
@@ -61,7 +60,7 @@ fun CenterToast(
             contentAlignment = Alignment.Center
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 color = Color.Black.copy(alpha = 0.6f)
             ) {
                 Text(

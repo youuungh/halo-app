@@ -20,20 +20,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
+/** 구역 머리: 제목 · 접으면 회색 요약 · 오른쪽 화살표 */
 @Composable
 fun CollapsibleSectionHeader(
     title: String,
     isCollapsed: Boolean,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    summary: String? = null
 ) {
     val rotationAngle by animateFloatAsState(
         targetValue = if (isCollapsed) 0f else 180f,
@@ -44,46 +47,47 @@ fun CollapsibleSectionHeader(
         modifier = modifier
             .fillMaxWidth()
             .clickable(
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
             ) { onToggle() }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Text(
+            text = if (isCollapsed) summary.orEmpty() else "",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
 
         Icon(
             painter = painterResource(R.drawable.ic_chevron_down),
             contentDescription = if (isCollapsed) "펼치기" else "접기",
             modifier = Modifier
                 .size(16.dp)
-                .rotate(rotationAngle),
+                .graphicsLayer { rotationZ = rotationAngle },
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-
-    SectionDivider()
 }
 
+/** 구역 사이 6dp 띠 */
 @Composable
-fun SectionDivider() {
+fun SectionBand() {
     HorizontalDivider(
-        thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-    )
-}
-
-@Composable
-fun FieldDivider() {
-    HorizontalDivider(
-        thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)
+        thickness = 6.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     )
 }
 
@@ -94,9 +98,9 @@ private fun SectionComponentsPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.padding(vertical = 16.dp)) {
                 CollapsibleSectionHeader(title = "기본 정보", isCollapsed = false, onToggle = {})
-                FieldDivider()
-                CollapsibleSectionHeader(title = "상세 설명", isCollapsed = true, onToggle = {})
-                SectionDivider()
+                SectionBand()
+                CollapsibleSectionHeader(title = "판매 정보", isCollapsed = true, onToggle = {}, summary = "35,000원 · 재고 20개 · 전체 공개")
+                SectionBand()
                 CollapsibleSectionHeader(title = "판매 설정", isCollapsed = false, onToggle = {})
             }
         }

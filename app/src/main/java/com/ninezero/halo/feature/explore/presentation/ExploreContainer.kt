@@ -4,8 +4,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import com.ninezero.halo.feature.explore.presentation.search.SearchScreen
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,6 +25,7 @@ fun ExploreContainer(
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
+    var isSearchFocused by remember { mutableStateOf(false) }
 
     // 검색모드 아닐 때만 ExploreScreen으로 릴레이
     val exploreReselectFlow = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -33,7 +37,8 @@ fun ExploreContainer(
 
     HorizontalPager(
         state = pagerState,
-        userScrollEnabled = true
+        // 검색 첫 화면에서만 밀어서 나감
+        userScrollEnabled = pagerState.settledPage == 1 && !isSearchFocused
     ) { page ->
         when (page) {
             0 -> ExploreScreen(
@@ -47,7 +52,8 @@ fun ExploreContainer(
             1 -> SearchScreen(
                 isActive = isVisible && pagerState.currentPage == 1,
                 onNavigateToProfile = onNavigateToProfile,
-                onBackPressed = { scope.launch { pagerState.animateScrollToPage(0) } }
+                onBackPressed = { scope.launch { pagerState.animateScrollToPage(0) } },
+                onSearchFocusChange = { isSearchFocused = it }
             )
         }
     }

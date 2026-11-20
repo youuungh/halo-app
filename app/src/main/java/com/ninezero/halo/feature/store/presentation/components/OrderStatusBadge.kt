@@ -17,34 +17,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Warning
 import com.ninezero.halo.feature.store.domain.model.OrderStatus
 import com.ninezero.halo.feature.store.domain.model.PaymentStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatus
-import com.ninezero.halo.ui.theme.HaloTheme
 
-private val StatusGray = Color(0xFF9E9E9E)
-private val StatusOrange = Color(0xFFFF9800)
-private val StatusGreen = Color(0xFF4CAF50)
-private val StatusRed = Color(0xFFF44336)
+/** 상태 색: 할 일 주황 · 진행 파랑 · 끝 회색 · 취소 빨강 */
+private object StatusColors {
+    val todo: Color = Warning
+    val progress: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val done: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+    val cancel: Color @Composable get() = MaterialTheme.colorScheme.error
+}
 
 @Composable
 fun OrderStatusBadge(
-    status: String,
-    shippingStatus: String?,
-    paymentStatus: String?,
+    status: OrderStatus,
+    shippingStatus: ShippingStatus?,
+    paymentStatus: PaymentStatus?,
     modifier: Modifier = Modifier
 ) {
     val (text, color) = when {
-        paymentStatus == PaymentStatus.REFUNDED -> "환불됨" to StatusRed
-        paymentStatus == PaymentStatus.PENDING -> "결제 확인 중" to StatusOrange  // 결제 결과 불명, 서버가 확정 전
-        status == OrderStatus.PENDING -> "주문 대기" to StatusGray
-        status == OrderStatus.CANCELLED -> "취소됨" to StatusRed
-        shippingStatus == ShippingStatus.DELIVERED || status == OrderStatus.DELIVERED -> "배송 완료" to StatusGreen
+        paymentStatus == PaymentStatus.REFUNDED -> "환불됨" to StatusColors.cancel
+        paymentStatus == PaymentStatus.PENDING -> "결제 확인 중" to StatusColors.todo  // 결제 결과 불명, 서버가 확정 전
+        status == OrderStatus.PENDING -> "주문 대기" to StatusColors.todo
+        status == OrderStatus.CANCELLED -> "취소됨" to StatusColors.cancel
+        shippingStatus == ShippingStatus.DELIVERED || status == OrderStatus.DELIVERED -> "배송 완료" to StatusColors.done
         shippingStatus == ShippingStatus.SHIPPED ||
                 shippingStatus == ShippingStatus.IN_TRANSIT ||
-                shippingStatus == ShippingStatus.OUT_FOR_DELIVERY -> "배송중" to StatusOrange
-        status == OrderStatus.CONFIRMED -> "주문 확인" to StatusGray
-        else -> status to StatusGray
+                shippingStatus == ShippingStatus.OUT_FOR_DELIVERY -> "배송중" to StatusColors.progress
+        else -> "주문 확인" to StatusColors.progress  // 남은 건 CONFIRMED
     }
     StatusChip(
         text = text,
@@ -58,18 +61,18 @@ fun OrderStatusBadge(
 
 @Composable
 fun GroupShippingBadge(
-    status: String?,
-    shippingStatus: String?,
+    status: OrderStatus?,
+    shippingStatus: ShippingStatus?,
     modifier: Modifier = Modifier
 ) {
     val (text, color) = when {
-        status == OrderStatus.CANCELLED -> "취소됨" to StatusRed
-        shippingStatus == ShippingStatus.PREPARING -> "배송 준비중" to StatusGray
-        shippingStatus == ShippingStatus.SHIPPED -> "발송됨" to StatusOrange
-        shippingStatus == ShippingStatus.IN_TRANSIT -> "배송중" to StatusOrange
-        shippingStatus == ShippingStatus.OUT_FOR_DELIVERY -> "배송 출발" to StatusOrange
-        shippingStatus == ShippingStatus.DELIVERED -> "배송 완료" to StatusGreen
-        else -> (shippingStatus ?: status).orEmpty() to StatusGray
+        status == OrderStatus.CANCELLED -> "취소됨" to StatusColors.cancel
+        shippingStatus == ShippingStatus.PREPARING -> "배송 준비중" to StatusColors.progress
+        shippingStatus == ShippingStatus.SHIPPED -> "발송됨" to StatusColors.progress
+        shippingStatus == ShippingStatus.IN_TRANSIT -> "배송중" to StatusColors.progress
+        shippingStatus == ShippingStatus.OUT_FOR_DELIVERY -> "배송 출발" to StatusColors.progress
+        shippingStatus == ShippingStatus.DELIVERED -> "배송 완료" to StatusColors.done
+        else -> (shippingStatus?.name ?: status?.name).orEmpty() to StatusColors.done
     }
     StatusChip(
         text = text,

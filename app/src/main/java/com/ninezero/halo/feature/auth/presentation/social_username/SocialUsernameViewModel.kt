@@ -2,7 +2,7 @@ package com.ninezero.halo.feature.auth.presentation.social_username
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.ninezero.halo.core.fcm.FcmRegistrationManager
+import com.ninezero.halo.core.fcm.FcmIdStore
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.feature.auth.domain.model.AuthValidationMessages
@@ -18,7 +18,7 @@ import javax.inject.Inject
 class SocialUsernameViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val socialCompleteUseCase: SocialCompleteUseCase,
-    private val fcmRegistrationManager: FcmRegistrationManager
+    private val fcmIdStore: FcmIdStore
 ) : ViewModel(), OrbitContainerHost<SocialUsernameState, SocialUsernameState, SocialUsernameSideEffect> {
 
     private val signupToken: String = savedStateHandle.get<String>("signupToken").orEmpty()
@@ -59,7 +59,7 @@ class SocialUsernameViewModel @Inject constructor(
         postSideEffect(SocialUsernameSideEffect.ClearFocus)
         reduce { state.copy(isLoading = true, usernameError = null) }
 
-        val fid = fcmRegistrationManager.getFid()
+        val fid = fcmIdStore.getFid()
 
         socialCompleteUseCase(
             signupToken = signupToken,

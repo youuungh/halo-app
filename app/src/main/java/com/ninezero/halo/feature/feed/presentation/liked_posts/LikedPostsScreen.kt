@@ -25,12 +25,11 @@ import com.ninezero.halo.core.ui.components.bottomsheet.CommentOptionBottomSheet
 import com.ninezero.halo.core.ui.components.bottomsheet.PostOptionBottomSheet
 import com.ninezero.halo.core.ui.components.chip.HaloFilterChipsRow
 import com.ninezero.halo.core.ui.components.comment.CommentItem
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.media.PrefetchUpcomingPostImages
+import com.ninezero.halo.core.ui.components.media.VideoPreloader
 import com.ninezero.halo.core.ui.components.media.rememberSettledVideoPostId
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.modifiers.LocalActiveViewerMediaKey
 import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransitionScope
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupData
@@ -39,10 +38,11 @@ import com.ninezero.halo.core.ui.components.popup.rememberProfilePopupHostState
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
 import com.ninezero.halo.core.ui.components.post.PostCard
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.ui.components.video_player.VideoPreloader
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
 import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.LikeTargetType
 import com.ninezero.halo.feature.feed.domain.model.LikedItem
@@ -51,6 +51,7 @@ import com.ninezero.halo.feature.feed.domain.model.PostContextType
 import com.ninezero.halo.feature.feed.domain.model.nextVideoUrlsAfter
 import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
+import dev.chrisbanes.haze.HazeState
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -79,7 +80,7 @@ fun LikedPostsScreen(
 
     ShareSheetHost(
         visible = state.showShareSheet && state.sharePostId != null,
-        shareAction = { vm -> vm.onIntent(ShareIntent.SharePost(state.sharePostId!!)) },
+        shareAction = { shareViewModel -> state.sharePostId?.let { shareViewModel.onIntent(ShareIntent.SharePost(it)) } },
         onDismiss = { viewModel.onIntent(LikedPostsIntent.DismissShareSheet) },
         onShareSuccess = { roomIds, count ->
             viewModel.onIntent(
@@ -137,6 +138,8 @@ internal fun LikedPostsScreenContent(
     onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit = { _, _ -> }
 ) {
     val profilePopupState = rememberProfilePopupHostState()
+    // 목록 위에 뜨는 팝업도 같은 블러를 씀
+    val hazeState = remember { HazeState() }
 
     PagedListScreenShell(
         title = "좋아요",
@@ -145,6 +148,7 @@ internal fun LikedPostsScreenContent(
         hasMore = state.hasMore,
         isEmpty = state.items.isEmpty(),
         error = state.error,
+        errorTitle = "좋아요 목록을 불러오지 못했습니다",
         emptyTitle = "좋아요한 항목이 없어요",
         emptyDescription = "포스트나 댓글에 좋아요하면 여기에 표시돼요",
         onNavigateBack = onNavigateBack,
@@ -152,6 +156,7 @@ internal fun LikedPostsScreenContent(
         onRetry = { onIntent(LikedPostsIntent.LoadItems) },
         onLoadMore = { onIntent(LikedPostsIntent.LoadMoreItems) },
         snackbarHostState = snackbarHostState,
+        hazeState = hazeState,
         filterContent = { chipHazeState ->
             HaloFilterChipsRow(
                 labels = listOf("전체", "포스트", "댓글"),
@@ -323,6 +328,7 @@ internal fun LikedPostsScreenContent(
 
     ProfilePopupHost(
         state = profilePopupState,
+        hazeState = hazeState,
         resolveAuthor = { authorId ->
             state.items.findAuthor(authorId)?.let { ProfilePopupData(it.id, it.isFollowing) }
         },

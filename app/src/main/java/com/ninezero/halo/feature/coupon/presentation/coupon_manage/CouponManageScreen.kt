@@ -20,7 +20,7 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.EditDeleteOptionBottomSheet
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.coupon.domain.model.CouponStatus
@@ -69,6 +69,7 @@ internal fun CouponManageScreenContent(
         hasMore = state.hasMore,
         isEmpty = state.coupons.isEmpty(),
         error = state.error,
+        errorTitle = "쿠폰 목록을 불러오지 못했습니다",
         emptyTitle = "발행한 쿠폰이 없어요",
         emptyDescription = "새 쿠폰을 만들어보세요",
         onNavigateBack = { onIntent(CouponManageIntent.NavigateBack) },

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 
+/** 화면 상태에 담는 스낵바 내용 */
 data class SnackbarState(
     val message: String,
     val actionLabel: String? = null,
@@ -51,6 +52,7 @@ data class SnackbarState(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+/** 보조 동작 버튼까지 담는 스낵바 표시 값 */
 data class CustomSnackbarVisuals(
     override val message: String,
     override val actionLabel: String? = null,
@@ -60,11 +62,12 @@ data class CustomSnackbarVisuals(
     val onSecondaryAction: (() -> Unit)? = null  // host가 호출 후 dismiss
 ) : SnackbarVisuals
 
+/** 앱 기본 스낵바 자리, 바텀바 · 키보드 위로 */
 @Composable
 fun DefaultSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
-    bottomBarPadding: Dp = 0.dp,  // 바텀바 footprint, 키보드와 최댓값 합산
+    bottomBarPadding: Dp = 0.dp,  // 바텀바 높이, 키보드와 최댓값 합산
     applyWindowInsets: Boolean = true  // false면 인셋 미적용
 ) {
     val hapticFeedback = LocalHapticFeedback.current
@@ -104,7 +107,7 @@ fun DefaultSnackbarHost(
         ) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .background(containerColor)
                     .padding(
                         start = 14.dp,
@@ -216,7 +219,7 @@ fun SnackbarHandler(
         }
     }
 
-    // 화면을 벗어나면 표시 중이던 '일반' 스낵바 상태를 제거
+    // 화면을 벗어나면 표시 중이던 일반 스낵바 상태를 제거
     val latestSnackbarState by rememberUpdatedState(snackbarState)
     DisposableEffect(Unit) {
         onDispose {
@@ -227,7 +230,7 @@ fun SnackbarHandler(
     }
 }
 
-/** 메시지 변경 시 표시, 시트 안 피드백용 */
+/** 메시지 변경 시 표시(시트 안 피드백용) */
 @Composable
 fun SnackbarHandler(
     message: String?,

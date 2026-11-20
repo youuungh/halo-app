@@ -1,7 +1,6 @@
 package com.ninezero.halo.feature.creator.presentation.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.ActionButton
 import com.ninezero.halo.core.ui.components.button.ActionButtonStyle
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.feature.creator.domain.model.CreatorApplication
 import com.ninezero.halo.feature.creator.domain.model.CreatorApplicationStatus
@@ -131,7 +130,7 @@ internal fun ApplicationStatusContent(
                     .fillMaxWidth()
                     .background(
                         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = MaterialTheme.shapes.medium
                     )
                     .padding(16.dp)
             ) {
@@ -156,11 +155,7 @@ internal fun ApplicationStatusContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                .cardBorder(MaterialTheme.shapes.medium)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

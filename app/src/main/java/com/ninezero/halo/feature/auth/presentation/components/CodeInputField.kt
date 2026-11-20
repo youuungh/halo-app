@@ -1,9 +1,6 @@
 package com.ninezero.halo.feature.auth.presentation.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -13,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -31,9 +27,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.input.inputBorder
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.Constants
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 fun CodeInputField(
@@ -70,28 +67,14 @@ fun CodeInputField(
                     repeat(length) { index ->
                         val isActiveSlot = isFocused && index == value.length
 
-                        val borderColor by animateColorAsState(
-                            targetValue = when {
-                                isError -> MaterialTheme.colorScheme.error
-                                isActiveSlot -> MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.outline
-                            },
-                            animationSpec = tween(150),
-                            label = "codeSlotBorderColor"
-                        )
-
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(56.dp)
-                                .border(
-                                    width = 1.dp,
-                                    color = borderColor,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
+                                .inputBorder(MaterialTheme.shapes.medium, isFocused = isActiveSlot, isError = isError)
                                 .background(
                                     color = MaterialTheme.colorScheme.surface,
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = MaterialTheme.shapes.medium
                                 ),
                             contentAlignment = Alignment.Center
                         ) {

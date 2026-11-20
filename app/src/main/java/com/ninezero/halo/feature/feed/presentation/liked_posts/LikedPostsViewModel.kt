@@ -63,41 +63,42 @@ class LikedPostsViewModel @Inject constructor(
 
     fun onIntent(intent: LikedPostsIntent) {
         when (intent) {
+            // 데이터 로딩
             is LikedPostsIntent.LoadItems -> loadItems()
             is LikedPostsIntent.RefreshItems -> refreshItems()
             is LikedPostsIntent.LoadMoreItems -> loadMoreItems()
             is LikedPostsIntent.SelectTab -> selectTab(intent.tabIndex)
-
+            // 포스트 상호작용
             is LikedPostsIntent.LikePost -> likePost(intent.postId)
             is LikedPostsIntent.UnlikePost -> unlikePost(intent.postId)
             is LikedPostsIntent.BookmarkPost -> bookmarkPost(intent.postId)
             is LikedPostsIntent.BlockUser -> blockUser(intent.userId)
             is LikedPostsIntent.FollowUser -> followUser(intent.userId)
             is LikedPostsIntent.UnfollowUser -> unfollowUser(intent.userId)
-
+            // 포스트 옵션 시트
             is LikedPostsIntent.ShowPostOptions -> showPostOptions(intent.post)
             is LikedPostsIntent.DismissPostOptions -> dismissPostOptions()
             is LikedPostsIntent.EditPost -> editPost()
             is LikedPostsIntent.DeletePost -> deletePost()
             is LikedPostsIntent.PinPost -> pinPost()
-
+            // 댓글 상호작용
             is LikedPostsIntent.LikeComment -> likeComment(intent.commentId)
             is LikedPostsIntent.UnlikeComment -> unlikeComment(intent.commentId)
-
+            // 댓글 옵션 시트
             is LikedPostsIntent.ShowCommentOptions -> showCommentOptions(intent.comment)
             is LikedPostsIntent.DismissCommentOptions -> dismissCommentOptions()
             is LikedPostsIntent.DeleteComment -> deleteComment()
             is LikedPostsIntent.BookmarkComment -> bookmarkComment()
             is LikedPostsIntent.BlockCommentAuthor -> blockUser(intent.userId)
-
+            // 공유
             is LikedPostsIntent.SharePost -> sharePost(intent.postId)
             is LikedPostsIntent.DismissShareSheet -> dismissShareSheet()
             is LikedPostsIntent.ShareCompleted -> shareCompleted(intent.sharedRoomIds, intent.recipientCount)
-
+            // 네비게이션
             is LikedPostsIntent.NavigateToPostDetail -> navigateToPostDetail(intent.postId)
             is LikedPostsIntent.NavigateToCommentDetail -> navigateToCommentDetail(intent.commentId)
             is LikedPostsIntent.NavigateToUserProfile -> navigateToUserProfile(intent.userId)
-
+            // Snackbar
             is LikedPostsIntent.SnackbarDismissed -> dismissSnackbar()
         }
     }

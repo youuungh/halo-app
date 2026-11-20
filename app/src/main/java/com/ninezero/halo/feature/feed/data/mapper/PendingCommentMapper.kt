@@ -27,14 +27,14 @@ fun PendingCommentEntity.toComment(): Comment {
     }
 
     val mappedMediaAttachments = parsedMediaAttachments.mapIndexed { index, url ->
-        val dims = parsedDimensions?.getOrNull(index)?.split("x")
+        val dimensions = parsedDimensions?.getOrNull(index)?.split("x")
         MediaItem(
             id = -index - 1,
             type = if (isVideoUrl(url)) MediaType.VIDEO else MediaType.IMAGE,
             url = url,
             thumbnailUrl = null,
-            width = dims?.getOrNull(0)?.toIntOrNull(),
-            height = dims?.getOrNull(1)?.toIntOrNull()
+            width = dimensions?.getOrNull(0)?.toIntOrNull(),
+            height = dimensions?.getOrNull(1)?.toIntOrNull()
         )
     }
 

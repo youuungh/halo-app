@@ -3,9 +3,7 @@ package com.ninezero.halo.core.ui.components.bottomsheet
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -16,7 +14,7 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.deeplink.copyLinkToClipboard
 import com.ninezero.halo.core.deeplink.shareTextExternally
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 /** 프로필 옵션 시트 */
 @Composable
@@ -32,15 +30,12 @@ fun ProfileOptionBottomSheet(
     val context = LocalContext.current
     val errorColor = MaterialTheme.colorScheme.error
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
         modifier = modifier
     ) {
-        Column(modifier = Modifier.navigationBarsPadding()) {
-            BottomSheetDragHandle()
+        Column {
             if (profileLink != null) {
                 BottomSheetMenuItemGroup(
                     items = listOf(

@@ -14,11 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.section.PostThumbnailRow
 import com.ninezero.halo.core.ui.components.section.PostThumbnailRowSkeleton
 import com.ninezero.halo.core.ui.components.section.ProductThumbnailRow
-import com.ninezero.halo.core.ui.components.section.SectionHeader
+import com.ninezero.halo.core.ui.components.section.ProfileSectionHeader
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.profile.domain.model.PostTagSection
 import com.ninezero.halo.feature.profile.domain.model.ProductTagSection
@@ -29,6 +30,7 @@ import com.ninezero.halo.feature.store.domain.model.Product
 @Composable
 fun CreatorHomeTabContent(
     state: UserProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onPostClick: (Post) -> Unit,
     onProductClick: (Product) -> Unit,
@@ -42,7 +44,7 @@ fun CreatorHomeTabContent(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+        contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
     ) {
         // 차단한 사용자
         if (state.profile?.isBlocked == true) {
@@ -82,7 +84,7 @@ fun CreatorHomeTabContent(
             // 고정 포스트 섹션, 최대 10개
             if (state.pinnedPosts.isNotEmpty()) {
                 item(key = "pinned_header") {
-                    SectionHeader(
+                    ProfileSectionHeader(
                         title = "고정 포스트",
                         showViewAll = false
                     )
@@ -101,7 +103,7 @@ fun CreatorHomeTabContent(
             // 포스트 태그 섹션들
             state.postSections.forEachIndexed { index, section ->
                 item(key = "post_section_header_$index") {
-                    SectionHeader(
+                    ProfileSectionHeader(
                         title = section.tag.name,
                         onViewAllClick = { onViewAllPostSectionClick(section) },
                         showViewAll = section.hasMore
@@ -121,7 +123,9 @@ fun CreatorHomeTabContent(
             // 상품 태그 섹션들
             state.productSections.forEachIndexed { index, section ->
                 item(key = "product_section_header_$index") {
-                    SectionHeader(
+                    ProfileSectionHeader(
+                        // 포스트에서 상품으로 넘어가는 경계
+                        groupStart = index == 0 && (state.pinnedPosts.isNotEmpty() || state.postSections.isNotEmpty()),
                         title = section.tag.name,
                         onViewAllClick = { onViewAllProductSectionClick(section) },
                         showViewAll = section.hasMore

@@ -12,6 +12,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,48 +34,27 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.ninezero.halo.core.datastore.ThemeMode
 import com.ninezero.halo.core.deeplink.DeepLinks
-import com.ninezero.halo.core.local.PreferencesManager
-import com.ninezero.halo.core.local.ThemeMode
-import com.ninezero.halo.core.network.auth.SessionEventBus
 import com.ninezero.halo.core.ui.components.overlay.GlobalCenterToastHost
 import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarRelay
-import com.ninezero.halo.feature.auth.data.local.TokenManager
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.feed.presentation.report.ReportHost
-import com.ninezero.halo.feature.notification.domain.event.NotificationSyncBus
 import com.ninezero.halo.feature.notification.domain.model.NotificationDestination
-import com.ninezero.halo.feature.notification.domain.model.NotificationType
 import com.ninezero.halo.feature.notification.domain.model.resolveNotificationDestination
-import com.ninezero.halo.feature.notification.domain.repository.NotificationRepository
 import com.ninezero.halo.feature.notification.fcm.FcmNotificationHelper
 import com.ninezero.halo.navigation.HaloNavGraph
 import com.ninezero.halo.navigation.Screen
 import com.ninezero.halo.navigation.navigateUnlessOnTop
-import com.ninezero.halo.ui.theme.HaloTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var tokenManager: TokenManager
-
-    @Inject
-    lateinit var preferencesManager: PreferencesManager
-
-    @Inject
-    lateinit var sessionEventBus: SessionEventBus
-
-    @Inject
-    lateinit var notificationRepository: NotificationRepository
-
-    @Inject
-    lateinit var notificationSyncBus: NotificationSyncBus
+    private val viewModel: MainActivityViewModel by viewModels()
 
     private var navController: NavHostController? = null
 
@@ -91,8 +71,6 @@ class MainActivity : ComponentActivity() {
 
     private var startDestination by mutableStateOf<Screen?>(null)
 
-    private var initialThemeMode by mutableStateOf<Int?>(null)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -102,10 +80,10 @@ class MainActivity : ComponentActivity() {
             pendingDeepLink = BundleCompat.getParcelable(it, KEY_PENDING_DEEP_LINK, Uri::class.java)
         }
 
-        splashScreen.setKeepOnScreenCondition { startDestination == null || initialThemeMode == null }
+        splashScreen.setKeepOnScreenCondition { startDestination == null || viewModel.themeMode.value == null }
 
         lifecycleScope.launch {
-            val loggedIn = tokenManager.hasToken()
+            val loggedIn = viewModel.hasToken()
             if (!loggedIn) {
                 // 콜드스타트 딥링크는 data 비워 자동 처리 차단
                 intent?.takeIf { it.action == Intent.ACTION_VIEW }?.data
@@ -117,20 +95,15 @@ class MainActivity : ComponentActivity() {
             }
             startDestination = if (loggedIn) Screen.Main else Screen.Welcome
         }
-        lifecycleScope.launch {
-            initialThemeMode = preferencesManager.observeThemeMode().first()
-        }
 
         enableEdgeToEdge()
         setContent {
-            val loadedThemeMode = initialThemeMode ?: return@setContent
-            val themeMode by preferencesManager.observeThemeMode()
-                .collectAsState(initial = loadedThemeMode)
+            val themeMode = viewModel.themeMode.collectAsState().value ?: return@setContent
 
             val darkTheme = when (themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
-                else -> isSystemInDarkTheme()
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
 
             DisposableEffect(darkTheme) {
@@ -183,10 +156,10 @@ class MainActivity : ComponentActivity() {
                         LaunchedEffect(controller) {
                             // 놓친 세션 만료면 복원된 메인 대신 첫 화면
                             val restoredMain = runCatching { controller.getBackStackEntry<Screen.Main>() }.isSuccess
-                            if (savedInstanceState != null && restoredMain && !tokenManager.hasToken()) {
+                            if (savedInstanceState != null && restoredMain && !viewModel.hasToken()) {
                                 controller.navigate(Screen.Welcome) { popUpTo(0) { inclusive = true } }
                             }
-                            sessionEventBus.sessionExpired.collect {
+                            viewModel.sessionExpired.collect {
                                 controller.navigate(Screen.Welcome) {
                                     popUpTo(0) { inclusive = true }
                                     launchSingleTop = true
@@ -199,7 +172,7 @@ class MainActivity : ComponentActivity() {
                             LocalOverscrollFactory provides null,
                             LocalSnackbarRelay provides remember { SnackbarRelay() }
                         ) {
-                            // 신고는 전역 호스트가 받음
+                            // 신고는 전역 호스트
                             ReportHost {
                                 HaloNavGraph(
                                     navController = controller,
@@ -235,7 +208,7 @@ class MainActivity : ComponentActivity() {
             ?.takeIf { DeepLinks.isContentUri(it) }
         if (contentUri != null) {
             lifecycleScope.launch {
-                if (tokenManager.hasToken()) {
+                if (viewModel.hasToken()) {
                     navigateToContentLink(controller, contentUri)
                 } else {
                     pendingDeepLink = contentUri
@@ -272,7 +245,7 @@ class MainActivity : ComponentActivity() {
     private fun handleNotificationIntent(intent: Intent?, navController: NavHostController) {
         if (intent == null) return
 
-        if (!tokenManager.loggedIn.value) return  // 미로그인은 트레이 탭 무시, 시작 뒤 로그인도 반영
+        if (!viewModel.isLoggedIn) return  // 미로그인은 트레이 탭 무시, 시작 뒤 로그인도 반영
 
         intent.getStringExtra(FcmNotificationHelper.EXTRA_SUMMARY_GROUP)?.let {
             intent.removeExtra(FcmNotificationHelper.EXTRA_SUMMARY_GROUP)
@@ -285,7 +258,9 @@ class MainActivity : ComponentActivity() {
         val notificationType = intent.getStringExtra("type")
         val targetType = intent.getStringExtra("targetType")
         val targetId = intent.getStringExtra("targetId")?.toIntOrNull()
-        markTappedNotificationRead(intent, notificationType, targetId)
+        val notificationId = intent.getStringExtra("notificationId")?.toIntOrNull()
+        intent.removeExtra("notificationId")
+        viewModel.markNotificationRead(notificationId, notificationType, targetId)
         val deepLink = intent.getStringExtra("deepLink")
 
         Timber.d("FCM 딥링크: targetType=$targetType, targetId=$targetId")
@@ -326,24 +301,6 @@ class MainActivity : ComponentActivity() {
             navController.navigateUnlessOnTop(route)
         } catch (e: Exception) {
             Timber.e(e, "FCM 딥링크 화면 이동 실패")
-        }
-    }
-
-    private fun markTappedNotificationRead(intent: Intent, type: String?, targetId: Int?) {
-        val notificationId = intent.getStringExtra("notificationId")?.toIntOrNull()
-        intent.removeExtra("notificationId")
-
-        if (type == NotificationType.CHAT_MESSAGE) return  // 채팅은 알림 목록에 없음
-        if (notificationId == null && (type == null || targetId == null)) return
-
-        lifecycleScope.launch {
-            if (!tokenManager.hasToken()) return@launch
-            val result = if (notificationId != null) {
-                notificationRepository.markAsRead(notificationId)
-            } else {
-                notificationRepository.markAsReadByTarget(type!!, targetId!!)
-            }
-            result.onSuccess { notificationSyncBus.notifyChanged() }
         }
     }
 

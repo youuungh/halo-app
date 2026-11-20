@@ -8,8 +8,8 @@ data class Wishlist(
 data class WishlistProduct(
     val id: Int,
     val name: String,
-    val price: String,
-    val originalPrice: String?,
+    val price: Long,
+    val originalPrice: Long?,
     val discountRate: Int?,
     val imageUrl: String?,
     val purchaseState: WishlistPurchaseState,

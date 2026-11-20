@@ -7,6 +7,7 @@ data class PaymentMethodsState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val billingCard: BillingCard? = null,
+    val hasAutoRenew: Boolean = false,  // 자동결제 켜진 멤버십 구독 있음
     val error: String? = null,
     val showDeleteDialog: Boolean = false,
     // 카드 등록 WebView

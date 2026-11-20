@@ -25,14 +25,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.components.post.PostCard
 import com.ninezero.halo.core.ui.components.post.PostCardSkeleton
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTabRowHeight
 import com.ninezero.halo.feature.profile.presentation.my_profile.MyProfileIntent
 import com.ninezero.halo.feature.profile.presentation.my_profile.MyProfileState
@@ -40,17 +41,18 @@ import com.ninezero.halo.feature.profile.presentation.my_profile.MyProfileState
 @Composable
 fun MyCommunityTabContent(
     state: MyProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onIntent: (MyProfileIntent) -> Unit,
     onPostClick: (Int) -> Unit,
     onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit,
     onProfileClick: (Int, IntOffset) -> Unit = { _, _ -> }
 ) {
-    // 업로드 중인 내 글을 목록 상단에 Optimistic
+    // 업로드 중인 내 글을 목록 상단에 미리 보여줌
     val communityPosts = state.pendingCommunityPosts + state.communityPosts
     val pinnedPosts = state.communityPinnedPosts
     val isLoading = state.isCommunityLoading
-    val hasMore = state.communityHasMore
+    val hasMore = state.hasMoreCommunityPosts
 
     LaunchedEffect(Unit) {
         if (state.communityPosts.isEmpty() && pinnedPosts.isEmpty() && !isLoading) {
@@ -63,7 +65,7 @@ fun MyCommunityTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
         ) {
             items(3) { PostCardSkeleton() }
         }
@@ -71,7 +73,7 @@ fun MyCommunityTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
         ) {
             item(key = "empty_community") {
                 Box(
@@ -93,7 +95,7 @@ fun MyCommunityTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
         ) {
             // 고정 글
             if (pinnedPosts.isNotEmpty()) {
@@ -150,7 +152,7 @@ fun MyCommunityTabContent(
                     onLikeClick = { if (!post.isUploading) onIntent(MyProfileIntent.LikeCommunityPost(post.id)) },
                     onShareClick = { if (!post.isUploading) onIntent(MyProfileIntent.SharePost(post.id)) },
                     onMoreClick = { if (!post.isUploading) onIntent(MyProfileIntent.ShowCommunityPostOptions(post)) },
-                    onMediaClick = { idx -> onShowMediaViewer(post.mediaAttachments.toViewerItems(), idx) },
+                    onMediaClick = { mediaIndex -> onShowMediaViewer(post.mediaAttachments.toViewerItems(), mediaIndex) },
                     onProfileClick = { offset -> if (!post.isUploading) onProfileClick(post.author.id, offset) }
                 )
                 HorizontalDivider(

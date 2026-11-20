@@ -3,12 +3,11 @@ package com.ninezero.halo.core.network.websocket
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import com.ninezero.halo.core.di.ApplicationScope
 import com.ninezero.halo.core.network.auth.TokenProvider
 import com.ninezero.halo.core.util.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -40,7 +39,8 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
     okHttpClient: OkHttpClient,
     private val tokenProvider: TokenProvider,
     private val json: Json,
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    @param:ApplicationScope private val scope: CoroutineScope
 ) {
     private val wsClient = okHttpClient.newBuilder()
         .pingInterval(PING_INTERVAL_SECONDS, TimeUnit.SECONDS)
@@ -53,11 +53,8 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
     private val _frames = MutableSharedFlow<RealtimeFrame>(replay = 0, extraBufferCapacity = 64)
     val frames: SharedFlow<RealtimeFrame> = _frames.asSharedFlow()
 
-
     @Volatile
     private var isOpen = false // 완전히 열렸는지, 정상 종료·취소 판별용
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // 연결은 한 번에 하나, 겹치면 소켓 둘
     private val connectMutex = Mutex()
@@ -70,8 +67,7 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
     private var shouldReconnect = true
     private val reconnectAttempts = AtomicInteger(0)
 
-    // 포그라운드 여부, 정리 틈에 재연결 방지
-    // 소켓 생성 직전에 이 값을 한 번 더 확인해 차단
+    // 포그라운드 여부, 정리 틈에 재연결 방지, 소켓 생성 직전에 이 값을 한 번 더 확인해 차단
     @Volatile
     private var isForeground = false
 
@@ -130,7 +126,6 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
             // 백그라운드면 여기서 차단
             if (!isForeground) return
 
-            // 소켓  "연결됨"과 "연결 중" 동시 판별
             if (webSocket != null) {
                 Timber.d("Realtime: 이미 연결됨 또는 연결 중")
                 return
@@ -144,8 +139,7 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
                 return
             }
 
-            // 토큰 읽기는 1회, 백그라운드 재확인
-            if (!shouldReconnect) return
+            if (!shouldReconnect) return  // 토큰 읽기는 1회, 백그라운드 재확인
 
             val request = Request.Builder()
                 .url("${Constants.WS_BASE_URL}ws/realtime")
@@ -168,8 +162,7 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
         // 재연결 먼저 꺼 연결 중인 쪽이 취소
         shouldReconnect = false
         generation.incrementAndGet()  // 일련번호도 올려 옛 응답 무시
-        // 열린 소켓은 정상 종료, 연결 중이면 취소
-        // 안 그러면 연결이 완료돼 서버에 세션이 남음
+        // 열린 소켓은 정상 종료, 연결 중이면 취소. 안 그러면 연결이 완료돼 서버에 세션이 남음
         if (isOpen) {
             webSocket?.close(1000, "User disconnected")
         } else {
@@ -181,17 +174,17 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
     }
 
     /** 일련번호 달린 소켓 리스너 */
-    private inner class SocketListener(private val gen: Int) : WebSocketListener() {
+    private inner class SocketListener(private val socketGeneration: Int) : WebSocketListener() {
         @Volatile
         var dead = false  // 옛 소켓 응답 필터
             private set
 
-        private fun isCurrent() = gen == generation.get()
+        private fun isCurrent() = socketGeneration == generation.get()
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
             if (!isCurrent()) {
                 // 안 닫으면 서버가 푸시를 계속 생략
-                Timber.d("Realtime: 교체된 소켓(gen=$gen) — 닫는다")
+                Timber.d("Realtime: 교체된 소켓(socketGeneration=$socketGeneration) — 닫는다")
                 webSocket.close(1000, "Superseded")
                 return
             }
@@ -244,8 +237,7 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
             Timber.d("Realtime: 종료 중 - code: $code, reason: $reason")
-            // 서버가 끊어도 close 호출 필수, 안 하면 이후 연결 차단
-            webSocket.close(1000, null)
+            webSocket.close(1000, null)  // 서버가 끊어도 close 호출 필수, 안 하면 이후 연결 차단
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -256,8 +248,7 @@ class RealtimeSocket @Inject constructor(  // 포그라운드에서만 연결, �
             Timber.d("Realtime: 종료됨 - code: $code, reason: $reason")
             this@RealtimeSocket.webSocket = null
 
-            // 1008 = 서버가 인증 실패로 끊음
-            if (code == 1008) {
+            if (code == 1008) {  // 1008 = 서버가 인증 실패로 끊음
                 Timber.w("Realtime: 정책 위반 (1008) — 재연결 중단")
                 shouldReconnect = false
                 return

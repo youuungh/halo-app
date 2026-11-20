@@ -28,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -56,25 +55,25 @@ import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.SecretPostBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
-import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
 import com.ninezero.halo.core.ui.components.media.MediaDisplayPolicy
+import com.ninezero.halo.core.ui.components.media.VideoPlayer
 import com.ninezero.halo.core.ui.components.media.clampedAspectRatio
 import com.ninezero.halo.core.ui.components.media.preferredAspectRatio
 import com.ninezero.halo.core.ui.components.media.singleMediaHeightForWidth
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlay
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlayShape
 import com.ninezero.halo.core.ui.components.overlay.LockedOverlay
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
+import com.ninezero.halo.core.ui.components.text.AnimatedCounter
 import com.ninezero.halo.core.ui.components.text.buildHashtagAnnotatedString
-import com.ninezero.halo.core.ui.components.video_player.VideoPlayer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Like
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.presentation.UnavailablePostReason
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.Like
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -97,9 +96,9 @@ fun PostPreviewSection(
     val hasPostImages = post?.mediaAttachments?.isNotEmpty() == true
 
     val hazeState = remember { HazeState() }
-    val isObscured = post?.isBlocked == true
-    val isRestricted = !isObscured && post?.isRestricted == true
-    val isMasked = isObscured || isRestricted
+    val isCovered = post?.isBlocked == true
+    val isRestricted = !isCovered && post?.isRestricted == true
+    val isMasked = isCovered || isRestricted
 
     var profilePosition by remember { mutableStateOf(IntOffset.Zero) }
 
@@ -133,7 +132,7 @@ fun PostPreviewSection(
                             .heightIn(min = 80.dp)
                             .hazeSource(state = hazeState)
                     )
-                    ObscuredOverlay(
+                    CoverOverlay(
                         hazeState = hazeState,
                         icon = when (unavailableReason) {
                             UnavailablePostReason.NOT_FOUND -> R.drawable.ic_eye_off
@@ -166,7 +165,7 @@ fun PostPreviewSection(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    enabled = !isObscured,
+                    enabled = !isCovered,
                     onClick = onPostClick
                 )
                 .padding(top = 12.dp)
@@ -180,7 +179,7 @@ fun PostPreviewSection(
             ) {
                 // 포스트 작성자 프로필 + 연결선 시작
                 AvatarWithLine(avatarSize, lineWidth, lineColor) {
-                    if (isObscured) {
+                    if (isCovered) {
                         // 차단/관심없음 시 아바타 자리표시
                         AvatarPlaceholder(avatarSize)
                     } else {
@@ -225,7 +224,7 @@ fun PostPreviewSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (isRestricted) Modifier.heightIn(min = 80.dp) else Modifier)
-                            .then(if (isMasked) Modifier.clip(ObscuredOverlayShape).hazeSource(state = hazeState) else Modifier)
+                            .then(if (isMasked) Modifier.clip(CoverOverlayShape).hazeSource(state = hazeState) else Modifier)
                     ) {
                         // 포스트 작성자 이름 + 시간 + 더보기
                         Row(
@@ -277,7 +276,7 @@ fun PostPreviewSection(
                         }
 
                         // 좋아요·댓글 버튼, 이미지 있으면 숨김
-                        if (!(hasPostImages && !isObscured) && !isRestricted) Row(
+                        if (!(hasPostImages && !isCovered) && !isRestricted) Row(
                             modifier = Modifier.padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(20.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -345,8 +344,8 @@ fun PostPreviewSection(
                     }
 
                     // 차단 오버레이
-                    if (isObscured) {
-                        ObscuredOverlay(
+                    if (isCovered) {
+                        CoverOverlay(
                             hazeState = hazeState,
                             icon = R.drawable.ic_block,
                             label = "차단된 사용자입니다"
@@ -358,7 +357,7 @@ fun PostPreviewSection(
                         LockedOverlay(
                             hazeState = hazeState,
                             icon = R.drawable.ic_lock,
-                            label = if (currentPost.isSecret) "비밀글" else "${currentPost.requiredTier} 이상 멤버십 전용"
+                            label = if (currentPost.isSecret) "비밀글" else "${currentPost.requiredTier.label} 이상 멤버십 전용"
                         )
                     }
                 }
@@ -426,7 +425,7 @@ fun PostPreviewSection(
                                         // 원글 미리보기는 자동재생 안 함
                                         isPlaying = false,
                                         onClick = onPostClick,
-                                        modifier = Modifier.clip(RoundedCornerShape(12.dp)),
+                                        modifier = Modifier.clip(MaterialTheme.shapes.medium),
                                         fixedHeight = displayHeight,
                                         maxWidth = availableWidth,
                                         preferredAspectRatio = clampedRatio,
@@ -441,7 +440,7 @@ fun PostPreviewSection(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(singleMediaHeight)
-                                            .clip(RoundedCornerShape(12.dp)),
+                                            .clip(MaterialTheme.shapes.medium),
                                         contentScale = ContentScale.Crop,
                                         placeholder = ColorPainter(placeholderColor),
                                         error = ColorPainter(placeholderColor)
@@ -506,7 +505,7 @@ fun PostPreviewSection(
                                             thumbnailUrl = media.thumbnailUrl,
                                             isPlaying = videoCount <= 1 || activeMediaId == media.id,
                                             onClick = onPostClick,
-                                            modifier = Modifier.clip(RoundedCornerShape(12.dp)),
+                                            modifier = Modifier.clip(MaterialTheme.shapes.medium),
                                             fixedHeight = multiMediaHeight,
                                             maxWidth = maxItemWidth,
                                             preferredAspectRatio = clampedAspectRatio(
@@ -530,7 +529,7 @@ fun PostPreviewSection(
                                             modifier = Modifier
                                                 .width(multiMediaHeight * itemRatio)
                                                 .height(multiMediaHeight)
-                                                .clip(RoundedCornerShape(12.dp)),
+                                                .clip(MaterialTheme.shapes.medium),
                                             contentScale = ContentScale.Crop,
                                             placeholder = ColorPainter(placeholderColor),
                                             error = ColorPainter(placeholderColor)

@@ -4,19 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,15 +23,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
-import com.ninezero.halo.core.ui.components.layout.ListEmptyState
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.feature.store.domain.model.creatorGroupsOrFallback
+import com.ninezero.halo.feature.store.presentation.components.ShippingTrackingBottomSheet
+import com.ninezero.halo.feature.store.presentation.sales_manage.components.DeliveryInfoBottomSheet
 import com.ninezero.halo.feature.store.presentation.sales_manage.components.SalesOrderCard
 import com.ninezero.halo.feature.store.presentation.sales_manage.components.SalesSummaryCard
 import com.ninezero.halo.feature.store.presentation.sales_manage.components.SalesSummaryCardSkeleton
@@ -145,21 +141,11 @@ internal fun SalesManageScreenContent(
                             .padding(top = headerHeight),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(SalesManageIntent.Load) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "주문 목록을 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = { onIntent(SalesManageIntent.Load) }
+                        )
                     }
                 }
 
@@ -171,23 +157,18 @@ internal fun SalesManageScreenContent(
                         contentPadding = PaddingValues(top = headerHeight, bottom = 32.dp)
                     ) {
                         salesSummaryHeaderItem(state, onIntent)
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(320.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (state.selectedFilter == OrderFilter.ALL) {
-                                    ListEmptyState(
-                                        title = "들어온 주문이 없어요",
-                                        description = "상품이 판매되면 여기에 표시돼요"
-                                    )
-                                } else {
-                                    ListEmptyState(title = "${state.selectedFilter.label} 주문이 없어요")
-                                }
-                            }
-                        }
+                    }
+                    // 다른 목록 화면처럼 화면 가운데
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // 내 멤버십 · 내 쿠폰처럼 제목 한 줄
+                        Text(
+                            text = if (state.selectedFilter == OrderFilter.ALL) "들어온 주문이 없어요" else "${state.selectedFilter.label} 주문이 없어요",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -205,20 +186,19 @@ internal fun SalesManageScreenContent(
                             items = state.orders,
                             key = { it.id }
                         ) { order ->
-                            Column(modifier = Modifier.animateItem()) {
+                            // 위치 이동 애니메이션은 끔, 따로 출렁임 방지
+                            Column(modifier = Modifier.animateItem(placementSpec = null)) {
                                 SalesOrderCard(
                                     order = order,
-                                    isExpanded = order.id in state.expandedOrderIds,
                                     onConfirm = { onIntent(SalesManageIntent.ConfirmOrder(order.id)) },
                                     onCancel = { onIntent(SalesManageIntent.ShowCancelConfirm(order.id)) },
                                     onRegisterShipping = { onIntent(SalesManageIntent.ShowShippingSheet(order.id)) },
                                     onEditShipping = { onIntent(SalesManageIntent.ShowShippingSheet(order.id)) },
-                                    onToggleExpand = { onIntent(SalesManageIntent.ToggleOrderExpand(order.id)) },
-                                    isStatusUpdating = state.statusUpdatingOrderId == order.id
-                                )
-                                HorizontalDivider(
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    onShowDeliveryInfo = { onIntent(SalesManageIntent.ShowDeliveryInfo(order.id)) },
+                                    onTrackShipping = { onIntent(SalesManageIntent.ShowTrackingSheet(order.id)) },
+                                    isStatusUpdating = state.statusUpdatingOrderId == order.id,
+                                    isCancelling = state.isCancellingOrder,
+                                    modifier = Modifier.padding(vertical = 5.dp)
                                 )
                             }
                         }
@@ -265,6 +245,23 @@ internal fun SalesManageScreenContent(
             onSave = { onIntent(SalesManageIntent.SaveShippingInfo) },
             onShippingErrorDismiss = { onIntent(SalesManageIntent.DismissShippingError) },
             onDismiss = { onIntent(SalesManageIntent.DismissShippingSheet) }
+        )
+    }
+
+    state.orders.firstOrNull { it.id == state.deliveryInfoOrderId }?.let { order ->
+        DeliveryInfoBottomSheet(
+            order = order,
+            onDismiss = { onIntent(SalesManageIntent.DismissDeliveryInfo) }
+        )
+    }
+
+    state.orders.firstOrNull { it.id == state.trackingSheetOrderId }?.let { order ->
+        // 판매 목록 주문은 내 상품만 담겨 묶음이 하나
+        ShippingTrackingBottomSheet(
+            group = order.creatorGroupsOrFallback().firstOrNull(),
+            shippingStatus = state.trackingStatus,
+            isLoading = state.isTrackingStatusLoading,
+            onDismiss = { onIntent(SalesManageIntent.DismissTrackingSheet) }
         )
     }
 

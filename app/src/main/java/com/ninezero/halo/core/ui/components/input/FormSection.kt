@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
 /** 폼 섹션 */
 @Composable
@@ -25,5 +27,15 @@ fun FormSection(
         )
         Spacer(modifier = Modifier.height(8.dp))
         content()
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun FormSectionPreview() {
+    HaloSurfacePreview {
+        FormSection(title = "상품 이름") {
+            Text("입력칸 자리")
+        }
     }
 }

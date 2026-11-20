@@ -7,7 +7,7 @@ import com.ninezero.halo.core.ui.preview.HaloScreenPreview
 internal fun previewNotificationSettingsState(): NotificationSettingsState {
     return NotificationSettingsState(
         isLoading = false,
-        masterEnabled = true,
+        mainEnabled = true,
         socialEnabled = true,
         creatorActivityEnabled = true,
         commerceEnabled = false,

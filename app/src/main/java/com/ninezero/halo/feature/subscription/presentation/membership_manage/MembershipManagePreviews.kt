@@ -34,7 +34,7 @@ private val previewMembershipPlans = listOf(
         name = "Basic",
         tier = SubscriptionPlanTier.TIER1,
         description = "기본 혜택을 누려보세요",
-        price = "4,900",
+        price = 4900L,
         benefits = listOf("전용 콘텐츠 열람", "커뮤니티 참여"),
         subscriberCount = 128
     ),
@@ -43,7 +43,7 @@ private val previewMembershipPlans = listOf(
         name = "Premium",
         tier = SubscriptionPlanTier.TIER2,
         description = "프리미엄 혜택을 누려보세요. 모든 기본 혜택 포함.",
-        price = "9,900",
+        price = 9900L,
         benefits = listOf("전용 콘텐츠 열람", "커뮤니티 참여", "1:1 메시지", "할인 혜택"),
         subscriberCount = 45
     )
@@ -54,7 +54,7 @@ private fun previewMembershipPlan(
     name: String,
     tier: SubscriptionPlanTier,
     description: String,
-    price: String,
+    price: Long,
     benefits: List<String>,
     subscriberCount: Int,
     now: LocalDateTime = LocalDateTime.now()

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.shimmer
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 @Composable
 fun PointBalanceCardSkeleton(
@@ -52,19 +53,19 @@ fun PointHistoryItemSkeleton(
                 modifier = Modifier
                     .width(160.dp)
                     .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Box(
                 modifier = Modifier
                     .width(80.dp)
                     .height(12.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
         }
 
-        // 우측: 금액 + 타입
+        // 우측: 금액 + 잔액
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -73,14 +74,14 @@ fun PointHistoryItemSkeleton(
                 modifier = Modifier
                     .width(70.dp)
                     .height(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Box(
                 modifier = Modifier
-                    .width(40.dp)
+                    .width(64.dp)
                     .height(12.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
         }

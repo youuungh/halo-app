@@ -1,11 +1,11 @@
 package com.ninezero.halo.core.ui.components.picker
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
@@ -23,13 +23,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetDrag
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.abs
 
 private val ITEM_HEIGHT = 40.dp
 
 /** 휠 피커 */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WheelPicker(
     items: List<String>,
@@ -137,6 +138,19 @@ fun WheelPicker(
                 .offset(y = ITEM_HEIGHT / 2),
             thickness = 1.dp,
             color = MaterialTheme.colorScheme.outlineVariant
+        )
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun WheelPickerPreview() {
+    HaloSurfacePreview {
+        WheelPicker(
+            items = (1..12).map { "${it}월" },
+            selectedIndex = 4,
+            onSelectedChanged = {},
+            modifier = Modifier.padding(16.dp)
         )
     }
 }

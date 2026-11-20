@@ -1,6 +1,5 @@
 package com.ninezero.halo.feature.store.presentation.components
 
-import androidx.annotation.DrawableRes
 import com.ninezero.halo.feature.store.domain.model.BillingCard
 
 /** 토스 발급사 코드별 카드사명 */
@@ -25,12 +24,3 @@ fun cardLabel(card: BillingCard?): String {
     val tail = card?.cardNumberMasked?.trim()?.takeIf { it.isNotBlank() }?.takeLast(4)
     return if (tail != null) "$name ($tail)" else name
 }
-
-@DrawableRes
-fun cardLogoRes(raw: String?): Int? {
-    val key = raw?.trim()?.uppercase()?.takeIf { it.isNotBlank() } ?: return null
-    return CARD_LOGOS[key]
-}
-
-// 카드사 코드별 로고, 리소스 추가 때 채움
-private val CARD_LOGOS: Map<String, Int> = emptyMap()

@@ -2,6 +2,7 @@ package com.ninezero.halo.feature.feed.presentation.comment_detail
 
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -52,33 +54,36 @@ import com.ninezero.halo.core.ui.components.dialog.AlertDialog
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.media.VideoPreloader
 import com.ninezero.halo.core.ui.components.media.rememberAutoplayTarget
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.modifiers.LocalActiveViewerMediaKey
 import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransitionScope
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupData
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupHost
+import com.ninezero.halo.core.ui.components.popup.ProfilePopupHostState
+import com.ninezero.halo.core.ui.components.popup.SortPopupMenu
 import com.ninezero.halo.core.ui.components.popup.rememberProfilePopupHostState
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
 import com.ninezero.halo.core.ui.components.post.LocalSubscribeRequester
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.components.snackbar.showOrToast
-import com.ninezero.halo.core.ui.components.video_player.VideoPreloader
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
 import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostState
+import com.ninezero.halo.feature.feed.domain.model.Comment
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
+import com.ninezero.halo.feature.feed.presentation.CommentSortType
 import com.ninezero.halo.feature.feed.presentation.comment_detail.components.ParentCommentItem
 import com.ninezero.halo.feature.feed.presentation.comment_detail.components.ParentCommentSection
 import com.ninezero.halo.feature.feed.presentation.comment_detail.components.PostPreviewSection
 import com.ninezero.halo.feature.feed.presentation.components.CommentInputBar
 import com.ninezero.halo.feature.feed.presentation.components.ReplyCurveContainer
-import com.ninezero.halo.feature.feed.presentation.components.SortPopupMenu
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.delay
@@ -217,8 +222,8 @@ internal fun CommentDetailScreenContent(
             }
         }
     LaunchedEffect(activeVideoItemKey, orderedVideoUrls) {
-        val idx = orderedVideoUrls.indexOfFirst { it.first == activeVideoItemKey }
-        val start = if (idx >= 0) idx + 1 else 0
+        val activeIndex = orderedVideoUrls.indexOfFirst { it.first == activeVideoItemKey }
+        val start = if (activeIndex >= 0) activeIndex + 1 else 0
         VideoPreloader.prefetch(context, orderedVideoUrls.drop(start).take(2).map { it.second })
     }
 
@@ -286,53 +291,10 @@ internal fun CommentDetailScreenContent(
     }
 
     // 알림 진입 하이라이트
-    var anchorHighlightPlayed by rememberSaveable { mutableStateOf(false) }
-    val anchorHighlight = remember { Animatable(0f) }
-    LaunchedEffect(hasAnchoredToParent) {
-        if (state.highlightAnchor && hasAnchoredToParent && !anchorHighlightPlayed) {
-            anchorHighlightPlayed = true
-            anchorHighlight.snapTo(1f)
-            delay(400)
-            anchorHighlight.animateTo(0f, animationSpec = tween(durationMillis = 1200))
-        }
-    }
+    val anchorHighlight = rememberAnchorHighlight(state.highlightAnchor, hasAnchoredToParent)
 
     // REPLY 알림 진입
-    var replyHighlightPlayed by rememberSaveable { mutableStateOf(false) }
-    val replyHighlight = remember { Animatable(0f) }
-    var replyHighlightItemIndex by remember { mutableStateOf<Int?>(null) }
-    LaunchedEffect(hasAnchoredToParent, state.replies, state.pendingReplies.size) {
-        val targetId = state.highlightReplyId ?: return@LaunchedEffect
-        if (replyHighlightPlayed || !hasAnchoredToParent) return@LaunchedEffect
-        val replyIndex = state.replies.indexOfFirst { it.id == targetId }
-        if (replyIndex < 0) return@LaunchedEffect
-        replyHighlightPlayed = true
-
-        // 원글·조상·탭한 댓글·구분선 3·대기 답글 순서
-        replyHighlightItemIndex =
-            5 + state.parentChain.size + state.pendingReplies.size + replyIndex
-    }
-    LaunchedEffect(replyHighlightItemIndex) {
-        val itemIndex = replyHighlightItemIndex ?: return@LaunchedEffect
-        listState.animateScrollToItem(itemIndex)
-        // 위 아이템 늦은 실측 대비 안착까지 재보정
-        var stableFrames = 0
-        var attempts = 0
-        while (attempts < 10 && stableFrames < 2) {
-            val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == itemIndex }
-            if (item != null && kotlin.math.abs(item.offset) <= 2) {
-                stableFrames++
-            } else {
-                listState.scrollToItem(itemIndex)
-                stableFrames = 0
-            }
-            withFrameNanos { }
-            attempts++
-        }
-        replyHighlight.snapTo(1f)
-        delay(400)
-        replyHighlight.animateTo(0f, animationSpec = tween(durationMillis = 1200))
-    }
+    val replyHighlight = rememberReplyHighlight(state, listState, hasAnchoredToParent)
 
     val profilePopupState = rememberProfilePopupHostState()
 
@@ -359,40 +321,12 @@ internal fun CommentDetailScreenContent(
                 .hazeSource(hazeState)
                 .imePadding(),
             // 여백 아이템이면 위쪽 로딩이 탭한 댓글을 밀어냄
-            contentPadding = PaddingValues(top = headerHeight + 16.dp)
+            contentPadding = PaddingValues(top = headerHeight + 8.dp)
         ) {
             // 원본 포스트 미리보기
             // 로딩 중 0 높이면 앵커 기준이 이 칸으로 넘어가 탭한 댓글이 밀림
             item {
-                Box(modifier = Modifier.heightIn(min = 1.dp)) {
-                    PostPreviewSection(
-                        post = state.post,
-                        unavailableReason = state.unavailablePost,
-                        onPostClick = { onIntent(CommentDetailIntent.NavigateToPost) },
-                        onProfileClick = { offset ->
-                            state.post?.author?.let { author ->
-                                if (state.myUserId == author.id) {
-                                    onIntent(CommentDetailIntent.NavigateToUserProfile(author.id))
-                                } else {
-                                    profilePopupState.show(author.id, offset)
-                                }
-                            }
-                        },
-                        onLikeClick = {
-                            state.post?.let { post ->
-                                if (post.isLiked) {
-                                    onIntent(CommentDetailIntent.UnlikePost)
-                                } else {
-                                    onIntent(CommentDetailIntent.LikePost)
-                                }
-                            }
-                        },
-                        onCommentClick = { onIntent(CommentDetailIntent.NavigateToPost) },
-                        onMoreClick = {
-                            onIntent(CommentDetailIntent.ShowPostOptions)
-                        }
-                    )
-                }
+                PostPreviewItem(state = state, profilePopupState = profilePopupState, onIntent = onIntent)
             }
 
             // 조상 체인
@@ -427,55 +361,19 @@ internal fun CommentDetailScreenContent(
 
             // 부모 댓글
             item(key = "tapped_parent") {
-                if (state.isParentLoading) {
-                    CommentItemSkeleton(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        showLine = false
-                    )
-                } else {
-                    state.parentComment?.let { comment ->
-                        // 알림 진입 하이라이트 배경
-                        val highlightColor = MaterialTheme.colorScheme.primary
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .drawBehind {
-                                    val alpha = anchorHighlight.value * 0.04f
-                                    if (alpha > 0f) drawRect(highlightColor.copy(alpha = alpha))
-                                }
-                        ) {
-                            ParentCommentSection(
-                                isPostAuthorReply = comment.parentCommentId != null && comment.author.id == state.post?.author?.id,
-                                comment = comment,
-                                onProfileClick = { offset ->
-                                    if (state.myUserId == comment.author.id) {
-                                        onIntent(CommentDetailIntent.NavigateToUserProfile(comment.author.id))
-                                    } else {
-                                        profilePopupState.show(comment.author.id, offset)
-                                    }
-                                },
-                                onLikeClick = {
-                                    if (comment.isLiked) {
-                                        onIntent(CommentDetailIntent.UnlikeParentComment)
-                                    } else {
-                                        onIntent(CommentDetailIntent.LikeParentComment)
-                                    }
-                                },
-                                onCommentClick = onReplyComposeClick,
-                                onMoreClick = {
-                                    onIntent(
-                                        CommentDetailIntent.ShowCommentOptions(
-                                            comment
-                                        )
-                                    )
-                                },
-                                onMediaClick = onShowMediaViewer,
-                                isVideoPlaying = activeVideoItemKey == "tapped_parent",
-                                connectTop = state.parentChain.isNotEmpty()
-                            )
-                        }
-                    }
-                }
+                TappedParentComment(
+                    isLoading = state.isParentLoading,
+                    comment = state.parentComment,
+                    postAuthorId = state.post?.author?.id,
+                    myUserId = state.myUserId,
+                    connectTop = state.parentChain.isNotEmpty(),
+                    isVideoPlaying = activeVideoItemKey == "tapped_parent",
+                    highlightProgress = { anchorHighlight.value },
+                    profilePopupState = profilePopupState,
+                    onIntent = onIntent,
+                    onReplyComposeClick = onReplyComposeClick,
+                    onShowMediaViewer = onShowMediaViewer
+                )
             }
 
             // 답글
@@ -495,7 +393,10 @@ internal fun CommentDetailScreenContent(
                     // 정렬 드롭다운
                     item {
                         SortPopupMenu(
+                            hazeState = hazeState,
+                            options = CommentSortType.entries,
                             currentSort = state.repliesSortBy,
+                            label = { it.displayName },
                             onSortChange = { onIntent(CommentDetailIntent.ChangeSortType(it)) }
                         )
                     }
@@ -554,131 +455,19 @@ internal fun CommentDetailScreenContent(
                 items = state.replies,
                 key = { _, reply -> "reply_${reply.id}" }
             ) { replyIndex, reply ->
-                // REPLY 알림 진입 하이라이트 배경
-                val isHighlightTarget = reply.id == state.highlightReplyId
-                val replyHighlightColor = MaterialTheme.colorScheme.primary
-                Column(
-                    modifier = if (isHighlightTarget) {
-                        Modifier.drawBehind {
-                            val alpha = replyHighlight.value * 0.04f
-                            if (alpha > 0f) drawRect(replyHighlightColor.copy(alpha = alpha))
-                        }
+                ReplyListItem(
+                    reply = reply,
+                    postAuthorId = state.post?.author?.id,
+                    showTopDivider = replyIndex > 0 || state.pendingReplies.isNotEmpty(),
+                    isVideoPlaying = activeVideoItemKey == "reply_${reply.id}",
+                    highlightProgress = if (reply.id == state.highlightReplyId) {
+                        { replyHighlight.value }
                     } else {
-                        Modifier
-                    }
-                ) {
-                    // 답글 사이 구분선
-                    if (replyIndex > 0 || state.pendingReplies.isNotEmpty()) {
-                        HorizontalDivider(
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                    }
-
-                    // firstReply가 있으면 스레드로 연결
-                    if (reply.firstReply != null) {
-                        val threadLineColor =
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        val threadLineWidth = 1.5.dp
-                        val threadAvatarSize = 32.dp
-                        val threadReplyAvatarSize = 24.dp
-                        val threadParentLineX = 8.dp + threadAvatarSize / 2
-                        val threadCurveTopLead = 12.dp
-
-                        // 부모 답글
-                        CommentItem(
-                            postAuthorId = state.post?.author?.id,
-                            comment = reply,
-                            onProfileClick = { userId, _ ->
-                                onIntent(CommentDetailIntent.NavigateToUserProfile(userId))
-                            },
-                            onLikeClick = {
-                                if (reply.isLiked) onIntent(CommentDetailIntent.UnlikeReply(it))
-                                else onIntent(CommentDetailIntent.LikeReply(it))
-                            },
-                            onReplyClick = {
-                                onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
-                            },
-                            onCommentClick = {
-                                onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
-                            },
-                            onMoreClick = {
-                                onIntent(CommentDetailIntent.ShowCommentOptions(reply))
-                            },
-                            modifier = Modifier.padding(top = 12.dp),
-                            showLine = true,
-                            lineBottomSpacing = 0.dp,
-                            onMediaClick = onShowMediaViewer,
-                            isVideoPlaying = activeVideoItemKey == "reply_${reply.id}"
-                        )
-
-                        // firstReply
-                        ReplyCurveContainer(
-                            parentLineX = threadParentLineX,
-                            curveEndX = threadParentLineX + 18.dp,
-                            avatarCenterY = threadCurveTopLead + threadReplyAvatarSize / 2,
-                            topLead = threadCurveTopLead,
-                            lineColor = threadLineColor,
-                            lineWidth = threadLineWidth
-                        ) {
-                            CommentItem(
-                                postAuthorId = state.post?.author?.id,
-                                comment = reply.firstReply,
-                                onProfileClick = { userId, _ ->
-                                    onIntent(CommentDetailIntent.NavigateToUserProfile(userId))
-                                },
-                                onLikeClick = {
-                                    if (reply.firstReply.isLiked) {
-                                        onIntent(CommentDetailIntent.UnlikeReply(it))
-                                    } else {
-                                        onIntent(CommentDetailIntent.LikeReply(it))
-                                    }
-                                },
-                                onReplyClick = {
-                                    onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
-                                },
-                                onCommentClick = {
-                                    onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
-                                },
-                                onMoreClick = {
-                                    onIntent(CommentDetailIntent.ShowCommentOptions(reply.firstReply))
-                                },
-                                indentStart = threadAvatarSize + 12.dp,
-                                avatarSize = threadReplyAvatarSize,
-                                onMediaClick = onShowMediaViewer,
-                                isVideoPlaying = activeVideoItemKey == "reply_${reply.id}"
-                            )
-                        }
-                    } else {
-                        // firstReply 없으면 일반 CommentItem
-                        CommentItem(
-                            postAuthorId = state.post?.author?.id,
-                            comment = reply,
-                            onProfileClick = { userId, _ ->
-                                onIntent(CommentDetailIntent.NavigateToUserProfile(userId))
-                            },
-                            onLikeClick = {
-                                if (reply.isLiked) {
-                                    onIntent(CommentDetailIntent.UnlikeReply(it))
-                                } else {
-                                    onIntent(CommentDetailIntent.LikeReply(it))
-                                }
-                            },
-                            onReplyClick = {
-                                onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
-                            },
-                            onCommentClick = {
-                                onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
-                            },
-                            onMoreClick = {
-                                onIntent(CommentDetailIntent.ShowCommentOptions(reply))
-                            },
-                            modifier = Modifier.padding(top = 12.dp),
-                            onMediaClick = onShowMediaViewer,
-                            isVideoPlaying = activeVideoItemKey == "reply_${reply.id}"
-                        )
-                    }
-                }
+                        null
+                    },
+                    onIntent = onIntent,
+                    onShowMediaViewer = onShowMediaViewer
+                )
             }
 
             // 마지막 답글 뒤 구분선
@@ -745,7 +534,7 @@ internal fun CommentDetailScreenContent(
         InfiniteScrollTrigger(
             listState = listState,
             isLoading = state.isRepliesLoading,
-            hasMore = state.repliesHasMore,
+            hasMore = state.hasMoreReplies,
             onLoadMore = { onIntent(CommentDetailIntent.LoadMoreReplies) }
         )
 
@@ -785,6 +574,336 @@ internal fun CommentDetailScreenContent(
         )
     }
 
+    CommentDetailSheets(state = state, onIntent = onIntent)
+
+    ProfilePopupHost(
+        state = profilePopupState,
+        hazeState = hazeState,
+        resolveAuthor = { authorId ->
+            val author = state.post?.author?.takeIf { it.id == authorId }
+                ?: state.parentChain.find { it.author.id == authorId }?.author
+                ?: state.parentComment?.author?.takeIf { it.id == authorId }
+                ?: state.replies.find { it.author.id == authorId }?.author
+                ?: state.replies.mapNotNull { it.firstReply }
+                    .find { it.author.id == authorId }?.author
+            author?.let { ProfilePopupData(it.id, it.isFollowing) }
+        },
+        onNavigateToProfile = { onIntent(CommentDetailIntent.NavigateToUserProfile(it)) },
+        onFollow = { onIntent(CommentDetailIntent.FollowAuthor(it)) },
+        onUnfollow = { onIntent(CommentDetailIntent.UnfollowAuthor(it)) }
+    )
+}
+
+/** 원본 포스트 미리보기 칸, 로딩 중에도 1dp 자리를 지킴 */
+@Composable
+private fun PostPreviewItem(
+    state: CommentDetailState,
+    profilePopupState: ProfilePopupHostState,
+    onIntent: (CommentDetailIntent) -> Unit
+) {
+    Box(modifier = Modifier.heightIn(min = 1.dp)) {
+        PostPreviewSection(
+            post = state.post,
+            unavailableReason = state.unavailablePost,
+            onPostClick = { onIntent(CommentDetailIntent.NavigateToPost) },
+            onProfileClick = { offset ->
+                state.post?.author?.let { author ->
+                    if (state.myUserId == author.id) {
+                        onIntent(CommentDetailIntent.NavigateToUserProfile(author.id))
+                    } else {
+                        profilePopupState.show(author.id, offset)
+                    }
+                }
+            },
+            onLikeClick = {
+                state.post?.let { post ->
+                    if (post.isLiked) {
+                        onIntent(CommentDetailIntent.UnlikePost)
+                    } else {
+                        onIntent(CommentDetailIntent.LikePost)
+                    }
+                }
+            },
+            onCommentClick = { onIntent(CommentDetailIntent.NavigateToPost) },
+            onMoreClick = {
+                onIntent(CommentDetailIntent.ShowPostOptions)
+            }
+        )
+    }
+}
+
+/** 알림으로 들어오면 탭한 댓글을 잠깐 강조, 강조 진행도 0~1 */
+@Composable
+private fun rememberAnchorHighlight(
+    highlightAnchor: Boolean,
+    hasAnchoredToParent: Boolean
+): Animatable<Float, AnimationVector1D> {
+    var anchorHighlightPlayed by rememberSaveable { mutableStateOf(false) }
+    val anchorHighlight = remember { Animatable(0f) }
+    LaunchedEffect(hasAnchoredToParent) {
+        if (highlightAnchor && hasAnchoredToParent && !anchorHighlightPlayed) {
+            anchorHighlightPlayed = true
+            anchorHighlight.snapTo(1f)
+            delay(400)
+            anchorHighlight.animateTo(0f, animationSpec = tween(durationMillis = 1200))
+        }
+    }
+    return anchorHighlight
+}
+
+/** 답글 알림으로 오면 그 답글로 스크롤 후 강조 진행도 */
+@Composable
+private fun rememberReplyHighlight(
+    state: CommentDetailState,
+    listState: LazyListState,
+    hasAnchoredToParent: Boolean
+): Animatable<Float, AnimationVector1D> {
+    var replyHighlightPlayed by rememberSaveable { mutableStateOf(false) }
+    val replyHighlight = remember { Animatable(0f) }
+    var replyHighlightItemIndex by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(hasAnchoredToParent, state.replies, state.pendingReplies.size) {
+        val targetId = state.highlightReplyId ?: return@LaunchedEffect
+        if (replyHighlightPlayed || !hasAnchoredToParent) return@LaunchedEffect
+        val replyIndex = state.replies.indexOfFirst { it.id == targetId }
+        if (replyIndex < 0) return@LaunchedEffect
+        replyHighlightPlayed = true
+
+        // 원글·조상·탭한 댓글·구분선 3·대기 답글 순서
+        replyHighlightItemIndex =
+            5 + state.parentChain.size + state.pendingReplies.size + replyIndex
+    }
+    LaunchedEffect(replyHighlightItemIndex) {
+        val itemIndex = replyHighlightItemIndex ?: return@LaunchedEffect
+        listState.animateScrollToItem(itemIndex)
+        // 위 아이템 늦은 실측 대비 안착까지 재보정
+        var stableFrames = 0
+        var attempts = 0
+        while (attempts < 10 && stableFrames < 2) {
+            val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == itemIndex }
+            if (item != null && kotlin.math.abs(item.offset) <= 2) {
+                stableFrames++
+            } else {
+                listState.scrollToItem(itemIndex)
+                stableFrames = 0
+            }
+            withFrameNanos { }
+            attempts++
+        }
+        replyHighlight.snapTo(1f)
+        delay(400)
+        replyHighlight.animateTo(0f, animationSpec = tween(durationMillis = 1200))
+    }
+    return replyHighlight
+}
+
+/** 탭한 부모 댓글 칸, 알림 진입이면 잠깐 강조 */
+@Composable
+private fun TappedParentComment(
+    isLoading: Boolean,
+    comment: Comment?,
+    postAuthorId: Int?,
+    myUserId: Int?,
+    connectTop: Boolean,
+    isVideoPlaying: Boolean,
+    highlightProgress: () -> Float,
+    profilePopupState: ProfilePopupHostState,
+    onIntent: (CommentDetailIntent) -> Unit,
+    onReplyComposeClick: () -> Unit,
+    onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit
+) {
+    if (isLoading) {
+        CommentItemSkeleton(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            showLine = false
+        )
+    } else {
+        comment?.let { comment ->
+            // 알림 진입 하이라이트 배경
+            val highlightColor = MaterialTheme.colorScheme.primary
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .drawBehind {
+                        val alpha = highlightProgress() * 0.08f
+                        if (alpha > 0f) drawRect(highlightColor.copy(alpha = alpha))
+                    }
+            ) {
+                ParentCommentSection(
+                    isPostAuthorReply = comment.parentCommentId != null && comment.author.id == postAuthorId,
+                    comment = comment,
+                    onProfileClick = { offset ->
+                        if (myUserId == comment.author.id) {
+                            onIntent(CommentDetailIntent.NavigateToUserProfile(comment.author.id))
+                        } else {
+                            profilePopupState.show(comment.author.id, offset)
+                        }
+                    },
+                    onLikeClick = {
+                        if (comment.isLiked) {
+                            onIntent(CommentDetailIntent.UnlikeParentComment)
+                        } else {
+                            onIntent(CommentDetailIntent.LikeParentComment)
+                        }
+                    },
+                    onCommentClick = onReplyComposeClick,
+                    onMoreClick = {
+                        onIntent(
+                            CommentDetailIntent.ShowCommentOptions(
+                                comment
+                            )
+                        )
+                    },
+                    onMediaClick = onShowMediaViewer,
+                    isVideoPlaying = isVideoPlaying,
+                    connectTop = connectTop
+                )
+            }
+        }
+    }
+}
+
+/** 답글 한 줄, firstReply가 있으면 곡선으로 이어 붙임 */
+@Composable
+private fun ReplyListItem(
+    reply: Comment,
+    postAuthorId: Int?,
+    showTopDivider: Boolean,
+    isVideoPlaying: Boolean,
+    highlightProgress: (() -> Float)?,  // 알림으로 들어온 답글만
+    onIntent: (CommentDetailIntent) -> Unit,
+    onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit
+) {
+    val replyHighlightColor = MaterialTheme.colorScheme.primary
+    Column(
+        modifier = if (highlightProgress != null) {
+            Modifier.drawBehind {
+                val alpha = highlightProgress() * 0.08f
+                if (alpha > 0f) drawRect(replyHighlightColor.copy(alpha = alpha))
+            }
+        } else {
+            Modifier
+        }
+    ) {
+        // 답글 사이 구분선
+        if (showTopDivider) {
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+        }
+
+        // firstReply가 있으면 스레드로 연결
+        if (reply.firstReply != null) {
+            val threadLineColor =
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            val threadLineWidth = 1.5.dp
+            val threadAvatarSize = 32.dp
+            val threadReplyAvatarSize = 24.dp
+            val threadParentLineX = 8.dp + threadAvatarSize / 2
+            val threadCurveTopLead = 12.dp
+
+            // 부모 답글
+            CommentItem(
+                postAuthorId = postAuthorId,
+                comment = reply,
+                onProfileClick = { userId, _ ->
+                    onIntent(CommentDetailIntent.NavigateToUserProfile(userId))
+                },
+                onLikeClick = {
+                    if (reply.isLiked) onIntent(CommentDetailIntent.UnlikeReply(it))
+                    else onIntent(CommentDetailIntent.LikeReply(it))
+                },
+                onReplyClick = {
+                    onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
+                },
+                onCommentClick = {
+                    onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
+                },
+                onMoreClick = {
+                    onIntent(CommentDetailIntent.ShowCommentOptions(reply))
+                },
+                modifier = Modifier.padding(top = 12.dp),
+                showLine = true,
+                lineBottomSpacing = 0.dp,
+                onMediaClick = onShowMediaViewer,
+                isVideoPlaying = isVideoPlaying
+            )
+
+            // firstReply
+            ReplyCurveContainer(
+                parentLineX = threadParentLineX,
+                curveEndX = threadParentLineX + 18.dp,
+                avatarCenterY = threadCurveTopLead + threadReplyAvatarSize / 2,
+                topLead = threadCurveTopLead,
+                lineColor = threadLineColor,
+                lineWidth = threadLineWidth
+            ) {
+                CommentItem(
+                    postAuthorId = postAuthorId,
+                    comment = reply.firstReply,
+                    onProfileClick = { userId, _ ->
+                        onIntent(CommentDetailIntent.NavigateToUserProfile(userId))
+                    },
+                    onLikeClick = {
+                        if (reply.firstReply.isLiked) {
+                            onIntent(CommentDetailIntent.UnlikeReply(it))
+                        } else {
+                            onIntent(CommentDetailIntent.LikeReply(it))
+                        }
+                    },
+                    onReplyClick = {
+                        onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
+                    },
+                    onCommentClick = {
+                        onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
+                    },
+                    onMoreClick = {
+                        onIntent(CommentDetailIntent.ShowCommentOptions(reply.firstReply))
+                    },
+                    indentStart = threadAvatarSize + 12.dp,
+                    avatarSize = threadReplyAvatarSize,
+                    onMediaClick = onShowMediaViewer,
+                    isVideoPlaying = isVideoPlaying
+                )
+            }
+        } else {
+            // firstReply 없으면 일반 CommentItem
+            CommentItem(
+                postAuthorId = postAuthorId,
+                comment = reply,
+                onProfileClick = { userId, _ ->
+                    onIntent(CommentDetailIntent.NavigateToUserProfile(userId))
+                },
+                onLikeClick = {
+                    if (reply.isLiked) {
+                        onIntent(CommentDetailIntent.UnlikeReply(it))
+                    } else {
+                        onIntent(CommentDetailIntent.LikeReply(it))
+                    }
+                },
+                onReplyClick = {
+                    onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
+                },
+                onCommentClick = {
+                    onIntent(CommentDetailIntent.NavigateToCommentDetail(it))
+                },
+                onMoreClick = {
+                    onIntent(CommentDetailIntent.ShowCommentOptions(reply))
+                },
+                modifier = Modifier.padding(top = 12.dp),
+                onMediaClick = onShowMediaViewer,
+                isVideoPlaying = isVideoPlaying
+            )
+        }
+    }
+}
+
+/** 댓글 · 포스트 옵션 시트와 차단 확인 */
+@Composable
+private fun CommentDetailSheets(
+    state: CommentDetailState,
+    onIntent: (CommentDetailIntent) -> Unit
+) {
     if (state.showCommentOptionsSheet && state.selectedComment != null) {
         val reportRequester = LocalReportRequester.current
         CommentOptionBottomSheet(
@@ -837,20 +956,4 @@ internal fun CommentDetailScreenContent(
             onDismiss = { onIntent(CommentDetailIntent.DismissBlockCompletedDialog) }
         )
     }
-
-    ProfilePopupHost(
-        state = profilePopupState,
-        resolveAuthor = { authorId ->
-            val author = state.post?.author?.takeIf { it.id == authorId }
-                ?: state.parentChain.find { it.author.id == authorId }?.author
-                ?: state.parentComment?.author?.takeIf { it.id == authorId }
-                ?: state.replies.find { it.author.id == authorId }?.author
-                ?: state.replies.mapNotNull { it.firstReply }
-                    .find { it.author.id == authorId }?.author
-            author?.let { ProfilePopupData(it.id, it.isFollowing) }
-        },
-        onNavigateToProfile = { onIntent(CommentDetailIntent.NavigateToUserProfile(it)) },
-        onFollow = { onIntent(CommentDetailIntent.FollowAuthor(it)) },
-        onUnfollow = { onIntent(CommentDetailIntent.UnfollowAuthor(it)) }
-    )
 }

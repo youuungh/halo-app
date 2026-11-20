@@ -14,17 +14,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
+import com.ninezero.halo.core.ui.theme.MembershipColors
 import com.ninezero.halo.core.util.toEpochMillis
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.feature.point.domain.model.PointBalance
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 import java.time.LocalDateTime
 
 @Composable
@@ -35,30 +34,12 @@ fun PointBalanceCard(
     val isDarkTheme = LocalIsDarkTheme.current
     val numberFormat = rememberKoreanNumberFormat()
 
-    val gradientColors = if (isDarkTheme) {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to Color(0xFF1E3A5F),
-                0.5f to Color(0xFF2D4A6F),
-                1.0f to Color(0xFF1E4A5F)
-            )
-        )
-    } else {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to Color(0xFFE8F4FD),
-                0.5f to Color(0xFFE0F0FF),
-                1.0f to Color(0xFFE8F8F4)
-            )
-        )
-    }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(16.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(brush = gradientColors)
+            .background(MembershipColors.cardBrush)
     ) {
         Column(
             modifier = Modifier
@@ -83,16 +64,16 @@ fun PointBalanceCard(
                 Spacer(modifier = Modifier.height(16.dp))
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(
-                            if (isDarkTheme) Color(0x33FF6B6B) else Color(0x1AFF6B6B)
+                            MaterialTheme.colorScheme.error.copy(alpha = if (isDarkTheme) 0.2f else 0.1f)
                         )
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "${balance.expiresAt.toFormattedDate("yyyy.MM.dd")}까지 ${numberFormat.format(balance.expiringPoints)}P 소멸 예정",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isDarkTheme) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }

@@ -5,15 +5,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,11 +25,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 import dev.chrisbanes.haze.HazeState
 
 @Composable
@@ -43,12 +41,7 @@ fun NewMessageBar(
     backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(12.dp)
-    val hazeTintColor = if (LocalIsDarkTheme.current) {
-        Color.White.copy(alpha = 0.08f)
-    } else {
-        Color.Black.copy(alpha = 0.08f)
-    }
+    val shape = MaterialTheme.shapes.medium
 
     AnimatedVisibility(
         visible = visible,
@@ -56,26 +49,18 @@ fun NewMessageBar(
         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
     ) {
+        // 입력창 위 12, 맨 아래로 버튼과 같은 높이
         Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(start = 12.dp, end = 12.dp, bottom = 4.dp)
                 .fillMaxWidth()
+                .height(40.dp)  // 입력창과 같은 높이
+                // 숫자 알약과 같은 블러, 경계는 테두리로
                 .clip(shape)
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor.copy(alpha = 0.7f),
-                        tint = HaloBlurTint(hazeTintColor),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0f
-                    )
-                }
-                .border(
-                    width = 0.5.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                    shape = shape
-                )
+                .haloBlur(hazeState, HaloBlurs.glassField(backgroundColor))
+                .cardBorder(shape)
                 .clickable { onClick() }
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(start = 14.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val isMedia = messageType != ChatMessageType.TEXT
@@ -89,7 +74,7 @@ fun NewMessageBar(
                     ChatMessageType.PRODUCT_LINK -> "상품을 공유했습니다"
                     else -> messageContent ?: ""
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,  // 말풍선과 같은 14
                 color = if (isMedia) {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 } else {
@@ -105,7 +90,7 @@ fun NewMessageBar(
             Icon(
                 painter = painterResource(R.drawable.ic_chevron_down),
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

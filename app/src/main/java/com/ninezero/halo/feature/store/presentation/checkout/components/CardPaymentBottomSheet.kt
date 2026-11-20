@@ -1,6 +1,5 @@
 package com.ninezero.halo.feature.store.presentation.checkout.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,31 +17,44 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
-import com.ninezero.halo.core.ui.components.button.SheetActionButton
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.core.ui.components.toggle.SelectionRadio
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.store.domain.model.BillingCard
-import com.ninezero.halo.feature.store.presentation.components.cardLabel
-import com.ninezero.halo.feature.store.presentation.components.cardLogoRes
+import com.ninezero.halo.feature.store.presentation.components.cardIssuerName
+
+private const val SAVED_CARD = "TOSS_BILLING"
+private const val GENERAL_CARD = "TOSS_CARD"
+private val OptionShape = RoundedCornerShape(14.dp)
 
 @Composable
 fun CardPaymentBottomSheet(
@@ -59,81 +71,34 @@ fun CardPaymentBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
 
-    ModalBottomSheet(
+    // 기본 선택: 저장 카드, 없으면 일반결제
+    LaunchedEffect(isLoading, savedCard, draftSelection) {
+        if (isLoading) return@LaunchedEffect
+        when {
+            savedCard == null && draftSelection != GENERAL_CARD -> onSelectOption(GENERAL_CARD)
+            savedCard != null && draftSelection == null -> onSelectOption(SAVED_CARD)
+        }
+    }
+
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = { BottomSheetDragHandle() }
+        sheetState = sheetState
     ) {
         Box {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "신용 · 체크카드",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // 저장카드 선택행 또는 카드 추가
-                when {
-                    isLoading -> Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 58.dp)
-                            .border(
-                                width = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(10.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LoadingIndicator(size = LoadingIndicatorSize.Medium)
-                    }
-
-                    savedCard != null -> SheetOptionRow(
-                        title = cardLabel(savedCard),
-                        subtitle = null,
-                        isSelected = draftSelection == "TOSS_BILLING",
-                        onClick = { onSelectOption("TOSS_BILLING") },
-                        leading = { CardLogo(savedCard) }
-                    )
-
-                    else -> SheetActionRow(
-                        title = "카드 추가하기",
-                        leadingIcon = R.drawable.ic_plus,
-                        onClick = onAddCard
-                    )
-                }
-
-                // 하단: 카드 일반결제
-                SheetOptionRow(
-                    title = "카드 일반결제",
-                    subtitle = "결제 시마다 카드 정보 입력",
-                    isSelected = draftSelection == "TOSS_CARD",
-                    onClick = { onSelectOption("TOSS_CARD") }
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                SheetActionButton(
-                    text = "선택 완료",
-                    onClick = onConfirm,
-                    enabled = draftSelection != null
-                )
-            }
+            CardPaymentContent(
+                savedCard = savedCard,
+                isLoading = isLoading,
+                draftSelection = draftSelection,
+                onSelectOption = onSelectOption,
+                onAddCard = onAddCard,
+                onConfirm = onConfirm
+            )
 
             // 시트 window에 가려지지 않게 시트 안에서 표시
             DefaultSnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.align(Alignment.BottomCenter),
-                bottomBarPadding = 56.dp  // 선택 완료 버튼 48 + 하단 여백 8
+                bottomBarPadding = 56.dp  // 결제 버튼 48 + 하단 여백 8
             )
         }
     }
@@ -146,106 +111,217 @@ fun CardPaymentBottomSheet(
 }
 
 @Composable
-private fun SheetOptionRow(
-    title: String,
-    subtitle: String?,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    leading: (@Composable () -> Unit)? = null
+private fun CardPaymentContent(
+    savedCard: BillingCard?,
+    isLoading: Boolean,
+    draftSelection: String?,
+    onSelectOption: (String) -> Unit,
+    onAddCard: () -> Unit,
+    onConfirm: () -> Unit
 ) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "신용 · 체크카드",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        when {
+            isLoading -> Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 64.dp)
+                    .cardBorder(OptionShape),
+                contentAlignment = Alignment.Center
+            ) {
+                LoadingIndicator(size = LoadingIndicatorSize.Medium)
+            }
+
+            savedCard != null -> CardOptionRow(
+                isSelected = draftSelection == SAVED_CARD,
+                onClick = { onSelectOption(SAVED_CARD) },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = cardIssuerName(savedCard.cardCompany) ?: "저장카드",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        savedCard.cardType?.takeIf { it.isNotBlank() }?.let { type ->
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = type,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.extraSmall)
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                },
+                subtitle = savedCard.cardNumberMasked?.trim()?.takeLast(4)?.let { "····$it" }
+            )
+
+            else -> CardOptionRow(
+                isSelected = null,
+                onClick = onAddCard,
+                isDashed = true,
+                iconRes = R.drawable.ic_plus,
+                title = {
+                    Text(
+                        text = "카드 등록",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            )
+        }
+
+        CardOptionRow(
+            isSelected = draftSelection == GENERAL_CARD,
+            onClick = { onSelectOption(GENERAL_CARD) },
+            title = {
+                Text(
+                    text = "카드 일반결제",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            subtitle = "결제할 때마다 카드 정보 입력"
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        PrimaryButton(
+            text = if (draftSelection == SAVED_CARD) "이 카드로 결제" else "일반결제로 진행",
+            onClick = onConfirm,
+            enabled = draftSelection != null
+        )
+    }
+}
+
+/** 선택지 한 줄, isSelected가 null이면 이동만 */
+@Composable
+private fun CardOptionRow(
+    isSelected: Boolean?,
+    onClick: () -> Unit,
+    title: @Composable () -> Unit,
+    subtitle: String? = null,
+    isDashed: Boolean = false,
+    iconRes: Int = R.drawable.ic_credit_card
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val lineColor = MaterialTheme.colorScheme.outlineVariant
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 58.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .border(
-                width = if (isSelected) 1.dp else 0.5.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(10.dp)
+            .heightIn(min = 64.dp)
+            .then(
+                when {
+                    isDashed -> Modifier.dashedBorder(lineColor.copy(alpha = 0.7f), 14.dp)
+                    isSelected == true -> Modifier
+                        .border(1.dp, primary, OptionShape)
+                        .background(primary.copy(alpha = 0.04f), OptionShape)
+                    else -> Modifier.border(0.5.dp, lineColor.copy(alpha = 0.5f), OptionShape)
+                }
             )
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-                else Color.Transparent
-            )
+            .clip(OptionShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (leading != null) {
-            leading()
+        if (isSelected != null) {
+            SelectionRadio(selected = isSelected)
             Spacer(modifier = Modifier.width(12.dp))
+        } else {
+            // 라디오 자리를 비워 아래 선택지와 아이콘 줄을 맞춤
+            Spacer(modifier = Modifier.width(32.dp))
         }
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isSelected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            title()
             if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-    }
-}
-
-@Composable
-fun CardLogo(card: BillingCard?, iconSize: Dp = 28.dp) {
-    val logoRes = cardLogoRes(card?.cardCompany)
-    if (logoRes != null) {
-        Image(
-            painter = painterResource(logoRes),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.height(iconSize)
-        )
-    } else {
         Icon(
-            painter = painterResource(R.drawable.ic_credit_card),
+            painter = painterResource(R.drawable.ic_chevron_right),
             contentDescription = null,
-            modifier = Modifier.size(iconSize),
-            tint = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
-private fun SheetActionRow(
-    title: String,
-    leadingIcon: Int,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 58.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .border(
-                width = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(10.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Icon(
-            painter = painterResource(leadingIcon),
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+    }
+}
+
+/** 카드 등록 자리 점선 테두리 */
+private fun Modifier.dashedBorder(color: Color, radius: Dp): Modifier = drawBehind {
+    val strokeWidth = 1.dp.toPx()
+    val inset = strokeWidth / 2
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(inset, inset),
+        size = Size(size.width - strokeWidth, size.height - strokeWidth),
+        cornerRadius = CornerRadius(radius.toPx()),
+        style = Stroke(
+            width = strokeWidth,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))
         )
+    )
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun CardPaymentContentPreview() {
+    HaloTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            Column {
+                CardPaymentContent(
+                    savedCard = BillingCard(registered = true, cardCompany = "11", cardNumberMasked = "1234****1234", cardType = "신용"),
+                    isLoading = false,
+                    draftSelection = SAVED_CARD,
+                    onSelectOption = {},
+                    onAddCard = {},
+                    onConfirm = {}
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                CardPaymentContent(
+                    savedCard = null,
+                    isLoading = false,
+                    draftSelection = GENERAL_CARD,
+                    onSelectOption = {},
+                    onAddCard = {},
+                    onConfirm = {}
+                )
+            }
+        }
     }
 }

@@ -1,15 +1,15 @@
 package com.ninezero.halo.feature.chat.presentation.chat_room
 
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ninezero.halo.core.fcm.ActiveChatRoomTracker
+import com.ninezero.halo.core.media.MediaFileReader
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.Constants
-import com.ninezero.halo.core.util.MediaUtils
 import com.ninezero.halo.feature.chat.domain.cache.ChatMessageMemoryCache
 import com.ninezero.halo.feature.chat.domain.model.ChatDownloadEvent
 import com.ninezero.halo.feature.chat.domain.model.ChatEvent
@@ -29,8 +29,6 @@ import com.ninezero.halo.feature.feed.domain.usecase.BlockUserUseCase
 import com.ninezero.halo.feature.notification.fcm.TrayNotifications
 import com.ninezero.halo.feature.profile.domain.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -45,10 +43,12 @@ import org.orbitmvi.orbit.blockingIntent
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.orbitContainer
 import timber.log.Timber
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 private const val SEARCH_PAGE_SIZE = 50
-private const val REFLECT_TIMEOUT_MS = 3_000L
+private const val SHOW_TIMEOUT_MS = 3_000L
 
 @HiltViewModel
 class ChatRoomViewModel @Inject constructor(
@@ -64,14 +64,14 @@ class ChatRoomViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
     private val messageCache: ChatMessageMemoryCache,
     private val trayNotifications: TrayNotifications,
-    @param:ApplicationContext private val context: Context
+    private val mediaFileReader: MediaFileReader
 ) : ViewModel(), OrbitContainerHost<ChatRoomState, ChatRoomState, ChatRoomSideEffect> {
 
     @Volatile
     private var roomId: Int = savedStateHandle.get<String>("roomId")?.toIntOrNull() ?: 0
     private val targetUserId: Int = savedStateHandle.get<Int>("targetUserId") ?: 0
 
-    private val seededOtherUser: UserSummary? = run {  // draft 헤더 즉시 표시용, 로드 후 덮어씀
+    private val seedOtherUser: UserSummary? = run {  // draft 헤더 즉시 표시용, 로드 후 덮어씀
         fun arg(key: String) = savedStateHandle.get<String>(key).orEmpty()
 
         val username = arg("targetUsername")
@@ -92,21 +92,22 @@ class ChatRoomViewModel @Inject constructor(
     private val isDraftMode: Boolean
         get() = roomId == 0 && targetUserId > 0
 
-    private val seededMessages: List<Message> = messageCache.get(roomId).orEmpty()  // 재진입 첫 프레임용 캐시 시드
+    private val seedMessages: List<Message> = messageCache.get(roomId).orEmpty()  // 재진입 첫 프레임용 캐시 시드
 
     override val container: OrbitContainer<ChatRoomState, ChatRoomState, ChatRoomSideEffect> =
         orbitContainer(
             ChatRoomState(
                 roomId = roomId,
-                otherUser = seededOtherUser,
+                otherUser = seedOtherUser,
                 isBlocked = savedStateHandle.get<Boolean>("targetBlockedByMe") ?: false,
                 isBlockedByOther = savedStateHandle.get<Boolean>("targetBlockedByOther") ?: false,
-                messages = seededMessages,
+                messages = seedMessages,
                 hasMore = !messageCache.isHistoryComplete(roomId)
             )
         )
 
     private var observeMessagesJob: Job? = null  // roomId 갱신 시 재시작
+    private val cancelledDownloadUrls = ConcurrentHashMap.newKeySet<String>()  // 취소 뒤 늦게 온 진행률은 버림
 
     init {
         // draft 모드는 기존 방 조회, 없으면 첫 전송 때 생성
@@ -135,14 +136,14 @@ class ChatRoomViewModel @Inject constructor(
     private fun observeMessagesFromDb() {
         observeMessagesJob?.cancel()
         if (roomId == 0) return
-        var isFirstEmission = true
+        var isFirstLoad = true
         observeMessagesJob = chatRepository.observeMessages(roomId)
             .onEach { messages ->
                 // 재진입 즉시 표시용 캐시 갱신
                 if (messages.isNotEmpty()) messageCache.put(roomId, messages)
                 // 첫 표시는 저장값으로 상단 헤더 판단
-                val storedComplete = isFirstEmission && chatRepository.isChatHistoryComplete(roomId)
-                isFirstEmission = false
+                val storedComplete = isFirstLoad && chatRepository.isChatHistoryComplete(roomId)
+                isFirstLoad = false
                 intent {
                     reduce {
                         // 빈 emit도 반영, 캐시 확인 뒤 첫 페이지 대기
@@ -322,6 +323,7 @@ class ChatRoomViewModel @Inject constructor(
             is ChatRoomIntent.SetFile -> setFile(intent.uri)
             is ChatRoomIntent.RemoveFile -> removeFile()
             is ChatRoomIntent.DownloadFile -> downloadFile(intent.fileUrl, intent.fileName)
+            is ChatRoomIntent.CancelFileDownload -> cancelFileDownload(intent.fileUrl)
         }
     }
 
@@ -371,7 +373,7 @@ class ChatRoomViewModel @Inject constructor(
             // 첫 성공이면 입장 마무리, 경계는 반영 뒤
             if (state.entryPhase != EntryPhase.READY) {
                 if (!isEntry && !result.hasNext) markHistoryComplete()
-                awaitMessagesReflected(result.messages)
+                awaitMessagesShown(result.messages)
                 // 재연결 조회와 겹쳐도 마무리는 한 번
                 var completesEntry = false
                 reduce {
@@ -398,9 +400,9 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     // 받은 페이지가 목록에 반영될 때까지 대기
-    private suspend fun awaitMessagesReflected(fetched: List<Message>) {
+    private suspend fun awaitMessagesShown(fetched: List<Message>) {
         val ids = fetched.mapTo(HashSet()) { it.id }
-        withTimeoutOrNull(REFLECT_TIMEOUT_MS) {
+        withTimeoutOrNull(SHOW_TIMEOUT_MS) {
             container.stateFlow.first { state ->
                 state.entryPhase != EntryPhase.CACHE_CHECKING &&
                         (ids.isEmpty() || state.messages.any { it.id in ids })
@@ -549,7 +551,7 @@ class ChatRoomViewModel @Inject constructor(
         postSideEffect(ChatRoomSideEffect.HideKeyboard)
 
         // 비운 뒤엔 나가도 방 생성·첫 전송 계속
-        withContext<Unit>(NonCancellable) {
+        withContext(NonCancellable) {
             // draft 모드: 첫 메시지 전송 직전에 채팅방을 생성함
             if (isDraftMode) {
                 val created = chatRepository.createOrGetChatRoom(targetUserId)
@@ -670,7 +672,7 @@ class ChatRoomViewModel @Inject constructor(
 
         val newUris = uris.take(availableSlots)
         val newAttachments = newUris.mapNotNull { uri ->
-            val fileInfo = MediaUtils.getFileInfo(context, uri) ?: return@mapNotNull null
+            val fileInfo = mediaFileReader.getFileInfo(uri) ?: return@mapNotNull null
 
             val validation = MediaUtils.validateImage(fileInfo)
             if (!validation.isValid) {
@@ -682,7 +684,7 @@ class ChatRoomViewModel @Inject constructor(
                 return@mapNotNull null
             }
 
-            val thumbnail = MediaUtils.createImageThumbnail(context, uri)
+            val thumbnail = mediaFileReader.createImageThumbnail(uri)
 
             AttachmentState(
                 uri = uri,
@@ -723,7 +725,7 @@ class ChatRoomViewModel @Inject constructor(
     private fun setVideo(uri: Uri) = intent {
         val pickSeq = attachPickSeq.incrementAndGet()
 
-        val fileInfo = MediaUtils.getFileInfo(context, uri)
+        val fileInfo = mediaFileReader.getFileInfo(uri)
         if (fileInfo == null) {
             postSideEffect(ChatRoomSideEffect.ShowToast("비디오를 불러올 수 없습니다"))
             return@intent
@@ -735,8 +737,8 @@ class ChatRoomViewModel @Inject constructor(
             return@intent
         }
 
-        val thumbnail = MediaUtils.extractVideoThumbnail(context, uri)
-        val duration = MediaUtils.getVideoDuration(context, uri)
+        val thumbnail = mediaFileReader.extractVideoThumbnail(uri)
+        val duration = mediaFileReader.getVideoDuration(uri)
 
         reduce {
             if (maxOf(lastImagePickSeq, lastOtherPickSeq) > pickSeq) return@reduce state  // 그사이 다른 첨부를 고름
@@ -763,7 +765,7 @@ class ChatRoomViewModel @Inject constructor(
     private fun setFile(uri: Uri) = intent {
         val pickSeq = attachPickSeq.incrementAndGet()
 
-        val fileInfo = MediaUtils.getFileInfo(context, uri)
+        val fileInfo = mediaFileReader.getFileInfo(uri)
         if (fileInfo == null) {
             postSideEffect(ChatRoomSideEffect.ShowToast("파일을 불러올 수 없습니다"))
             return@intent
@@ -796,14 +798,21 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     private fun downloadFile(fileUrl: String, fileName: String) = intent {
+        cancelledDownloadUrls.remove(fileUrl)
         chatMediaRepository.enqueueFileDownload(fileUrl, fileName)
+    }
+
+    private fun cancelFileDownload(fileUrl: String) = intent {
+        cancelledDownloadUrls.add(fileUrl)
+        chatMediaRepository.cancelFileDownload(fileUrl)
+        reduce { state.copy(downloadingFiles = state.downloadingFiles - fileUrl) }
     }
 
 
     private suspend fun Syntax<ChatRoomState, ChatRoomSideEffect>.sendImagesWithText(content: String?) {
         val imageUris = state.selectedImages.map { it.uri.toString() }
         val (imgWidth, imgHeight) = if (state.selectedImages.size == 1) {
-            MediaUtils.getImageDimensions(context, state.selectedImages.first().uri)
+            mediaFileReader.getImageDimensions(state.selectedImages.first().uri)
         } else null to null
 
         // 복사 중 방을 나가도 업로드 예약과 임시 메시지가 함께 남음
@@ -815,7 +824,7 @@ class ChatRoomViewModel @Inject constructor(
                 mediaUris = imageUris
             )
 
-            // Optimistic: DB에 임시 메시지 insert
+            // DB에 임시 메시지를 먼저 넣음
             // clientTempId는 워커가 찾는 대기 id
             // 스테이징 URI로 표시, 재시작 후에도 유효
             val clientTempId = handle.pendingMessageId.toString()
@@ -840,8 +849,8 @@ class ChatRoomViewModel @Inject constructor(
 
     private suspend fun Syntax<ChatRoomState, ChatRoomSideEffect>.sendVideoWithText(content: String?) {
         val video = state.selectedVideo ?: return
-        val (vidWidth, vidHeight) = MediaUtils.getVideoDimensions(context, video.uri)
-        val videoDuration = MediaUtils.getVideoDuration(context, video.uri)
+        val (vidWidth, vidHeight) = mediaFileReader.getVideoDimensions(video.uri)
+        val videoDuration = mediaFileReader.getVideoDuration(video.uri)
 
         // 복사 중 방을 나가도 업로드 예약과 임시 메시지가 함께 남음
         withContext(NonCancellable) {
@@ -1001,7 +1010,7 @@ class ChatRoomViewModel @Inject constructor(
                 searchResults = emptyList(),
                 currentSearchIndex = 0,
                 searchPage = 1,
-                searchHasMore = false,
+                hasMoreSearchResults = false,
                 searchTotalCount = 0
             )
         }
@@ -1031,7 +1040,7 @@ class ChatRoomViewModel @Inject constructor(
                     searchResults = ordered,
                     currentSearchIndex = 0,
                     searchPage = 1,
-                    searchHasMore = result.hasNext,
+                    hasMoreSearchResults = result.hasNext,
                     searchTotalCount = result.totalCount
                 )
             }
@@ -1058,7 +1067,7 @@ class ChatRoomViewModel @Inject constructor(
     }
 
     private suspend fun Syntax<ChatRoomState, ChatRoomSideEffect>.loadMoreSearchResults(): Boolean {
-        if (!state.searchHasMore || state.isSearching) return false
+        if (!state.hasMoreSearchResults || state.isSearching) return false
         val query = state.searchQuery.trim()
         if (query.isBlank()) return false
 
@@ -1077,7 +1086,7 @@ class ChatRoomViewModel @Inject constructor(
                 state.copy(
                     searchResults = merged,
                     searchPage = nextPage,
-                    searchHasMore = searchResult.hasNext,
+                    hasMoreSearchResults = searchResult.hasNext,
                     searchTotalCount = searchResult.totalCount,
                     currentSearchIndex = state.currentSearchIndex + olderItems.size,
                     isSearching = false
@@ -1104,7 +1113,7 @@ class ChatRoomViewModel @Inject constructor(
                 searchResults = emptyList(),
                 currentSearchIndex = 0,
                 searchPage = 1,
-                searchHasMore = false,
+                hasMoreSearchResults = false,
                 searchTotalCount = 0
             )
         }
@@ -1158,7 +1167,7 @@ class ChatRoomViewModel @Inject constructor(
 
             chatRepository.cacheMessages(result.messages)
             if (!result.hasNext) markHistoryComplete()
-            awaitMessagesReflected(result.messages)
+            awaitMessagesShown(result.messages)
             reduce { state.copy(hasMore = result.hasNext) }
 
             if (result.messages.any { it.id == messageId }) return true
@@ -1333,6 +1342,7 @@ class ChatRoomViewModel @Inject constructor(
                 intent {
                     when (result) {
                         is ChatDownloadEvent.Progress -> {
+                            if (result.fileUrl in cancelledDownloadUrls) return@intent
                             reduce {
                                 state.copy(
                                     downloadingFiles = state.downloadingFiles + (result.fileUrl to result.progress)

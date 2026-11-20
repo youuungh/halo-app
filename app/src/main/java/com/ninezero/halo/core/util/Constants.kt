@@ -12,7 +12,7 @@ object Constants {
     const val WS_BASE_URL = BuildConfig.HUB_WS_BASE_URL
 
     /** Hub 카드 등록 페이지 URL */
-    fun billingAuthUrl(customerKey: String): String =  // 결제·결제수단·멤버십 시트 공용
+    fun billingAuthUrl(customerKey: String): String =
         "${BASE_URL}static/billing_auth.html" +
             "?clientKey=${BuildConfig.TOSS_CLIENT_KEY}&customerKey=$customerKey"
 
@@ -29,6 +29,7 @@ object Constants {
         const val DEFAULT_SHIPPING_FEE = 3_000L
         const val MAX_CART_QUANTITY = 99
         const val REVIEW_WRITE_DEADLINE_DAYS = 30
+        const val COUPON_EXPIRING_SOON_DAYS = 7
     }
 
     // 비밀번호·사용자명 규칙

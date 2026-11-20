@@ -1,6 +1,7 @@
 package com.ninezero.halo.feature.chat.domain.model
 
 import com.ninezero.halo.core.model.UserSummary
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 
 data class Message(
     val id: Int,
@@ -31,14 +32,14 @@ data class Message(
 data class ProductMessageInfo(
     val productId: Int,
     val name: String,
-    val price: String,
-    val originalPrice: String? = null,
+    val price: Long,
+    val originalPrice: Long? = null,
     val discountRate: Int? = null,
     val imageUrl: String?,
     val canAccess: Boolean = true,
     val creatorId: Int? = null,
     val creatorName: String? = null,
-    val requiredTier: String? = null
+    val requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE
 )
 
 data class PostMessageInfo(
@@ -49,14 +50,14 @@ data class PostMessageInfo(
     val mediaAttachments: List<String> = emptyList(),
     val mediaType: String? = null,
     val thumbnailUrl: String? = null,
-    val mediaThumbnails: List<String> = emptyList(),  // 타일별 썸네일
-    val mediaTypes: List<String> = emptyList(),  // IMAGE·VIDEO
+    val mediaThumbnails: List<String> = emptyList(),
+    val mediaTypes: List<String> = emptyList(),
     val likeCount: Int = 0,
     val commentCount: Int = 0,
     val shareCount: Int = 0,
     val canAccess: Boolean = true,
     val creatorId: Int? = null,
-    val requiredTier: String? = null,
+    val requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
     val isHidden: Boolean = false
 )
 

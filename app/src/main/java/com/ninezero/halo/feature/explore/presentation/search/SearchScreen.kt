@@ -30,6 +30,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,20 +44,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.explore.presentation.search.components.RecommendationsSection
 import com.ninezero.halo.feature.explore.presentation.search.components.SearchBar
 import com.ninezero.halo.feature.explore.presentation.search.components.SearchHistorySection
 import com.ninezero.halo.feature.explore.presentation.search.components.SearchResultsSection
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -66,16 +65,23 @@ fun SearchScreen(
     isActive: Boolean,
     onNavigateToProfile: (Int) -> Unit,
     onBackPressed: () -> Unit,
+    onSearchFocusChange: (Boolean) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val state by viewModel.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
 
-    BackHandler(enabled = isActive && state.isSearchFocused) {
-        focusManager.clearFocus()
-        viewModel.onIntent(SearchIntent.ClearSearch)
-        onBackPressed()
+    LaunchedEffect(state.isSearchFocused) { onSearchFocusChange(state.isSearchFocused) }
+
+    // 기록 · 결과에선 첫 화면으로, 첫 화면에선 탐색으로
+    BackHandler(enabled = isActive) {
+        if (state.isSearchFocused) {
+            focusManager.clearFocus()
+            viewModel.onIntent(SearchIntent.ClearSearch)
+        } else {
+            onBackPressed()
+        }
     }
 
     viewModel.collectSideEffect { sideEffect ->
@@ -93,7 +99,6 @@ fun SearchScreen(
     SearchScreenContent(
         state = state,
         snackbarHostState = snackbarHostState,
-        onBackPressed = onBackPressed,
         onIntent = viewModel::onIntent
     )
 }
@@ -102,7 +107,6 @@ fun SearchScreen(
 internal fun SearchScreenContent(
     state: SearchState,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    onBackPressed: () -> Unit = {},
     onIntent: (SearchIntent) -> Unit
 ) {
     val hazeState = remember { HazeState() }
@@ -114,7 +118,7 @@ internal fun SearchScreenContent(
     InfiniteScrollTrigger(
         listState = listState,
         isLoading = state.isSearching,
-        hasMore = state.searchHasMore && state.searchQuery.isNotBlank(),
+        hasMore = state.hasMoreSearchResults && state.searchQuery.isNotBlank(),
         onLoadMore = { onIntent(SearchIntent.LoadMoreSearchResults) }
     )
 
@@ -123,7 +127,7 @@ internal fun SearchScreenContent(
             // 키보드 없으면 바텀바 위, 있으면 키보드 위
             DefaultSnackbarHost(
                 hostState = snackbarHostState,
-                bottomBarPadding = BottomBarDefaults.PillFootprint
+                bottomBarPadding = BottomBarDefaults.PillSpace
             )
         },
         contentWindowInsets = WindowInsets(0),
@@ -163,7 +167,6 @@ internal fun SearchScreenContent(
                                 ) {
                                     focusManager.clearFocus()
                                     onIntent(SearchIntent.ClearSearch)
-                                    onBackPressed()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -181,17 +184,7 @@ internal fun SearchScreenContent(
                     .pointerInput(Unit) {
                         detectTapGestures { /* 터치 이벤트 소비 */ }
                     }
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = topBarBlurColor,
-                            tint = HaloBlurTint(topBarBlurColor),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0.5f,
-                            endIntensity = 0f
-                        )
-                    }
+                    .haloBlur(hazeState, HaloBlurs.fadeDown(topBarBlurColor))
             )
         }
     ) { paddingValues ->
@@ -226,7 +219,6 @@ internal fun SearchScreenContent(
                             hazeState = hazeState,
                             listState = listState,
                             topPadding = topPadding,
-                            // 먼저 clearFocus해야 키보드가 전환과 같이 내려감
                             onCreatorClick = {
                                 focusManager.clearFocus(force = true)
                                 onIntent(SearchIntent.NavigateToProfile(it))

@@ -6,7 +6,7 @@ data class OrderLine(  // 장바구니 주문·바로구매 공용
 ) {
     /** 판매가 × 수량 */
     val subtotal: Long
-        get() = (product.price.toLongOrNull() ?: 0L) * quantity
+        get() = product.price * quantity
 }
 
 fun CartItem.toOrderLine() = OrderLine(product = product, quantity = quantity)

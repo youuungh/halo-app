@@ -16,44 +16,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.theme.MembershipColors
 import com.ninezero.halo.core.util.toFormattedCount
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 
 @Composable
 internal fun SummarySection(
     totalPlans: Int,
     totalSubscribers: Int
 ) {
-    val isDarkTheme = LocalIsDarkTheme.current
-
-    val pastelGradient = if (isDarkTheme) {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to Color(0xFF2A2535),
-                0.5f to Color(0xFF252A35),
-                1.0f to Color(0xFF253035)
-            )
-        )
-    } else {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to Color(0xFFF5F0FF),
-                0.5f to Color(0xFFEDF6FF),
-                1.0f to Color(0xFFF0FAFF)
-            )
-        )
-    }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(brush = pastelGradient)
+            .clip(RoundedCornerShape(20.dp))
+            .background(MembershipColors.cardBrush)
     ) {
         Column(
             modifier = Modifier
@@ -68,13 +45,12 @@ internal fun SummarySection(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = totalPlans.toString(),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "플랜",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -89,13 +65,12 @@ internal fun SummarySection(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = totalSubscribers.toFormattedCount(),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "총 구독자",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

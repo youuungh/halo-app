@@ -7,12 +7,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntOffset
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
+import dev.chrisbanes.haze.HazeState
 
+/** 프로필 팝업에 넘기는 사용자 · 팔로우 여부 */
 data class ProfilePopupData(
     val id: Int,
     val isFollowing: Boolean
 )
 
+/** 프로필 팝업 표시 · 위치 상태 */
 class ProfilePopupHostState {
     var showPopup by mutableStateOf(false)
         internal set
@@ -56,6 +59,7 @@ fun rememberProfilePopupHostState(): ProfilePopupHostState {
 @Composable
 fun ProfilePopupHost(
     state: ProfilePopupHostState,
+    hazeState: HazeState?,
     resolveAuthor: (Int) -> ProfilePopupData?,
     onNavigateToProfile: (Int) -> Unit,
     onFollow: (Int) -> Unit,
@@ -66,6 +70,7 @@ fun ProfilePopupHost(
     if (state.showPopup && author != null) {
         ProfilePopupMenu(
             isFollowing = author.isFollowing,
+            hazeState = hazeState,
             onDismiss = { state.dismiss() },
             onVisitProfile = {
                 onNavigateToProfile(author.id)

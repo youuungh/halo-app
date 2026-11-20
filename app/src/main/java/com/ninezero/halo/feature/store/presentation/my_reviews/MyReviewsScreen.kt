@@ -21,7 +21,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.core.ui.components.bottomsheet.EditDeleteOptionBottomSheet
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
@@ -114,6 +114,7 @@ internal fun MyReviewsScreenContent(
         hasMore = state.hasMore,
         isEmpty = state.reviews.isEmpty(),
         error = state.error,
+        errorTitle = "리뷰를 불러오지 못했습니다",
         emptyTitle = "아직 작성한 리뷰가 없어요",
         emptyDescription = "상품을 구매하고 리뷰를 남겨보세요",
         onNavigateBack = onNavigateBack,
@@ -176,4 +177,3 @@ internal fun MyReviewsScreenContent(
         )
     }
 }
-

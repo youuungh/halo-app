@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,10 +22,6 @@ import com.ninezero.halo.core.ui.components.modifiers.shimmer
 fun LazyListScope.myProductsSkeleton() {
     items(5) {
         MyProductCardSkeleton()
-        HorizontalDivider(
-            thickness = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
     }
 }
 
@@ -45,7 +39,7 @@ private fun MyProductCardSkeleton() {
             Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .shimmer()
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -54,7 +48,7 @@ private fun MyProductCardSkeleton() {
                     modifier = Modifier
                         .fillMaxWidth(0.6f)
                         .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -62,7 +56,7 @@ private fun MyProductCardSkeleton() {
                     modifier = Modifier
                         .width(80.dp)
                         .height(14.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -72,7 +66,7 @@ private fun MyProductCardSkeleton() {
                             modifier = Modifier
                                 .width(48.dp)
                                 .height(12.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(MaterialTheme.shapes.extraSmall)
                                 .shimmer()
                         )
                     }
@@ -88,14 +82,14 @@ private fun MyProductCardSkeleton() {
                 modifier = Modifier
                     .weight(1f)
                     .height(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .shimmer()
             )
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .shimmer()
             )
         }

@@ -1,9 +1,7 @@
 package com.ninezero.halo.feature.feed.presentation.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,12 +9,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,12 +24,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.switch.HaloSwitch
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
+import com.ninezero.halo.core.ui.components.toggle.HaloSwitch
+import com.ninezero.halo.core.ui.components.toggle.SelectionRadio
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.GroupShape
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
-import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -44,19 +42,16 @@ fun PostSettingsBottomSheet(
     isCreator: Boolean,
     isCommunityMode: Boolean,
     isSecret: Boolean,
-    requiredTier: String,
+    requiredTier: SubscriptionPlanTier,
     planTiers: Set<SubscriptionPlanTier>,
     onSecretChange: (Boolean) -> Unit,
-    onTierChange: (String) -> Unit,
+    onTierChange: (SubscriptionPlanTier) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        sheetState = sheetState
     ) {
-        BottomSheetDragHandle()
         PostSettingsContent(
             isCreator = isCreator,
             isCommunityMode = isCommunityMode,
@@ -75,10 +70,10 @@ private fun PostSettingsContent(
     isCreator: Boolean,
     isCommunityMode: Boolean,
     isSecret: Boolean,
-    requiredTier: String,
+    requiredTier: SubscriptionPlanTier,
     planTiers: Set<SubscriptionPlanTier>,
     onSecretChange: (Boolean) -> Unit,
-    onTierChange: (String) -> Unit,
+    onTierChange: (SubscriptionPlanTier) -> Unit,
     onDismiss: () -> Unit
 ) {
     val hazeState = remember { HazeState() }
@@ -87,21 +82,14 @@ private fun PostSettingsContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .padding(bottom = 32.dp)
+            .padding(bottom = 24.dp)
     ) {
-        // 헤더: 타이틀 + X 버튼
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        // 헤더: X 버튼 + 타이틀
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
         ) {
-            Text(
-                text = "상세설정",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-
             GlassIconButton(
                 onClick = onDismiss,
                 icon = painterResource(R.drawable.ic_close),
@@ -109,17 +97,24 @@ private fun PostSettingsContent(
                 hazeState = hazeState,
                 backgroundColor = MaterialTheme.colorScheme.surface,
                 size = 36.dp,
-                iconSize = 20.dp
+                iconSize = 20.dp,
+                modifier = Modifier.align(Alignment.CenterStart)
+            )
+            Text(
+                text = "상세설정",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.align(Alignment.Center)
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
+        // 두 경우는 동시에 나오지 않음
         Column(modifier = Modifier.hazeSource(hazeState)) {
-            // 팔로워의 커뮤니티 글은 비밀글 설정
-            // 크리에이터가 커뮤니티에 글 쓸 때는 비밀글 의미 없음
             if (isCommunityMode && !isCreator) {
-                SettingsCard {
+                SettingsGroup {
                     SettingsSwitchItem(
                         title = "비밀글",
                         description = "크리에이터만 이 글을 볼 수 있습니다",
@@ -129,56 +124,32 @@ private fun PostSettingsContent(
                 }
             }
 
-            // 크리에이터는 멤버십 티어 설정
             if (isCreator && !isCommunityMode) {
-                SettingsCard {
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "공개 범위",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "이 포스트를 볼 수 있는 멤버십 티어를 설정합니다",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        TierSelector(
-                            selectedTier = requiredTier,
-                            planTiers = planTiers,
-                            onTierSelect = onTierChange,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
+                Text(
+                    text = "공개 범위",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                TierOptionList(
+                    selectedTier = requiredTier,
+                    planTiers = planTiers,
+                    onTierSelect = onTierChange
+                )
             }
         }
     }
 }
 
+/** 테두리 한 묶음, 줄 사이 가는 선은 안에서 */
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+private fun SettingsGroup(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GroupShape)
+            .cardBorder(GroupShape)
     ) {
         content()
     }
@@ -198,7 +169,7 @@ private fun SettingsSwitchItem(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -225,28 +196,27 @@ private fun SettingsSwitchItem(
     }
 }
 
+/** 공개 범위 동그라미 목록 */
 @Composable
-private fun TierSelector(
-    selectedTier: String,
+private fun TierOptionList(
+    selectedTier: SubscriptionPlanTier,
     planTiers: Set<SubscriptionPlanTier>,
-    onTierSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onTierSelect: (SubscriptionPlanTier) -> Unit
 ) {
     // 전체 공개와 플랜이 있는 등급만, 이미 고른 등급은 유지
     val tiers = listOf(
-        TierOption(SubscriptionPlanTier.FREE.name, "전체 공개", "모든 사용자가 볼 수 있습니다"),
-        TierOption(SubscriptionPlanTier.TIER1.name, "TIER 1", "TIER 1 이상 구독자만"),
-        TierOption(SubscriptionPlanTier.TIER2.name, "TIER 2", "TIER 2 구독자만")
+        TierOption(SubscriptionPlanTier.FREE, "전체 공개", "모든 사용자가 볼 수 있습니다"),
+        TierOption(SubscriptionPlanTier.TIER1, "${SubscriptionPlanTier.TIER1.label} 이상", "${SubscriptionPlanTier.TIER1.label} · ${SubscriptionPlanTier.TIER2.label} 구독자만"),
+        TierOption(SubscriptionPlanTier.TIER2, SubscriptionPlanTier.TIER2.label, "${SubscriptionPlanTier.TIER2.label} 구독자만")
     ).filter { option ->
-        option.value == SubscriptionPlanTier.FREE.name || option.value == selectedTier ||
-            planTiers.any { it.name == option.value }
+        option.value == SubscriptionPlanTier.FREE || option.value == selectedTier ||
+            option.value in planTiers
     }
+    val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        tiers.forEach { tier ->
+    SettingsGroup {
+        tiers.forEachIndexed { index, tier ->
+            if (index > 0) HorizontalDivider(thickness = 0.5.dp, color = lineColor)
             TierOptionItem(
                 tier = tier,
                 isSelected = selectedTier == tier.value,
@@ -257,7 +227,7 @@ private fun TierSelector(
 }
 
 private data class TierOption(
-    val value: String,
+    val value: SubscriptionPlanTier,
     val title: String,
     val description: String
 )
@@ -268,66 +238,27 @@ private fun TierOptionItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
-        color = if (isSelected) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (isSelected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.outline
-            }
-        )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 체크 아이콘
-            Box(
-                modifier = Modifier.size(20.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSelected) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_check),
-                        contentDescription = "선택됨",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = tier.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                )
-                Text(
-                    text = tier.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        SelectionRadio(selected = isSelected)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = tier.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = tier.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -349,7 +280,7 @@ private fun PostSettingsFollowerCommunityPreview() {
                 isCreator = false,
                 isCommunityMode = true,
                 isSecret = false,
-                requiredTier = SubscriptionPlanTier.FREE.name,
+                requiredTier = SubscriptionPlanTier.FREE,
                 planTiers = setOf(SubscriptionPlanTier.TIER1, SubscriptionPlanTier.TIER2),
                 onSecretChange = {},
                 onTierChange = {},
@@ -368,7 +299,7 @@ private fun PostSettingsCreatorFeedPreview() {
                 isCreator = true,
                 isCommunityMode = false,
                 isSecret = false,
-                requiredTier = SubscriptionPlanTier.TIER1.name,
+                requiredTier = SubscriptionPlanTier.TIER1,
                 planTiers = setOf(SubscriptionPlanTier.TIER1),
                 onSecretChange = {},
                 onTierChange = {},

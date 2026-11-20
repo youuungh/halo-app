@@ -1,8 +1,12 @@
 package com.ninezero.halo.feature.subscription.presentation.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -13,33 +17,25 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -47,42 +43,43 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
+import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.bottomsheet.SheetHeader
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
-import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.media.Avatar
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
+import com.ninezero.halo.core.ui.components.selector.SegmentedTabRow
+import com.ninezero.halo.core.ui.components.selector.segmentedTabTransition
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.MembershipColors
 import com.ninezero.halo.feature.store.domain.model.BillingCard
 import com.ninezero.halo.feature.store.presentation.components.cardLabel
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlan
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import com.ninezero.halo.feature.subscription.domain.model.UserTierInfo
-import com.ninezero.halo.ui.theme.HaloGradient
-import com.ninezero.halo.ui.theme.HaloTheme
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
 @Composable
 fun MembershipBottomSheet(
     creatorName: String,
+    creatorAvatarUrl: String?,
+    creatorRole: String?,
     plans: List<SubscriptionPlan>,
     onSubscribe: (planId: Int) -> Unit,
     onDismiss: () -> Unit,
@@ -111,17 +108,18 @@ fun MembershipBottomSheet(
         confirmValueChange = confirmValueChange
     )
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = {
             if (subscribingPlanId == null) onDismiss()
         },
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
-        contentWindowInsets = { WindowInsets(0) }  // 시트 inset 끄고 직접 처리
+        showDragHandle = false,  // 헤더 안에 있음
+        dismissEnabled = subscribingPlanId == null
     ) {
         MembershipBottomSheetContent(
             creatorName = creatorName,
+            creatorAvatarUrl = creatorAvatarUrl,
+            creatorRole = creatorRole,
             plans = plans,
             currentPlanId = currentPlanId,
             currentTier = currentTier,
@@ -143,6 +141,8 @@ fun MembershipBottomSheet(
 @Composable
 private fun MembershipBottomSheetContent(
     creatorName: String,
+    creatorAvatarUrl: String?,
+    creatorRole: String?,
     plans: List<SubscriptionPlan>,
     onSubscribe: (planId: Int) -> Unit,
     onDismiss: () -> Unit,
@@ -162,7 +162,6 @@ private fun MembershipBottomSheetContent(
     val hazeState = remember { HazeState() }
     val backgroundColor = MaterialTheme.colorScheme.surface
     var headerHeight by remember { mutableStateOf(0.dp) }
-    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Box(modifier = Modifier.fillMaxWidth()) {
         val confirmPlan = confirmingPlanId?.let { id -> plans.find { it.id == id } }
@@ -173,7 +172,7 @@ private fun MembershipBottomSheetContent(
                 isProcessing = subscribingPlanId == confirmingPlanId,
                 upgradeDiff = upgradeDiff,
                 topPadding = headerHeight + 16.dp,
-                bottomPadding = 8.dp + navBottom,
+                bottomPadding = 16.dp,
                 onPay = onPay
             )
         } else LazyColumn(
@@ -185,7 +184,7 @@ private fun MembershipBottomSheetContent(
                 top = headerHeight + 16.dp,
                 start = 16.dp,
                 end = 16.dp,
-                bottom = 8.dp + navBottom
+                bottom = 16.dp
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             overscrollEffect = null
@@ -212,21 +211,11 @@ private fun MembershipBottomSheetContent(
                                 .height(200.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = error,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                OutlinedButton(
-                                    onClick = onRetry,
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.bounceClick()
-                                ) {
-                                    Text("재시도")
-                                }
-                            }
+                            ListErrorState(
+                                title = "멤버십 정보를 불러오지 못했습니다",
+                                reason = error,
+                                onRetry = onRetry
+                            )
                         }
                     }
                 }
@@ -240,7 +229,7 @@ private fun MembershipBottomSheetContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "등록된 멤버십 플랜이 없습니다",
+                                text = "등록된 멤버십 플랜이 없어요",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -248,110 +237,28 @@ private fun MembershipBottomSheetContent(
                     }
                 }
 
-                else -> {
-                    // 구독 중 플랜은 상단, 목록에 없으면 받은 정보로
-                    if (currentPlanId != null) {
-                        val currentPlan = plans.find { it.id == currentPlanId }
-                        val fallbackName = currentTier?.planName
-                        val fallbackPrice = currentTier?.planPrice
-                        when {
-                            currentPlan != null -> item {
-                                CurrentSubscriptionCard(
-                                    name = currentPlan.name,
-                                    tier = currentPlan.tier,
-                                    price = currentPlan.price,
-                                    onManageClick = onManageSubscription
-                                )
-                            }
-                            currentTier != null && fallbackName != null && fallbackPrice != null -> item {
-                                CurrentSubscriptionCard(
-                                    name = fallbackName,
-                                    tier = currentTier.tier,
-                                    price = fallbackPrice,
-                                    onManageClick = onManageSubscription
-                                )
-                            }
-                        }
-                    }
-
-                    // 구독 중이면 상위 플랜만 표시
-                    val currentPrice = currentPlanId?.let { id ->
-                        (plans.find { it.id == id }?.price ?: currentTier?.planPrice)?.toBigDecimalOrNull()?.toLong()
-                    }
-                    val visiblePlans = if (currentPrice != null) {
-                        plans.filter {
-                            (it.price.toBigDecimalOrNull()?.toLong() ?: 0L) > currentPrice
-                        }
-                    } else {
-                        plans.filter { it.id != currentPlanId }
-                    }
-                    items(
-                        items = visiblePlans,
-                        key = { it.id }
-                    ) { plan ->
-                        PlanCard(
-                            plan = plan,
-                            isSubscribing = subscribingPlanId == plan.id,
-                            isUpgrade = currentPlanId != null,
-                            onSubscribe = { onSubscribe(plan.id) }
-                        )
-                    }
+                else -> item {
+                    MembershipPlansContent(
+                        creatorName = creatorName,
+                        creatorAvatarUrl = creatorAvatarUrl,
+                        creatorRole = creatorRole,
+                        plans = plans,
+                        currentPlanId = currentPlanId,
+                        currentTier = currentTier,
+                        subscribingPlanId = subscribingPlanId,
+                        onSubscribe = onSubscribe,
+                        onManageSubscription = onManageSubscription
+                    )
                 }
             }
         }
 
-        // 헤더
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1f,
-                        endIntensity = 0f
-                    )
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { /* 터치 이벤트 소비 */ }
-                }
-                .onGloballyPositioned { coordinates ->
-                    headerHeight = with(density) { coordinates.size.height.toDp() }
-                }
-        ) {
-            BottomSheetDragHandle()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                GlassIconButton(
-                    onClick = onDismiss,
-                    icon = painterResource(R.drawable.ic_close),
-                    contentDescription = "닫기",
-                    hazeState = hazeState,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
-                    size = 36.dp,
-                    iconSize = 20.dp
-                )
-
-                Text(
-                    text = "$creatorName 멤버십",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.size(36.dp))
-            }
-        }
+        SheetHeader(
+            title = "$creatorName 멤버십",
+            onClose = onDismiss,
+            hazeState = hazeState,
+            onHeightChange = { headerHeight = it }
+        )
 
         if (subscribingPlanId != null) {
             // matchParentSize라 크기에 영향 없이 덮기만
@@ -366,212 +273,282 @@ private fun MembershipBottomSheetContent(
     }
 }
 
+/** 크리에이터 머리 + 플랜 탭 + 고른 플랜 칸 + 결제 버튼 */
 @Composable
-private fun CurrentSubscriptionCard(
-    name: String,
-    tier: SubscriptionPlanTier,
-    price: String,
-    onManageClick: () -> Unit
+private fun MembershipPlansContent(
+    creatorName: String,
+    creatorAvatarUrl: String?,
+    creatorRole: String?,
+    plans: List<SubscriptionPlan>,
+    currentPlanId: Int?,
+    currentTier: UserTierInfo?,
+    subscribingPlanId: Int?,
+    onSubscribe: (planId: Int) -> Unit,
+    onManageSubscription: () -> Unit
 ) {
     val numberFormat = rememberKoreanNumberFormat()
+    val isSubscribed = currentPlanId != null
+    val currentPlan = plans.find { it.id == currentPlanId }
+    // 비활성 현재 플랜은 목록에 없어 받은 정보로
+    val currentName = currentPlan?.name ?: currentTier?.planName
+    val currentPrice = currentPlan?.price ?: currentTier?.planPrice
+    // 구독 중이면 지금 플랜과 상위 플랜만
+    val tabPlans = if (isSubscribed && currentPrice != null) {
+        plans.filter { it.id == currentPlanId || it.price > currentPrice }
+    } else {
+        plans
+    }
+    // 처음엔 업그레이드할 플랜, 없으면 이용 중 플랜
+    var selectedId by remember(tabPlans) {
+        mutableStateOf(tabPlans.firstOrNull { it.id != currentPlanId }?.id ?: tabPlans.firstOrNull()?.id)
+    }
+    val selectedIndex = tabPlans.indexOfFirst { it.id == selectedId }
+    val selected = tabPlans.getOrNull(selectedIndex)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(brush = HaloGradient)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.height(24.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_check_badge_filled),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "현재 구독 중",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                }
-                TierBadge(tier = tier, isOnGradient = true)
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        CreatorHeader(
+            creatorName = creatorName,
+            avatarUrl = creatorAvatarUrl,
+            role = creatorRole,
+            currentPlanName = if (isSubscribed) currentName ?: "" else null,
+            onManageSubscription = onManageSubscription
+        )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+        if (tabPlans.size > 1) {
+            SegmentedTabRow(
+                tabs = tabPlans.map { it.name },
+                selectedIndex = selectedIndex,
+                onTabSelected = { selectedId = tabPlans[it].id }
             )
+        }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "₩${
-                    price.toBigDecimalOrNull()?.let { numberFormat.format(it) } ?: price
-                }/월",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = onManageClick,
+        if (selected != null) {
+            // 칸은 그대로, 안의 내용만 바뀜
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp)
-                    .bounceClick(),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White
-                )
+                    .cardBorder(MaterialTheme.shapes.large)
             ) {
-                Text("구독 관리")
+                AnimatedContent(
+                    targetState = selectedIndex,
+                    transitionSpec = { segmentedTabTransition() },
+                    label = "plan_tab"
+                ) { index ->
+                    tabPlans.getOrNull(index)?.let { PlanDetailContent(plan = it) }
+                }
+            }
+
+            val isCurrent = selected.id == currentPlanId
+            val upgradeDiff = if (isSubscribed && !isCurrent && currentPrice != null) {
+                (selected.price - currentPrice).takeIf { it > 0L }
+            } else {
+                null
+            }
+            var lastUpgradeDiff by remember { mutableLongStateOf(0L) }
+            var lastUpgradePrice by remember { mutableLongStateOf(0L) }
+            if (upgradeDiff != null) {
+                lastUpgradeDiff = upgradeDiff
+                lastUpgradePrice = selected.price
+            }
+            AnimatedVisibility(
+                visible = upgradeDiff != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                // 사라지는 동안에도 마지막 값을 그림
+                val diff = upgradeDiff ?: lastUpgradeDiff
+                Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "지금 결제 (차액)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "₩${numberFormat.format(diff)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "다음 결제일부터 월 ₩${numberFormat.format(lastUpgradePrice)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            PrimaryButton(
+                text = when {
+                    isCurrent -> "이용 중인 플랜입니다"
+                    isSubscribed -> "${selected.name} 플랜으로 업그레이드"
+                    else -> "${selected.name} 구독하기"
+                },
+                onClick = { onSubscribe(selected.id) },
+                isLoading = subscribingPlanId == selected.id,
+                enabled = !isCurrent
+            )
+        }
+    }
+}
+
+/** 사진 · 이름, 구독 중이면 이용 중 알약 */
+@Composable
+private fun CreatorHeader(
+    creatorName: String,
+    avatarUrl: String?,
+    role: String?,
+    currentPlanName: String?,
+    onManageSubscription: () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Avatar(
+            model = avatarUrl,
+            size = 40.dp
+        )
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = creatorName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                VerifiedBadge(role = role)
+            }
+            if (currentPlanName != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (currentPlanName.isBlank()) "이용 중" else "$currentPlanName 이용 중",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MembershipColors.label,
+                    modifier = Modifier
+                        .border(0.5.dp, MembershipColors.label, CircleShape)
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        if (currentPlanName != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Row(
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onManageSubscription() }
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "구독 관리",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
 }
 
+/** 고른 플랜의 가격 · 설명 · 혜택 */
 @Composable
-private fun PlanCard(
-    plan: SubscriptionPlan,
-    isSubscribing: Boolean,
-    isUpgrade: Boolean = false,
-    onSubscribe: () -> Unit
-) {
-    var isExpanded by remember { mutableStateOf(false) }
+private fun PlanDetailContent(plan: SubscriptionPlan) {
+    var isExpanded by remember(plan.id) { mutableStateOf(false) }
     val hasMoreBenefits = plan.benefits.size > 3
     val numberFormat = rememberKoreanNumberFormat()
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .animateContentSize()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .animateContentSize()
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = plan.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    text = "₩${numberFormat.format(plan.price)}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                TierBadge(tier = plan.tier, isOnGradient = false)
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "₩${
-                    plan.price.toBigDecimalOrNull()?.let { numberFormat.format(it) } ?: plan.price
-                }/월",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            if (plan.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = plan.description,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "/월",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.padding(start = 2.dp, bottom = 3.dp)
                 )
             }
+            // 잠금 문구의 등급과 이어지게
+            TierBadge(tier = plan.tier)
+        }
 
-            if (plan.benefits.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val benefitsToShow = if (isExpanded) plan.benefits else plan.benefits.take(3)
-                    benefitsToShow.forEach { benefit ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_check),
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = benefit,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                    if (hasMoreBenefits) {
+        if (plan.description.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = plan.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (plan.benefits.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val benefitsToShow = if (isExpanded) plan.benefits else plan.benefits.take(3)
+                benefitsToShow.forEach { benefit ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isExpanded) "접기" else "혜택 더보기",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { isExpanded = !isExpanded }
-                                .padding(vertical = 4.dp)
+                            text = benefit,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { if (!isSubscribing) onSubscribe() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .bounceClick(),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Box(modifier = Modifier.fillMaxWidth()) {
+                if (hasMoreBenefits) {
                     Text(
-                        text = if (isUpgrade) "업그레이드" else "구독하기",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.align(Alignment.Center)
+                        text = if (isExpanded) "접기" else "혜택 더보기",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { isExpanded = !isExpanded }
+                            .padding(vertical = 4.dp)
                     )
-
-                    if (isSubscribing) {
-                        LoadingIndicator(
-                            modifier = Modifier.align(Alignment.CenterEnd),
-                            size = LoadingIndicatorSize.Small,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
                 }
             }
         }
@@ -599,7 +576,7 @@ private fun PaymentConfirmContent(
         // 선택 플랜 요약
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -614,14 +591,11 @@ private fun PaymentConfirmContent(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    TierBadge(tier = plan.tier, isOnGradient = false)
+                    TierBadge(tier = plan.tier)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "₩${
-                        plan.price.toBigDecimalOrNull()
-                            ?.let { numberFormat.format(it) } ?: plan.price
-                    }/월",
+                    text = "₩${numberFormat.format(plan.price)}/월",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -661,12 +635,8 @@ private fun PaymentConfirmContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .border(
-                    width = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                .clip(MaterialTheme.shapes.medium)
+                .cardBorder(MaterialTheme.shapes.medium)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -687,60 +657,28 @@ private fun PaymentConfirmContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = { if (!isProcessing) onPay() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .bounceClick(),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "결제하기",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                if (isProcessing) {
-                    LoadingIndicator(
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                        size = LoadingIndicatorSize.Small,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
-        }
+        PrimaryButton(
+            text = "결제하기",
+            onClick = onPay,
+            isLoading = isProcessing
+        )
     }
 }
 
 @Composable
-private fun TierBadge(
-    tier: SubscriptionPlanTier,
-    isOnGradient: Boolean = false
-) {
-    val text = when (tier) {
-        SubscriptionPlanTier.FREE -> "무료"
-        SubscriptionPlanTier.TIER1 -> "Tier 1"
-        SubscriptionPlanTier.TIER2 -> "Tier 2"
-    }
-
-    val (backgroundColor, textColor) = if (isOnGradient) {
-        Color.White.copy(alpha = 0.2f) to Color.White
-    } else {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f) to MaterialTheme.colorScheme.onSurfaceVariant
-    }
+private fun TierBadge(tier: SubscriptionPlanTier) {
+    val text = tier.label
 
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = backgroundColor
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            color = textColor
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -751,7 +689,7 @@ private val previewPlans = listOf(
         name = "Basic",
         tier = SubscriptionPlanTier.TIER1,
         description = "기본 혜택을 누려보세요",
-        price = "4,900",
+        price = 4900L,
         benefits = listOf("전용 콘텐츠 열람", "커뮤니티 참여"),
         subscriberCount = 128,
         isActive = true
@@ -761,7 +699,7 @@ private val previewPlans = listOf(
         name = "Premium",
         tier = SubscriptionPlanTier.TIER2,
         description = "프리미엄 혜택을 누려보세요. 모든 기본 혜택 포함.",
-        price = "9,900",
+        price = 9900L,
         benefits = listOf("전용 콘텐츠 열람", "커뮤니티 참여", "1:1 메시지", "할인 혜택", "굿즈 할인"),
         subscriberCount = 45,
         isActive = true
@@ -782,6 +720,8 @@ private fun MembershipBottomSheetPreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = previewPlans,
                 currentPlanId = null,
                 isLoading = false,
@@ -801,6 +741,8 @@ private fun MembershipBottomSheetWithSubscriptionPreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = previewPlans,
                 currentPlanId = 1,
                 isLoading = false,
@@ -820,6 +762,8 @@ private fun MembershipBottomSheetConfirmPreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = previewPlans,
                 isLoading = false,
                 subscribingPlanId = null,
@@ -841,6 +785,8 @@ private fun MembershipBottomSheetConfirmUpgradePreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = previewPlans,
                 currentPlanId = 1,
                 isLoading = false,
@@ -864,6 +810,8 @@ private fun MembershipBottomSheetConfirmProcessingPreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = previewPlans,
                 isLoading = false,
                 subscribingPlanId = 2,
@@ -885,6 +833,8 @@ private fun MembershipBottomSheetLoadingPreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = emptyList(),
                 isLoading = true,
                 subscribingPlanId = null,
@@ -903,6 +853,8 @@ private fun MembershipBottomSheetEmptyPreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = emptyList(),
                 isLoading = false,
                 subscribingPlanId = null,
@@ -921,6 +873,8 @@ private fun MembershipBottomSheetErrorPreview() {
         Surface {
             MembershipBottomSheetContent(
                 creatorName = "크리에이터",
+                creatorAvatarUrl = null,
+                creatorRole = "CREATOR",
                 plans = emptyList(),
                 isLoading = false,
                 error = "플랜을 불러올 수 없습니다",

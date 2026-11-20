@@ -1,9 +1,11 @@
 package com.ninezero.halo.feature.chat.presentation.chat_room.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,9 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,10 +46,10 @@ fun ChatRoomProfileHeader(
             model = otherUser?.avatarThumbUrl ?: otherUser?.avatarUrl,
             contentDescription = "${otherUser?.displayName} 프로필",
             modifier = Modifier
-                .size(100.dp)
+                .size(88.dp)
+                .bounceClick()  // 뒤 회색 원이 테두리로 비치지 않게 먼저 적용
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .bounceClick(),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop,
             placeholder = painterResource(R.drawable.ic_profile_placeholder),
             error = painterResource(R.drawable.ic_profile_placeholder),
@@ -64,19 +64,19 @@ fun ChatRoomProfileHeader(
         ) {
             Text(
                 text = otherUser?.displayName ?: otherUser?.username ?: "",
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
-            VerifiedBadge(role = otherUser?.role, size = 22.dp)
+            VerifiedBadge(role = otherUser?.role, size = 20.dp)
         }
 
         otherUser?.username?.let { username ->
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = username,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
@@ -84,17 +84,22 @@ fun ChatRoomProfileHeader(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedButton(
-            onClick = onProfileClick,
-            shape = RoundedCornerShape(8.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp),
+        // 0.5 테두리 작은 알약
+        Box(
             modifier = Modifier
                 .bounceClick()
                 .height(28.dp)
+                .clip(CircleShape)
+                .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                .clickable(onClick = onProfileClick)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "프로필 보기",
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

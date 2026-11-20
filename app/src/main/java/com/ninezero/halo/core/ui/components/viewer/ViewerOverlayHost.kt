@@ -8,12 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerOverlay
-import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerState
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaType
 import com.ninezero.halo.core.ui.components.modifiers.mediaSharedKey
 
+/** 미디어 뷰어 열기 · 닫기와 지금 보는 위치 */
 class ViewerOverlayHostState {
     var mediaViewerState by mutableStateOf(MediaViewerState())
         internal set
@@ -30,7 +27,7 @@ class ViewerOverlayHostState {
         } else null
 
     /** 영상 뷰어 표시 여부 */
-    val suppressInlineVideo: Boolean
+    val pauseInlineVideo: Boolean
         get() = mediaViewerState.isVisible &&
             mediaViewerState.items.any { it.type == ViewerMediaType.VIDEO }
 

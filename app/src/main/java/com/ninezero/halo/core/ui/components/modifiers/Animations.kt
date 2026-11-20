@@ -9,16 +9,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
@@ -105,27 +104,23 @@ fun Modifier.popClick(
     if (!enabled) this
     else this then PressScaleElement(pressedScale = shrinkScale, spec = PopSpec)
 
-/** Shimmer 효과 */
-fun Modifier.shimmer(): Modifier = composed {
+/** 방향 없이 옅어졌다 돌아오는 스켈레톤 효과 */
+@Composable
+fun Modifier.softPulse(): Modifier {
     val baseColor = MaterialTheme.colorScheme.surfaceVariant
-    val highlightColor = MaterialTheme.colorScheme.surface
-
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
+    val highlightColor = lerp(baseColor, MaterialTheme.colorScheme.surface, 0.7f)
+    val progress by rememberInfiniteTransition(label = "softPulse").animateFloat(
         initialValue = 0f,
-        targetValue = 1000f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200),
-            repeatMode = RepeatMode.Restart
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse
         ),
-        label = "shimmerTranslate"
+        label = "softPulseProgress"
     )
-
-    this.background(
-        brush = Brush.linearGradient(
-            colors = listOf(baseColor, highlightColor, baseColor),
-            start = Offset(translateAnim - 500f, translateAnim - 500f),
-            end = Offset(translateAnim, translateAnim)
-        )
-    )
+    return drawBehind { drawRect(lerp(baseColor, highlightColor, progress)) }
 }
+
+/** 스켈레톤 공통 효과 */
+@Composable
+fun Modifier.shimmer(): Modifier = softPulse()

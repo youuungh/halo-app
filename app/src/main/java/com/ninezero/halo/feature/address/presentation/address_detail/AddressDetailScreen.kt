@@ -1,24 +1,28 @@
 package com.ninezero.halo.feature.address.presentation.address_detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +31,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -34,26 +40,27 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassActionButton
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.input.FormSection
+import com.ninezero.halo.core.ui.components.input.FormTextField
+import com.ninezero.halo.core.ui.components.input.inputBorder
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.core.ui.components.toggle.HaloCheckbox
 import com.ninezero.halo.feature.address.presentation.address_detail.components.DeliveryMemoBottomSheet
-import com.ninezero.halo.feature.address.presentation.address_detail.components.DetailTextField
 import com.ninezero.halo.feature.address.presentation.address_detail.components.MemoSelectorField
 import com.ninezero.halo.feature.address.presentation.components.DaumPostcodeBottomSheet
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
@@ -140,109 +147,100 @@ internal fun AddressDetailScreenContent(
                 .hazeSource(hazeState),
             contentPadding = PaddingValues(top = headerHeight, bottom = 24.dp)
         ) {
-            item(key = "address_info") {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${state.address} (${state.zipCode})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .padding(16.dp)
-                    )
-
-                    if (state.isEditMode) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
+            item(key = "address") {
+                Column(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // 칸마다 위에 작은 이름 + 칸 안 힌트
+                    FormSection(title = "주소") {
+                        AddressRow(
+                            address = state.address,
+                            zipCode = state.zipCode,
+                            onChangeClick = if (state.isEditMode) {
+                                {
+                                    focusManager.clearFocus(force = true)
+                                    onIntent(AddressDetailIntent.ShowPostcodeSheet)
+                                }
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                    FormSection(title = "상세주소") {
+                        FormTextField(
+                            value = state.addressDetail,
+                            onValueChange = { onIntent(AddressDetailIntent.UpdateAddressDetail(it)) },
+                            placeholder = "동/호수",
+                            imeAction = ImeAction.Next,
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            FormSection(title = "받는 분") {
+                                FormTextField(
+                                    value = state.recipientName,
+                                    onValueChange = { onIntent(AddressDetailIntent.UpdateRecipientName(it)) },
+                                    placeholder = "이름",
+                                    isError = state.recipientNameError != null,
+                                    errorMessage = state.recipientNameError,
+                                    imeAction = ImeAction.Next,
+                                    onNext = { focusManager.moveFocus(FocusDirection.Right) }
+                                )
+                            }
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            FormSection(title = "연락처") {
+                                FormTextField(
+                                    value = state.recipientPhone,
+                                    onValueChange = { onIntent(AddressDetailIntent.UpdateRecipientPhone(it)) },
+                                    placeholder = "010-0000-0000",
+                                    keyboardType = KeyboardType.Number,
+                                    isError = state.recipientPhoneError != null,
+                                    errorMessage = state.recipientPhoneError,
+                                    maxLength = 11,
+                                    visualTransformation = PhoneVisualTransformation
+                                )
+                            }
+                        }
+                    }
+                    FormSection(title = "배송 메모") {
+                        MemoSelectorField(
+                            value = state.memo,
                             onClick = {
                                 focusManager.clearFocus(force = true)
-                                onIntent(AddressDetailIntent.ShowPostcodeSheet)
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bounceClick()
-                        ) {
-                            Text("주소 변경")
-                        }
+                                onIntent(AddressDetailIntent.ShowMemoSheet)
+                            }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onIntent(AddressDetailIntent.UpdateDefault(!state.isDefault)) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HaloCheckbox(checked = state.isDefault, contentDescription = "기본 배송지로 설정")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "기본 배송지로 설정",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
-
-            item(key = "address_detail") {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    DetailTextField(
-                        value = state.addressDetail,
-                        onValueChange = { onIntent(AddressDetailIntent.UpdateAddressDetail(it)) },
-                        label = "상세주소",
-                        placeholder = "동/호수를 입력해주세요"
-                    )
-                }
-            }
-
-            item(key = "recipient_name") {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    DetailTextField(
-                        value = state.recipientName,
-                        onValueChange = { onIntent(AddressDetailIntent.UpdateRecipientName(it)) },
-                        label = "받는 이",
-                        error = state.recipientNameError
-                    )
-                }
-            }
-
-            item(key = "recipient_phone") {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    DetailTextField(
-                        value = state.recipientPhone,
-                        onValueChange = { onIntent(AddressDetailIntent.UpdateRecipientPhone(it)) },
-                        label = "연락처",
-                        error = state.recipientPhoneError,
-                        placeholder = "01012345678",
-                        keyboardType = KeyboardType.Number
-                    )
-                }
-            }
-
-            item(key = "memo") {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    MemoSelectorField(
-                        value = state.memo,
-                        onClick = {
-                            focusManager.clearFocus(force = true)
-                            onIntent(AddressDetailIntent.ShowMemoSheet)
-                        }
-                    )
-                }
-            }
-
         }
 
         // 헤더
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 0.5f,
-                        endIntensity = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
@@ -298,9 +296,7 @@ internal fun AddressDetailScreenContent(
 
         DefaultSnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp)
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
 
         if (state.isSaving) {
@@ -324,6 +320,56 @@ internal fun AddressDetailScreenContent(
             ) {
                 CenteredLoadingIndicator(size = LoadingIndicatorSize.Large)
             }
+        }
+    }
+}
+
+/** 위치 아이콘 + 주소 · 우편번호, 오른쪽 '변경' */
+@Composable
+private fun AddressRow(
+    address: String,
+    zipCode: String,
+    onChangeClick: (() -> Unit)?
+) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .inputBorder(shape)
+            .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_map_pin),
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = address,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = zipCode,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (onChangeClick != null) {
+            Text(
+                text = "변경",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(onClick = onChangeClick)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            )
         }
     }
 }

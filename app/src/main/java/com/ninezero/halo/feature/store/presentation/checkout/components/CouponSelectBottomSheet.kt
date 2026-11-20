@@ -1,103 +1,73 @@
 package com.ninezero.halo.feature.store.presentation.checkout.components
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
-import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.button.SheetActionButton
-import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
-import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
+import com.ninezero.halo.core.ui.components.button.PrimaryButtonStyle
+import com.ninezero.halo.core.ui.components.input.CouponCodeInputField
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.toggle.SelectionRadio
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.feature.coupon.domain.model.Coupon
 import com.ninezero.halo.feature.coupon.domain.model.CouponType
 import com.ninezero.halo.feature.coupon.domain.model.UserCouponStatus
-import com.ninezero.halo.feature.store.domain.model.calcSingleCouponDiscount
+import com.ninezero.halo.feature.store.domain.model.calcCouponBenefit
 import com.ninezero.halo.feature.store.domain.model.isCouponUsable
 import com.ninezero.halo.feature.store.presentation.checkout.CouponCreatorInfo
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import java.text.NumberFormat
 
+// 하단 버튼 48 + 위아래 여백
+private val BottomButtonArea = 84.dp
+
 @Composable
 fun CouponSelectBottomSheet(
     coupons: List<Coupon>,
-    orderCreatorIds: Set<Int>,
     orderAmountByCreatorId: Map<Int, Long>,
     couponInfoByCreator: Map<Int, CouponCreatorInfo>,
     draftSelectedCoupons: Map<Int, Coupon>,
-    canApply: Boolean,
     couponCode: String,
     isClaiming: Boolean,
     isLoading: Boolean,
@@ -110,38 +80,29 @@ fun CouponSelectBottomSheet(
     onRetry: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val numberFormat = rememberKoreanNumberFormat()
-    val sheetProperties = remember { ModalBottomSheetProperties(shouldDismissOnBackPress = false) }  // 시트 기본 뒤로가기는 예측형 비활성화
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        sheetGesturesEnabled = false,
-        dragHandle = null,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentWindowInsets = { WindowInsets(0) },
-        properties = sheetProperties,
-        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
+        fullHeight = true
     ) {
-        BackHandler(onBack = onDismiss)
         CouponSelectContent(
             coupons = coupons,
-            orderCreatorIds = orderCreatorIds,
             orderAmountByCreatorId = orderAmountByCreatorId,
             couponInfoByCreator = couponInfoByCreator,
             draftSelectedCoupons = draftSelectedCoupons,
-            canApply = canApply,
             couponCode = couponCode,
             isClaiming = isClaiming,
             isLoading = isLoading,
             error = error,
-            numberFormat = numberFormat,
             onToggleCoupon = onToggleCoupon,
             onUpdateCouponCode = onUpdateCouponCode,
             onClaimCoupon = onClaimCoupon,
             onApply = onApply,
             onDismiss = onDismiss,
-            onRetry = onRetry
+            onRetry = onRetry,
+            // 쿠폰 수·로딩과 상관없이 높이 고정, 목록만 스크롤
+            modifier = Modifier.fillMaxHeight()
         )
     }
 }
@@ -149,13 +110,12 @@ fun CouponSelectBottomSheet(
 @Composable
 private fun CouponSelectContent(
     coupons: List<Coupon>,
-    orderCreatorIds: Set<Int>,
+    orderAmountByCreatorId: Map<Int, Long>,
     couponInfoByCreator: Map<Int, CouponCreatorInfo>,
     draftSelectedCoupons: Map<Int, Coupon>,
     couponCode: String,
     isClaiming: Boolean,
-    orderAmountByCreatorId: Map<Int, Long> = emptyMap(),
-    canApply: Boolean = draftSelectedCoupons.isNotEmpty(),
+    modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     error: String? = null,
     numberFormat: NumberFormat = rememberKoreanNumberFormat(),
@@ -164,739 +124,429 @@ private fun CouponSelectContent(
     onClaimCoupon: () -> Unit = {},
     onApply: () -> Unit = {},
     onDismiss: () -> Unit = {},
-    onRetry: () -> Unit = {},
-    initialExpanded: Boolean = false
+    onRetry: () -> Unit = {}
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.surface
-    val hazeState = remember { HazeState() }
-    val density = LocalDensity.current
-    var headerHeight by remember { mutableStateOf(0.dp) }
-    var isExpanded by remember { mutableStateOf(initialExpanded) }
-
-    val selectedCount = draftSelectedCoupons.size
-    val totalDiscount = remember(draftSelectedCoupons, orderAmountByCreatorId) {
-        calcPreviewDiscount(draftSelectedCoupons, orderAmountByCreatorId)
+    // 이번 주문 크리에이터의 쿠폰만, 주문 순서대로
+    val couponsByCreator = remember(coupons, couponInfoByCreator) {
+        val grouped = coupons.groupBy { it.creatorId }
+        couponInfoByCreator.keys.mapNotNull { creatorId -> grouped[creatorId]?.let { creatorId to it } }
     }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-    ) {
-        // 콘텐츠
-        when {
-            // 로딩 상태
-            isLoading -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .hazeSource(hazeState)
-                        .blockSheetFling(),
-                    contentPadding = PaddingValues(
-                        top = headerHeight + 8.dp,
-                        bottom = 140.dp
-                    ),
-                    overscrollEffect = null
-                ) {
-                    items(5) {
-                        CouponSelectItemSkeleton(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                        )
-                    }
-                }
-            }
-            // 에러 상태
-            error != null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .hazeSource(hazeState)
-                        .padding(top = headerHeight + 8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(bottom = 140.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = onRetry,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
-                    }
-                }
-            }
-            // 빈 상태
-            coupons.isEmpty() -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .hazeSource(hazeState)
-                        .padding(top = headerHeight + 8.dp)
-                ) {
-                    CouponCodeInput(
-                        value = couponCode,
-                        onValueChange = onUpdateCouponCode,
-                        onClaimClick = onClaimCoupon,
-                        isClaiming = isClaiming,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(bottom = 140.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "사용 가능한 쿠폰이 없습니다",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            // 쿠폰 목록
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .hazeSource(hazeState)
-                        .blockSheetFling(),
-                    contentPadding = PaddingValues(
-                        top = headerHeight + 8.dp,
-                        bottom = 140.dp
-                    ),
-                    overscrollEffect = null
-                ) {
-                    item(key = "coupon_code_input") {
-                        CouponCodeInput(
-                            value = couponCode,
-                            onValueChange = onUpdateCouponCode,
-                            onClaimClick = onClaimCoupon,
-                            isClaiming = isClaiming,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
-
-                    items(coupons, key = { it.id }) { coupon ->
-                        val isApplicableToCurrentOrder = coupon.creatorId in orderCreatorIds
-                        val creatorInfo = couponInfoByCreator[coupon.creatorId]
-                        val freeShipBlockReason = if (coupon.type == CouponType.FREE_SHIPPING) {
-                            creatorInfo?.freeShipBlockReason
-                        } else null
-                        val isSelected = draftSelectedCoupons[coupon.creatorId]?.id == coupon.id
-                        val creatorLabel = creatorInfo?.name
-                            ?: coupon.creatorName
-                            ?: "크리에이터 #${coupon.creatorId}"
-                        val creatorOrderAmount = orderAmountByCreatorId[coupon.creatorId] ?: 0L
-                        val disabledReason = when {
-                            !isApplicableToCurrentOrder -> "특정 크리에이터 상품에만 사용 가능"
-                            // 서버 거부 조건은 선택 차단
-                            !isCouponUsable(coupon, creatorOrderAmount) ->
-                                "최소 주문 금액 미달 (${numberFormat.format(coupon.minOrderAmount?.toBigDecimal()?.toInt() ?: 0)}원 이상)"
-                            freeShipBlockReason != null -> "무료배송 쿠폰 사용 불가: $freeShipBlockReason"
-                            else -> null
-                        }
-                        CouponSelectItem(
-                            coupon = coupon,
-                            creatorLabel = creatorLabel,
-                            isEnabled = disabledReason == null,
-                            disabledReason = disabledReason,
-                            isSelected = isSelected,
-                            numberFormat = numberFormat,
-                            onClick = { onToggleCoupon(coupon) }
-                        )
-                    }
-                }
-            }
+    val totalDiscount = remember(draftSelectedCoupons, orderAmountByCreatorId) {
+        draftSelectedCoupons.entries.sumOf { (creatorId, coupon) ->
+            calcCouponBenefit(coupon, orderAmountByCreatorId[creatorId] ?: 0L)
         }
+    }
+    val isEmpty = !isLoading && error == null && couponsByCreator.isEmpty()
+    val surface = MaterialTheme.colorScheme.surface
+    val hazeState = remember { HazeState() }
+    val listState = rememberLazyListState()
+    // 목록이 상단 밑으로 들어갈 때만 경계선
+    val dividerAlpha by animateFloatAsState(
+        targetValue = if (listState.canScrollBackward) 1f else 0f,
+        label = "couponHeaderDivider"
+    )
 
-        // 헤더
-        Column(
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "할인쿠폰",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp)
+        )
+
+        CouponCodeInputField(
+            value = couponCode,
+            onValueChange = onUpdateCouponCode,
+            onClaimClick = onClaimCoupon,
+            isClaiming = isClaiming,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1f,
-                        endIntensity = 0f
-                    )
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { /* 터치 이벤트 소비 */ }
-                }
-                .onGloballyPositioned { coordinates ->
-                    headerHeight = with(density) { coordinates.size.height.toDp() }
-                }
+                .weight(1f)
+                .padding(top = 6.dp)
         ) {
-            Row(
+            // 목록은 버튼 아래로 흐르고 버튼 뒤는 점점 흐려짐
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .hazeSource(hazeState)
             ) {
-                GlassIconButton(
-                    onClick = onDismiss,
-                    icon = painterResource(R.drawable.ic_close),
-                    contentDescription = "닫기",
-                    hazeState = hazeState,
-                    backgroundColor = backgroundColor,
-                    size = 36.dp,
-                    iconSize = 20.dp
-                )
-                Text(
-                    text = "할인쿠폰",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 36.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        // 하단 바
-        val isDark = LocalIsDarkTheme.current
-        val bottomTintColor = if (isDark) {
-            Color.White.copy(alpha = 0.2f)
-        } else {
-            Color.Black.copy(alpha = 0.2f)
-        }
-        val expandedBoxTintColor = if (isDark) {
-            Color.White.copy(alpha = 0.15f)
-        } else {
-            Color.Black.copy(alpha = 0.1f)
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .clip(
-                    RoundedCornerShape(
-                        topStart = if (isExpanded) 20.dp else 0.dp,
-                        topEnd = if (isExpanded) 20.dp else 0.dp
-                    )
-                )
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(bottomTintColor),
-                        blurRadius = 25.dp,
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = if (isExpanded) 0.2f else 0f,
-                        endIntensity = 1f
-                    )
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { /* 터치 이벤트 소비 */ }
-                }
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp)
-                .padding(top = 12.dp, bottom = 8.dp)
-        ) {
-
-            AnimatedVisibility(
-                visible = isExpanded && selectedCount > 0,
-                enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(),
-                exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut()
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // 접기 버튼
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_chevron_down),
-                            contentDescription = "접기",
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { isExpanded = false },
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 가격 상세
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .haloBlur(state = hazeState) {
-                                style = HaloBlurStyle(
-                                    backgroundColor = backgroundColor,
-                                    tint = HaloBlurTint(expandedBoxTintColor),
-                                    blurRadius = 40.dp,
-                                    noiseFactor = 0f
+                when {
+                    isLoading -> {
+                        Column(modifier = Modifier.padding(top = 12.dp)) {
+                            repeat(4) {
+                                CouponSelectItemSkeleton(
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
                                 )
-                            }
-                            .padding(12.dp)
-                    ) {
-                        draftSelectedCoupons.entries.forEachIndexed { index, (creatorId, coupon) ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = coupon.name,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Normal,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                //실제 할인액
-                                Text(
-                                    text = "-${numberFormat.format(previewDiscountFor(coupon, orderAmountByCreatorId[creatorId] ?: 0L))}원",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Normal,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            if (index < draftSelectedCoupons.size - 1) {
-                                Spacer(modifier = Modifier.height(6.dp))
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    // 불러오기 실패는 "쿠폰 없음"과 구분
+                    error != null -> {
+                        CouponSheetMessage(
+                            title = "쿠폰을 불러오지 못했습니다",
+                            subtitle = error,
+                            actionLabel = "다시 불러오기",
+                            onAction = onRetry
+                        )
+                    }
+
+                    isEmpty -> {
+                        CouponSheetMessage(
+                            title = "사용할 수 있는 쿠폰이 없어요",
+                            subtitle = "쿠폰 코드가 있다면 위에 입력해주세요"
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = BottomButtonArea),
+                            overscrollEffect = null
+                        ) {
+                            items(couponsByCreator, key = { (creatorId, _) -> creatorId }) { (creatorId, creatorCoupons) ->
+                                CreatorCouponGroup(
+                                    creatorInfo = couponInfoByCreator.getValue(creatorId),
+                                    coupons = creatorCoupons,
+                                    orderAmount = orderAmountByCreatorId[creatorId] ?: 0L,
+                                    selectedCoupon = draftSelectedCoupons[creatorId],
+                                    numberFormat = numberFormat,
+                                    onToggleCoupon = onToggleCoupon
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            // 요약 행
-            if (selectedCount > 0) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { isExpanded = !isExpanded }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "총 ${numberFormat.format(totalDiscount)}원",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "(${selectedCount}개 사용)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Icon(
-                        painter = painterResource(
-                            if (isExpanded) R.drawable.ic_circle_chevron_down
-                            else R.drawable.ic_circle_chevron_up
-                        ),
-                        contentDescription = if (isExpanded) "접기" else "펼치기",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { alpha = dividerAlpha }
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .haloBlur(hazeState, HaloBlurs.fadeUp(surface, end = 1f))
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 16.dp)
+            ) {
+                if (isEmpty || error != null) {
+                    PrimaryButton(
+                        text = "닫기",
+                        onClick = onDismiss,
+                        style = PrimaryButtonStyle.Tonal
+                    )
+                } else {
+                    PrimaryButton(
+                        text = if (totalDiscount > 0L) "${numberFormat.format(totalDiscount)}원 할인 적용" else "쿠폰 없이 확인",
+                        onClick = onApply,
+                        enabled = !isLoading
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 적용 버튼
-            SheetActionButton(
-                text = "사용하기",
-                onClick = onApply,
-                enabled = canApply
-            )
         }
     }
 }
 
 @Composable
-private fun CouponSelectItem(
-    coupon: Coupon,
-    creatorLabel: String,
-    isEnabled: Boolean,
-    disabledReason: String?,
-    isSelected: Boolean,
+private fun CreatorCouponGroup(
+    creatorInfo: CouponCreatorInfo,
+    coupons: List<Coupon>,
+    orderAmount: Long,
+    selectedCoupon: Coupon?,
     numberFormat: NumberFormat,
-    onClick: () -> Unit
+    onToggleCoupon: (Coupon) -> Unit
 ) {
+    // 쓸 수 있는 쿠폰 중 할인이 가장 큰 것
+    val bestCouponId = remember(coupons, orderAmount, creatorInfo) {
+        coupons
+            .filter { couponBlockReason(it, orderAmount, creatorInfo, numberFormat) == null }
+            .maxByOrNull { calcCouponBenefit(it, orderAmount) }
+            ?.takeIf { calcCouponBenefit(it, orderAmount) > 0L }
+            ?.id
+    }
+    val shape = MaterialTheme.shapes.large
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .height(IntrinsicSize.Min)
-            .border(
-                width = 0.5.dp,
-                color = if (!isEnabled) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
-            )
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (!isEnabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
-                else MaterialTheme.colorScheme.surface
-            )
-            .clickable(enabled = isEnabled, onClick = onClick)
-            .alpha(if (isEnabled) 1f else 0.62f)
-    ) {
-        // 좌측: 쿠폰 정보
+    Column(modifier = Modifier.padding(top = 12.dp)) {
+        Text(
+            text = creatorInfo.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 2.dp, bottom = 8.dp)
+        )
         Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(16.dp)
+                .fillMaxWidth()
+                .cardBorder(shape)
+                .clip(shape)
         ) {
-            // 할인 금액
-            Row {
-                Text(
-                    text = coupon.discountText,
-                    modifier = Modifier.alignByBaseline(),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+            val hasUsableCoupon = coupons.any { couponBlockReason(it, orderAmount, creatorInfo, numberFormat) == null }
+            coupons.forEachIndexed { index, coupon ->
+                if (index > 0) CouponRowDivider()
+                val blockReason = couponBlockReason(coupon, orderAmount, creatorInfo, numberFormat)
+                CouponOptionRow(
+                    coupon = coupon,
+                    benefit = calcCouponBenefit(coupon, orderAmount),
+                    blockReason = blockReason,
+                    isSelected = selectedCoupon?.id == coupon.id,
+                    isBest = coupon.id == bestCouponId,
+                    numberFormat = numberFormat,
+                    onClick = { onToggleCoupon(coupon) }
                 )
-                coupon.maxDiscountAmount?.let { maxAmount ->
-                    Spacer(modifier = Modifier.width(6.dp))
+            }
+            if (hasUsableCoupon) {
+                CouponRowDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedCoupon?.let(onToggleCoupon) }
+                        .padding(horizontal = 14.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SelectionRadio(selected = selectedCoupon == null)
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "(최대 ${numberFormat.format(maxAmount.toBigDecimal().toInt())}원)",
-                        modifier = Modifier.alignByBaseline(),
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "쿠폰 적용 안 함",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
-
-            // 쿠폰명, 무료배송은 숨김
-            if (coupon.type != CouponType.FREE_SHIPPING) {
-                Text(
-                    text = coupon.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-            }
-
-            CreatorExclusiveBadge(text = "$creatorLabel 상품 전용")
-            if (disabledReason != null) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = disabledReason,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // 유효기간
-            Text(
-                text = "${coupon.expiresAt.toFormattedDate("yyyy.MM.dd")}까지",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // 최소 주문 금액
-            coupon.minOrderAmount?.let { minAmount ->
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "${numberFormat.format(minAmount.toBigDecimal().toInt())}원 이상 주문 시",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // 우측: CheckCircle
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(56.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (isSelected) R.drawable.ic_circle_check
-                    else R.drawable.ic_circle
-                ),
-                contentDescription = if (isSelected) "선택됨" else "선택안됨",
-                modifier = Modifier.size(24.dp),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.outlineVariant
-            )
         }
     }
 }
 
 @Composable
-private fun CreatorExclusiveBadge(
-    text: String,
-    modifier: Modifier = Modifier
+private fun CouponOptionRow(
+    coupon: Coupon,
+    benefit: Long,
+    blockReason: String?,
+    isSelected: Boolean,
+    isBest: Boolean,
+    numberFormat: NumberFormat,
+    onClick: () -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun CouponCodeInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onClaimClick: () -> Unit,
-    isClaiming: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val isClaimEnabled = value.isNotBlank() && !isClaiming
+    val isEnabled = blockReason == null
+    val conditions = listOfNotNull(
+        coupon.minOrderAmount?.takeIf { it > 0L }
+            ?.let { "${numberFormat.format(it)}원 이상" },
+        coupon.maxDiscountAmount?.takeIf { coupon.type == CouponType.PERCENTAGE }
+            ?.let { "최대 ${numberFormat.format(it)}원" }
+    ).joinToString(" · ")
 
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .background(
-                color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(start = 12.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(enabled = isEnabled, onClick = onClick)
+            .alpha(if (isEnabled) 1f else 0.5f)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        BasicTextField(
-            value = value,
-            onValueChange = { onValueChange(it.uppercase()) },
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 8.dp),
-            enabled = !isClaiming,
-            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                color = MaterialTheme.colorScheme.onSurface
-            ),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Characters,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { if (isClaimEnabled) onClaimClick() }
-            ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.CenterStart) {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = "쿠폰 코드 입력",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    innerTextField()
-                }
-            }
-        )
-
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(
-                    if (isClaimEnabled) MaterialTheme.colorScheme.inverseSurface
-                    else MaterialTheme.colorScheme.surfaceVariant
-                )
-                .clickable(enabled = isClaimEnabled, onClick = onClaimClick)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isClaiming) {
-                LoadingIndicator(
-                    size = LoadingIndicatorSize.Small,
-                    color = MaterialTheme.colorScheme.inverseOnSurface
+        SelectionRadio(selected = isSelected, enabled = isEnabled)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = coupon.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            if (blockReason != null) {
+                Text(
+                    text = blockReason,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error
                 )
             } else {
-                Text(
-                    text = "등록",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = if (isClaimEnabled) MaterialTheme.colorScheme.inverseOnSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                )
+                if (conditions.isNotEmpty()) {
+                    Text(
+                        text = conditions,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${coupon.expiresAt.toFormattedDate("yyyy.MM.dd")}까지",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (coupon.daysRemaining in 0..Constants.Commerce.COUPON_EXPIRING_SOON_DAYS) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (coupon.daysRemaining == 0) "D-day" else "D-${coupon.daysRemaining}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                                    MaterialTheme.shapes.extraSmall
+                                )
+                                .padding(horizontal = 4.dp)
+                        )
+                    }
+                }
             }
         }
-
-        Spacer(modifier = Modifier.width(4.dp))
+        if (isEnabled) {
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = if (coupon.type == CouponType.FREE_SHIPPING) {
+                        "무료배송"
+                    } else {
+                        "${numberFormat.format(benefit)}원 할인"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                if (isBest) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "최대 할인",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                                MaterialTheme.shapes.extraSmall
+                            )
+                            .padding(horizontal = 5.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
-private fun previewDiscountFor(coupon: Coupon, groupAmount: Long): Long =
-    if (coupon.type == CouponType.FREE_SHIPPING) {
-        if (isCouponUsable(coupon, groupAmount)) Constants.Commerce.DEFAULT_SHIPPING_FEE else 0L
-    } else {
-        calcSingleCouponDiscount(coupon, groupAmount)
+@Composable
+private fun CouponRowDivider() {
+    HorizontalDivider(
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        modifier = Modifier.padding(horizontal = 14.dp)
+    )
+}
+
+@Composable
+private fun CouponSheetMessage(
+    title: String,
+    subtitle: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {}
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(start = 20.dp, end = 20.dp, bottom = BottomButtonArea),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        if (actionLabel != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = actionLabel,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(onClick = onAction)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
     }
+}
 
-private fun calcPreviewDiscount(
-    selectedCoupons: Map<Int, Coupon>,
-    orderAmountByCreatorId: Map<Int, Long>
-): Long {
-    var totalDiscount = 0L
-
-    for ((creatorId, coupon) in selectedCoupons) {
-        val groupAmount = orderAmountByCreatorId[creatorId] ?: continue
-        totalDiscount += previewDiscountFor(coupon, groupAmount)
+/** 쓸 수 없는 이유, 서버 조건과 같음 */
+private fun couponBlockReason(
+    coupon: Coupon,
+    orderAmount: Long,
+    creatorInfo: CouponCreatorInfo,
+    numberFormat: NumberFormat
+): String? {
+    if (!isCouponUsable(coupon, orderAmount)) {
+        val minAmount = coupon.minOrderAmount ?: 0L
+        return "${numberFormat.format(minAmount - orderAmount)}원 더 담으면 사용 가능"
     }
-
-    return totalDiscount
+    if (coupon.type == CouponType.FREE_SHIPPING && creatorInfo.freeShipBlockReason != null) {
+        return creatorInfo.freeShipBlockReason
+    }
+    return null
 }
 
 private val previewCoupons = listOf(
     Coupon(
-        id = 1, creatorId = 1, code = "WELCOME10", name = "신규 가입 할인 쿠폰",
-        type = CouponType.PERCENTAGE, discountValue = "10", minOrderAmount = "10000",
-        maxDiscountAmount = "5000", status = UserCouponStatus.AVAILABLE,
-        expiresAt = System.currentTimeMillis() + 30 * 86_400_000L, daysRemaining = 30
+        id = 1, creatorId = 1, code = "WINTER10", name = "겨울잠 준비 10% 할인",
+        type = CouponType.PERCENTAGE, discountValue = 10L, minOrderAmount = 30000L,
+        maxDiscountAmount = 3000L, status = UserCouponStatus.AVAILABLE,
+        expiresAt = System.currentTimeMillis() + 3 * 86_400_000L, daysRemaining = 3
     ),
     Coupon(
-        id = 2, creatorId = 2, code = "SAVE5000", name = "5천원 할인 쿠폰",
-        type = CouponType.FIXED_AMOUNT, discountValue = "5000", minOrderAmount = "30000",
+        id = 2, creatorId = 1, code = "ONYX1000", name = "오닉스 네 살 1,000원 할인",
+        type = CouponType.FIXED_AMOUNT, discountValue = 1000L, minOrderAmount = 10000L,
         maxDiscountAmount = null, status = UserCouponStatus.AVAILABLE,
-        expiresAt = System.currentTimeMillis() + 3 * 86_400_000L, daysRemaining = 2
+        expiresAt = System.currentTimeMillis() + 40 * 86_400_000L, daysRemaining = 40
     ),
     Coupon(
-        id = 3, creatorId = 3, code = "FREESHIP", name = "무료배송 쿠폰",
-        type = CouponType.FREE_SHIPPING, discountValue = "0", minOrderAmount = null,
+        id = 3, creatorId = 2, code = "STAR2000", name = "별빛 겨울 2,000원 할인",
+        type = CouponType.FIXED_AMOUNT, discountValue = 2000L, minOrderAmount = 30000L,
         maxDiscountAmount = null, status = UserCouponStatus.AVAILABLE,
         expiresAt = System.currentTimeMillis() + 15 * 86_400_000L, daysRemaining = 15
     )
 )
 
-@HaloLightDarkPreview
-@Composable
-private fun CouponSelectNonePreview() {
-    HaloTheme {
-        CouponSelectContent(
-            coupons = previewCoupons,
-            orderCreatorIds = setOf(1, 2),
-            orderAmountByCreatorId = mapOf(1 to 50_000L, 2 to 20_000L),
-            couponInfoByCreator = mapOf(
-                1 to CouponCreatorInfo(name = "크리에이터A"),
-                2 to CouponCreatorInfo(name = "크리에이터B"),
-                3 to CouponCreatorInfo(
-                    name = "크리에이터C",
-                    freeShipBlockReason = "멤버십 무료배송 적용 중"
-                )
-            ),
-            draftSelectedCoupons = emptyMap(),
-            couponCode = "",
-            isClaiming = false
-        )
-    }
-}
+private val previewCreators = mapOf(
+    1 to CouponCreatorInfo(name = "오닉스", freeShipBlockReason = "멤버십 무료배송 적용 중"),
+    2 to CouponCreatorInfo(name = "아마리")
+)
 
 @HaloLightDarkPreview
 @Composable
-private fun CouponSelectOnePreview() {
+private fun CouponSelectPreview() {
     HaloTheme {
-        CouponSelectContent(
-            coupons = previewCoupons,
-            orderCreatorIds = setOf(1, 2),
-            orderAmountByCreatorId = mapOf(1 to 50_000L, 2 to 50_000L),
-            couponInfoByCreator = mapOf(
-                1 to CouponCreatorInfo(name = "크리에이터A"),
-                2 to CouponCreatorInfo(name = "크리에이터B"),
-                3 to CouponCreatorInfo(name = "크리에이터C")
-            ),
-            draftSelectedCoupons = mapOf(1 to previewCoupons[0]),
-            couponCode = "",
-            isClaiming = false
-        )
-    }
-}
-
-@HaloLightDarkPreview
-@Composable
-private fun CouponSelectTwoExpandedPreview() {
-    HaloTheme {
-        CouponSelectContent(
-            coupons = previewCoupons,
-            orderCreatorIds = setOf(1, 2),
-            orderAmountByCreatorId = mapOf(1 to 50_000L, 2 to 50_000L),
-            couponInfoByCreator = mapOf(
-                1 to CouponCreatorInfo(name = "크리에이터A"),
-                2 to CouponCreatorInfo(name = "크리에이터B"),
-                3 to CouponCreatorInfo(name = "크리에이터C")
-            ),
-            draftSelectedCoupons = mapOf(
-                1 to previewCoupons[0],
-                2 to previewCoupons[1]
-            ),
-            couponCode = "",
-            isClaiming = false,
-            initialExpanded = true
-        )
-    }
-}
-
-@HaloLightDarkPreview
-@Composable
-private fun CouponSelectLoadingPreview() {
-    HaloTheme {
-        CouponSelectContent(
-            coupons = emptyList(),
-            orderCreatorIds = emptySet(),
-            couponInfoByCreator = emptyMap(),
-            draftSelectedCoupons = emptyMap(),
-            couponCode = "",
-            isClaiming = false,
-            isLoading = true
-        )
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            CouponSelectContent(
+                coupons = previewCoupons,
+                orderAmountByCreatorId = mapOf(1 to 45_000L, 2 to 18_000L),
+                couponInfoByCreator = previewCreators,
+                draftSelectedCoupons = mapOf(1 to previewCoupons[0]),
+                couponCode = "",
+                isClaiming = false,
+                modifier = Modifier.height(640.dp)
+            )
+        }
     }
 }
 
@@ -904,14 +554,17 @@ private fun CouponSelectLoadingPreview() {
 @Composable
 private fun CouponSelectEmptyPreview() {
     HaloTheme {
-        CouponSelectContent(
-            coupons = emptyList(),
-            orderCreatorIds = emptySet(),
-            couponInfoByCreator = emptyMap(),
-            draftSelectedCoupons = emptyMap(),
-            couponCode = "",
-            isClaiming = false
-        )
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            CouponSelectContent(
+                coupons = emptyList(),
+                orderAmountByCreatorId = emptyMap(),
+                couponInfoByCreator = previewCreators,
+                draftSelectedCoupons = emptyMap(),
+                couponCode = "",
+                isClaiming = false,
+                modifier = Modifier.height(640.dp)
+            )
+        }
     }
 }
 
@@ -919,14 +572,17 @@ private fun CouponSelectEmptyPreview() {
 @Composable
 private fun CouponSelectErrorPreview() {
     HaloTheme {
-        CouponSelectContent(
-            coupons = emptyList(),
-            orderCreatorIds = emptySet(),
-            couponInfoByCreator = emptyMap(),
-            draftSelectedCoupons = emptyMap(),
-            couponCode = "",
-            isClaiming = false,
-            error = "쿠폰을 불러올 수 없습니다"
-        )
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            CouponSelectContent(
+                coupons = emptyList(),
+                orderAmountByCreatorId = emptyMap(),
+                couponInfoByCreator = previewCreators,
+                draftSelectedCoupons = emptyMap(),
+                couponCode = "",
+                isClaiming = false,
+                error = "쿠폰을 불러올 수 없습니다",
+                modifier = Modifier.height(640.dp)
+            )
+        }
     }
 }

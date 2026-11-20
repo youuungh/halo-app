@@ -1,5 +1,3 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-
 package com.ninezero.halo.feature.store.presentation.create_product.components
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -53,7 +51,12 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.modifiers.BringIntoViewGap
 import com.ninezero.halo.feature.store.domain.model.RichTextBlockStyle
+import com.ninezero.halo.feature.store.presentation.components.richTextAlign
+import com.ninezero.halo.feature.store.presentation.components.richTextColorOrNull
+import com.ninezero.halo.feature.store.presentation.components.richTextDecoration
+import com.ninezero.halo.feature.store.presentation.components.richTextStyle
 import com.ninezero.halo.feature.store.presentation.create_product.CharFormat
 import com.ninezero.halo.feature.store.presentation.create_product.EditorBlock
 
@@ -64,6 +67,7 @@ fun RichEditorTextField(
     onTextChange: (String, Int) -> Unit,
     onSelectionChange: (TextRange) -> Unit,
     onFocus: () -> Unit,
+    onFocusStateChange: (Boolean) -> Unit,  // 하단 바를 포커스가 빠지는 즉시 숨기려고
     modifier: Modifier = Modifier,
     selectionOverride: TextRange? = null,
     showPlaceholder: Boolean = true,
@@ -75,7 +79,7 @@ fun RichEditorTextField(
     bottomReserve: Dp = 0.dp
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val editorTextStyle = richEditorTextStyle(block.textStyle).copy(
+    val editorTextStyle = richTextStyle(block.textStyle).copy(
         textAlign = richTextAlign(block.textAlignment),
         lineHeightStyle = LineHeightStyle(
             alignment = LineHeightStyle.Alignment.Center,
@@ -87,13 +91,13 @@ fun RichEditorTextField(
     val annotatedString = remember(block.text, block.formats) {
         buildAnnotatedString {
             block.text.forEachIndexed { index, char ->
-                val fmt = block.formats.getOrElse(index) { CharFormat() }
+                val charFormat = block.formats.getOrElse(index) { CharFormat() }
                 withStyle(
                     SpanStyle(
-                        fontWeight = if (fmt.bold) FontWeight.Bold else FontWeight.Normal,
-                        fontStyle = if (fmt.italic) FontStyle.Italic else FontStyle.Normal,
-                        textDecoration = richTextDecoration(fmt.underline, fmt.strikethrough),
-                        color = richTextColorOrNull(fmt.textColor) ?: Color.Unspecified
+                        fontWeight = if (charFormat.bold) FontWeight.Bold else FontWeight.Normal,
+                        fontStyle = if (charFormat.italic) FontStyle.Italic else FontStyle.Normal,
+                        textDecoration = richTextDecoration(charFormat.underline, charFormat.strikethrough),
+                        color = richTextColorOrNull(charFormat.textColor) ?: Color.Unspecified
                     )
                 ) {
                     append(char)
@@ -120,7 +124,7 @@ fun RichEditorTextField(
     val focusRequester = remember { FocusRequester() }
     var textLayoutResult by remember(block.id) { mutableStateOf<TextLayoutResult?>(null) }
     // 예약 높이는 state로만 읽어 effect 재실행 방지
-    val reservePxState = rememberUpdatedState(with(density) { bottomReserve.toPx() })
+    val reservePxState = rememberUpdatedState(with(density) { (bottomReserve + BringIntoViewGap).toPx() })
     val imeBottom = WindowInsets.ime.getBottom(density)
     // 분리·병합 뒤 포커스 이동
     LaunchedEffect(pendingFocus) {
@@ -185,7 +189,10 @@ fun RichEditorTextField(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
-                .onFocusChanged { if (it.isFocused && !isFocused) onFocus() }
+                .onFocusChanged {
+                    if (it.isFocused && !isFocused) onFocus()
+                    onFocusStateChange(it.isFocused)
+                }
                 .onPreviewKeyEvent { event ->
                     // 맨 앞 백스페이스는 앞 블록과 병합
                     if (event.type == KeyEventType.KeyDown &&

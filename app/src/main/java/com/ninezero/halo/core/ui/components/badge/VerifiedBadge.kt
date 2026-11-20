@@ -1,5 +1,7 @@
 package com.ninezero.halo.core.ui.components.badge
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -11,6 +13,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
 /** 인증 뱃지 대상 role 여부 */
 private fun isVerifiedRole(role: String?): Boolean = role == "CREATOR" || role == "ADMIN"
@@ -32,5 +36,16 @@ fun VerifiedBadge(
                 .size(size),
             tint = tint
         )
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun VerifiedBadgePreview() {
+    HaloSurfacePreview {
+        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            VerifiedBadge(role = "CREATOR")
+            VerifiedBadge(role = "ADMIN", size = 20.dp)
+        }
     }
 }

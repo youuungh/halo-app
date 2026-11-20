@@ -8,6 +8,8 @@ data class SubscriptionSheetState(
     val isVisible: Boolean = false,
     val creatorId: Int? = null,
     val creatorName: String = "",
+    val creatorAvatarUrl: String? = null,
+    val creatorRole: String? = null,  // 인증 뱃지용
     val plans: List<SubscriptionPlan> = emptyList(),
     val currentPlanId: Int? = null,
     val currentTier: UserTierInfo? = null,  // 비활성 현재 플랜은 목록에 없어 따로 받음

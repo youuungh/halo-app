@@ -29,7 +29,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.button.ActionButton
-import com.ninezero.halo.core.ui.components.input.AuthTextField
+import com.ninezero.halo.core.ui.components.input.LabeledTextField
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
@@ -131,7 +131,7 @@ internal fun ResetPasswordScreenContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.password,
                 onValueChange = { onIntent(ResetPasswordIntent.PasswordChanged(it)) },
                 label = "새 비밀번호",
@@ -146,13 +146,13 @@ internal fun ResetPasswordScreenContent(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.confirmPassword,
                 onValueChange = { onIntent(ResetPasswordIntent.ConfirmPasswordChanged(it)) },
                 label = "새 비밀번호 확인",
                 isPassword = true,
-                isPasswordVisible = state.isConfirmPwVisible,
-                onPasswordVisibilityToggle = { onIntent(ResetPasswordIntent.ToggleConfirmPwVisibility) },
+                isPasswordVisible = state.isConfirmPasswordVisible,
+                onPasswordVisibilityToggle = { onIntent(ResetPasswordIntent.ToggleConfirmPasswordVisibility) },
                 keyboardType = KeyboardType.Password,
                 isError = state.confirmPasswordError != null,
                 errorMessage = state.confirmPasswordError,

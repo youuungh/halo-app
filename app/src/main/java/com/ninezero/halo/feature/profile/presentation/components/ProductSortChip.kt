@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 enum class ProductSortType(val apiValue: String, val displayName: String) {
     LATEST("LATEST", "최신순"),

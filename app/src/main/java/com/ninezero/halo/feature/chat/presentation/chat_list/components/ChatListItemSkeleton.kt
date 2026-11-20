@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,7 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.shimmer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 @Composable
 fun ChatListItemSkeleton(
@@ -53,7 +53,7 @@ fun ChatListItemSkeleton(
                     modifier = Modifier
                         .width(100.dp)
                         .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
 
@@ -61,7 +61,7 @@ fun ChatListItemSkeleton(
                     modifier = Modifier
                         .width(40.dp)
                         .height(12.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
             }
@@ -72,7 +72,7 @@ fun ChatListItemSkeleton(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
                     .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
         }

@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
 /** 시트 드래그 핸들 */
 @Composable
@@ -24,12 +26,20 @@ fun BottomSheetDragHandle() {
     ) {
         Box(
             modifier = Modifier
-                .width(32.dp)
+                .width(58.dp)
                 .height(4.dp)
                 .background(
                     color = MaterialTheme.colorScheme.outlineVariant,
                     shape = RoundedCornerShape(2.dp)
                 )
         )
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun BottomSheetDragHandlePreview() {
+    HaloSurfacePreview {
+        BottomSheetDragHandle()
     }
 }

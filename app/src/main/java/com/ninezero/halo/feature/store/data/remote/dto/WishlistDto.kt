@@ -2,6 +2,8 @@ package com.ninezero.halo.feature.store.data.remote.dto
 
 import com.ninezero.halo.core.network.CursorDto
 import com.ninezero.halo.core.network.dto.UserSummaryDto
+import com.ninezero.halo.core.util.toAmountLong
+import com.ninezero.halo.core.util.toAmountLongOrNull
 import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.store.domain.model.Wishlist
 import com.ninezero.halo.feature.store.domain.model.WishlistProduct
@@ -57,8 +59,8 @@ fun WishlistDto.toDomain(): Wishlist = Wishlist(
 fun WishlistProductDto.toDomain(): WishlistProduct = WishlistProduct(
     id = id,
     name = name,
-    price = price,
-    originalPrice = originalPrice,
+    price = price.toAmountLong(),
+    originalPrice = originalPrice.toAmountLongOrNull(),
     discountRate = discountRate,
     imageUrl = imageUrl,
     purchaseState = purchaseState.toWishlistPurchaseState(),

@@ -23,18 +23,21 @@ private val previewMonthlyTrend = listOf(
 
 private val previewBestSellers = listOf(
     BestSeller(
+        productId = 1,
         productName = "프리미엄 무선 이어폰 Pro Max",
         productImageUrl = null,
         quantity = 32,
         revenue = 2_848_000L
     ),
     BestSeller(
+        productId = 2,
         productName = "노이즈캔슬링 헤드폰",
         productImageUrl = null,
         quantity = 7,
         revenue = 1_113_000L
     ),
     BestSeller(
+        productId = 3,
         productName = "USB-C 고속 충전기",
         productImageUrl = null,
         quantity = 6,

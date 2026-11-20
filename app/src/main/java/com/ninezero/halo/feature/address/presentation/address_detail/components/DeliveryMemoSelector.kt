@@ -24,47 +24,37 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.bottomsheet.SheetHeader
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
-import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.button.SheetActionButton
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
 import com.ninezero.halo.core.ui.components.input.FormTextField
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.input.inputBorder
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -84,59 +74,29 @@ fun MemoSelectorField(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val hasContent = value.isNotEmpty()
-
-    Box(
+    val shape = RoundedCornerShape(10.dp)
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(12.dp)
-            )
+            .inputBorder(shape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "배송 메모 (선택)",
-            style = if (hasContent) {
-                MaterialTheme.typography.labelSmall
-            } else {
-                MaterialTheme.typography.bodyLarge
-            },
-            color = if (hasContent) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            },
-            modifier = Modifier
-                .align(if (hasContent) Alignment.TopStart else Alignment.CenterStart)
-                .padding(top = if (hasContent) 8.dp else 0.dp)
+            text = value.ifEmpty { "배송 메모 선택" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (value.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
-
-        if (hasContent) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(end = 28.dp, bottom = 8.dp)
-            )
-        }
-
         Icon(
             painter = painterResource(R.drawable.ic_chevron_right),
             contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .size(18.dp),
+            modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -163,34 +123,12 @@ fun DeliveryMemoBottomSheet(
     }
     var customText by remember { mutableStateOf(if (initialIsCustom) currentMemo else "") }
 
-    val customFieldRequester = remember { BringIntoViewRequester() }
-    var customFieldSize by remember { mutableStateOf(IntSize.Zero) }
-    var isCustomFocused by remember { mutableStateOf(false) }
-    var viewportHeight by remember { mutableIntStateOf(0) }
-
-    // 키보드만큼 시트가 줄면 스크롤은 필드를 바텀바 밑까지만 올림, 줄 때마다 바텀바 위로 재요청
-    LaunchedEffect(isCustomFocused, customFieldSize, bottomBarHeight, viewportHeight) {
-        if (!isCustomFocused || customFieldSize == IntSize.Zero) return@LaunchedEffect
-        val reservedPx = with(density) { (bottomBarHeight + 8.dp).toPx() }
-        customFieldRequester.bringIntoView(
-            Rect(
-                left = 0f,
-                top = 0f,
-                right = customFieldSize.width.toFloat(),
-                bottom = customFieldSize.height.toFloat() + reservedPx
-            )
-        )
-    }
-
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = surface,
-        dragHandle = null,
-        contentWindowInsets = { WindowInsets(0) },
-        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
+        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+        showDragHandle = false  // 헤더 안에 있음
     ) {
-        BottomSheetDragHandle()
 
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -198,7 +136,6 @@ fun DeliveryMemoBottomSheet(
                     .fillMaxWidth()
                     .hazeSource(hazeState)
                     .blockSheetFling()
-                    .onSizeChanged { viewportHeight = it.height }
                     .verticalScroll(rememberScrollState(), overscrollEffect = null)
                     .padding(top = headerHeight, bottom = bottomBarHeight)
                     .padding(horizontal = 16.dp)
@@ -240,11 +177,8 @@ fun DeliveryMemoBottomSheet(
                             placeholder = "배송 시 요청사항을 입력해주세요",
                             maxLength = MEMO_MAX_LENGTH,
                             showCounter = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bringIntoViewRequester(customFieldRequester)
-                                .onSizeChanged { customFieldSize = it }
-                                .onFocusChanged { isCustomFocused = it.hasFocus }
+                            modifier = Modifier.fillMaxWidth(),
+                            bringIntoViewReserve = bottomBarHeight
                         )
                     }
                 }
@@ -252,44 +186,13 @@ fun DeliveryMemoBottomSheet(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // 헤더
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = surface,
-                            tint = HaloBlurTint(surface),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 1f,
-                            endIntensity = 0f
-                        )
-                    }
-                    .onGloballyPositioned { headerHeight = with(density) { it.size.height.toDp() } }
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "배송 메모",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                    GlassIconButton(
-                        onClick = onDismiss,
-                        icon = painterResource(R.drawable.ic_close),
-                        contentDescription = "닫기",
-                        hazeState = hazeState,
-                        backgroundColor = surface,
-                        size = 36.dp,
-                        iconSize = 20.dp
-                    )
-                }
-            }
+            SheetHeader(
+                title = "배송 메모",
+                onClose = onDismiss,
+                hazeState = hazeState,
+                onHeightChange = { headerHeight = it },
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
 
             // 바텀바
             Box(
@@ -301,17 +204,7 @@ fun DeliveryMemoBottomSheet(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .haloBlur(state = hazeState) {
-                            style = HaloBlurStyle(
-                                backgroundColor = surface,
-                                tint = HaloBlurTint(surface),
-                                noiseFactor = 0f
-                            )
-                            progressive = HazeProgressive.verticalGradient(
-                                startIntensity = 0f,
-                                endIntensity = 1f
-                            )
-                        }
+                        .haloBlur(hazeState, HaloBlurs.fadeUp(surface, end = 1f))
                 )
                 Box(
                     modifier = Modifier
@@ -320,7 +213,7 @@ fun DeliveryMemoBottomSheet(
                         .padding(horizontal = 16.dp)
                         .padding(top = 12.dp, bottom = 8.dp)
                 ) {
-                    SheetActionButton(
+                    PrimaryButton(
                         text = "적용",
                         onClick = {
                             onConfirm((if (isCustom) customText else selectedPreset.orEmpty()).trim())

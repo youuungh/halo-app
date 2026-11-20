@@ -22,4 +22,9 @@ class ChatMessageMemoryCache @Inject constructor() {
     fun putHistoryComplete(roomId: Int, complete: Boolean) {
         if (roomId != 0) historyComplete[roomId] = complete
     }
+
+    fun clear() {
+        cache.clear()
+        historyComplete.clear()
+    }
 }

@@ -6,6 +6,7 @@ import com.ninezero.halo.feature.store.domain.model.CreateOrderRequest
 import com.ninezero.halo.feature.store.domain.model.CreatorMonthlySales
 import com.ninezero.halo.feature.store.domain.model.CreatorSalesSummary
 import com.ninezero.halo.feature.store.domain.model.Order
+import com.ninezero.halo.feature.store.domain.model.OrderStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatusResponse
 
 interface OrderRepository {
@@ -30,7 +31,7 @@ interface OrderRepository {
     /** 판매자 월별 매출 통계 조회 */
     suspend fun getCreatorMonthlySales(month: String?): Result<CreatorMonthlySales>
     /** 주문 상태 변경 */
-    suspend fun updateOrderStatus(orderId: Int, status: String): Result<Order>
+    suspend fun updateOrderStatus(orderId: Int, status: OrderStatus): Result<Order>
     /** 배송 정보 등록 */
     suspend fun updateShippingInfo(orderId: Int, trackingNumber: String, carrier: String): Result<Order>
 }

@@ -8,10 +8,8 @@ import com.ninezero.halo.core.util.mergeFreshHead
 import com.ninezero.halo.feature.store.domain.event.StoreEvent
 import com.ninezero.halo.feature.store.domain.event.StoreEventBus
 import com.ninezero.halo.feature.store.domain.model.OrderItem
-import com.ninezero.halo.feature.store.domain.model.purchaseBlockedMessage
-import com.ninezero.halo.feature.store.domain.repository.CartRepository
 import com.ninezero.halo.feature.store.domain.repository.OrderRepository
-import com.ninezero.halo.feature.store.domain.repository.ProductRepository
+import com.ninezero.halo.feature.store.domain.usecase.AddOrderItemToCartUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
@@ -24,8 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderListViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
-    private val cartRepository: CartRepository,
-    private val productRepository: ProductRepository,
+    private val addOrderItemToCartUseCase: AddOrderItemToCartUseCase,
     private val storeEventBus: StoreEventBus
 ) : ViewModel(), OrbitContainerHost<OrderListState, OrderListState, OrderListSideEffect> {
 
@@ -33,6 +30,7 @@ class OrderListViewModel @Inject constructor(
         orbitContainer(OrderListState())
 
     private val listGeneration = ListGeneration()
+    private val shippingGeneration = ListGeneration()  // 시트를 열고 닫을 때마다 올림, 옛 응답은 버림
 
     init {
         loadOrders()
@@ -75,10 +73,12 @@ class OrderListViewModel @Inject constructor(
             is OrderListIntent.Load -> loadOrders()
             is OrderListIntent.LoadMore -> loadMore()
             is OrderListIntent.Refresh -> refresh()
-            is OrderListIntent.ScreenResumed -> refreshOrdersQuietly()
+            is OrderListIntent.ScreenResumed -> refreshOrdersSilently()
             is OrderListIntent.ToggleOrderExpand -> toggleExpand(intent.orderId)
             is OrderListIntent.WriteReview -> writeReview(intent.item, intent.orderId)
             is OrderListIntent.AddToCart -> addToCart(intent.item)
+            is OrderListIntent.ShowShippingSheet -> showShippingSheet(intent.orderId, intent.creatorId)
+            is OrderListIntent.DismissShippingSheet -> dismissShippingSheet()
             is OrderListIntent.NavigateBack -> navigateBack()
             is OrderListIntent.NavigateToDetail -> navigateToDetail(intent.orderId)
             is OrderListIntent.SnackbarDismissed -> dismissSnackbar()
@@ -146,7 +146,7 @@ class OrderListViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-    private fun refreshOrdersQuietly() = intent {
+    private fun refreshOrdersSilently() = intent {
         if (state.isLoading || state.isRefreshing) return@intent
         orderRepository.getMyOrders(cursor = null, limit = 20)
             .onSuccess { result ->
@@ -212,18 +212,7 @@ class OrderListViewModel @Inject constructor(
     }
 
     private fun addToCart(item: OrderItem) = intent {
-        val product = productRepository.getProduct(item.productId)
-            .onFailure { error ->
-                reduce { state.copy(snackbarState = SnackbarState(error.message ?: "상품 정보를 확인할 수 없습니다")) }
-            }
-            .getOrNull() ?: return@intent
-
-        product.purchaseBlockedMessage()?.let { message ->
-            reduce { state.copy(snackbarState = SnackbarState(message)) }
-            return@intent
-        }
-
-        cartRepository.addToCart(productId = item.productId, quantity = 1)
+        addOrderItemToCartUseCase(item.productId)
             .onSuccess {
                 reduce {
                     state.copy(
@@ -237,6 +226,41 @@ class OrderListViewModel @Inject constructor(
             .onFailure { error ->
                 reduce { state.copy(snackbarState = SnackbarState(error.message ?: "장바구니 담기 실패")) }
             }
+    }
+
+    private fun showShippingSheet(orderId: Int, creatorId: Int?) = intent {
+        val generation = shippingGeneration.next()
+        reduce {
+            state.copy(
+                shippingSheetOrderId = orderId,
+                shippingSheetCreatorId = creatorId,
+                shippingStatus = null,
+                isShippingStatusLoading = true
+            )
+        }
+
+        orderRepository.getShippingStatus(orderId, creatorId)
+            .onSuccess { shipping ->
+                if (shippingGeneration.current() != generation) return@intent
+                reduce { state.copy(shippingStatus = shipping, isShippingStatusLoading = false) }
+            }
+            .onFailure {
+                if (shippingGeneration.current() != generation) return@intent
+                // 실패는 조용히, 시트는 주문에 있는 값으로
+                reduce { state.copy(isShippingStatusLoading = false) }
+            }
+    }
+
+    private fun dismissShippingSheet() = intent {
+        shippingGeneration.next()
+        reduce {
+            state.copy(
+                shippingSheetOrderId = null,
+                shippingSheetCreatorId = null,
+                shippingStatus = null,
+                isShippingStatusLoading = false
+            )
+        }
     }
 
     private fun navigateBack() = intent {

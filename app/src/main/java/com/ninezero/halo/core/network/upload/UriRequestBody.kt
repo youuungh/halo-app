@@ -17,8 +17,8 @@ class UriRequestBody(
 
     override fun contentType() = mediaType
     override fun contentLength() = length
-    // IOException으로만 던짐, 그 외는 앱이 죽음
-    override fun writeTo(sink: BufferedSink) {
+
+    override fun writeTo(sink: BufferedSink) {  // IOException으로만 던짐, 그 외는 앱이 죽음
         val input = try {
             contentResolver.openInputStream(uri)
         } catch (e: Exception) {
@@ -35,5 +35,5 @@ class UriRequestBody(
     }
 }
 
-/** 기기 파일 읽기 실패, 통신 오류와 구분 */
+/** 기기 파일 읽기 실패(통신 오류와 구분) */
 class LocalFileReadException(message: String, cause: Throwable? = null) : IOException(message, cause)

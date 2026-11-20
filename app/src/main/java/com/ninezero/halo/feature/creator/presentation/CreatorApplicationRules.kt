@@ -5,7 +5,7 @@ import com.ninezero.halo.feature.creator.domain.model.CreatorApplicationStatus
 
 const val CREATOR_APPLICATION_REASON_MIN_LENGTH = 10
 const val CREATOR_APPLICATION_REASON_MAX_LENGTH = 300
-const val CREATOR_REAPPLY_COOLDOWN_DAYS = 7
+const val CREATOR_REAPPLY_WAIT_DAYS = 7
 
 fun String.isValidApplicationReason(): Boolean {
     val length = trim().length
@@ -26,8 +26,8 @@ fun CreatorApplication.reapplyDaysLeft(nowMillis: Long = System.currentTimeMilli
     }
 
     val reviewedAtMillis = reviewedAt?.takeIf { it > 0L } ?: return null
-    val elapsedDays = ((nowMillis - reviewedAtMillis) / (24L * 60L * 60L * 1000L)).toInt()
-    val remainingDays = CREATOR_REAPPLY_COOLDOWN_DAYS - elapsedDays
+    val daysPassed = ((nowMillis - reviewedAtMillis) / (24L * 60L * 60L * 1000L)).toInt()
+    val remainingDays = CREATOR_REAPPLY_WAIT_DAYS - daysPassed
 
     return remainingDays.takeIf { it > 0 }
 }

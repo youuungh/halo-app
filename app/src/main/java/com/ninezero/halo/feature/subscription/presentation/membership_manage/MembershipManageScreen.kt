@@ -1,18 +1,12 @@
 package com.ninezero.halo.feature.subscription.presentation.membership_manage
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,13 +19,12 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.EditDeleteOptionBottomSheet
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.subscription.presentation.components.SubscriptionPlanBottomSheet
 import com.ninezero.halo.feature.subscription.presentation.membership_manage.components.PlanItem
-import com.ninezero.halo.feature.subscription.presentation.membership_manage.components.PlanItemSkeleton
 import com.ninezero.halo.feature.subscription.presentation.membership_manage.components.SummarySection
-import com.ninezero.halo.feature.subscription.presentation.membership_manage.components.SummarySectionSkeleton
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -68,8 +61,6 @@ internal fun MembershipManageScreenContent(
     onIntent: (MembershipManageIntent) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
-    val isInitialLoading = state.isLoading && state.plans.isEmpty()
-
     PagedListScreenShell(
         title = "멤버십 관리",
         isRefreshing = state.isRefreshing,
@@ -77,6 +68,7 @@ internal fun MembershipManageScreenContent(
         hasMore = state.hasMore,
         isEmpty = state.plans.isEmpty(),
         error = state.error,
+        errorTitle = "멤버십 목록을 불러오지 못했습니다",
         emptyTitle = "아직 멤버십이 없어요",
         emptyDescription = "새 멤버십을 생성해보세요",
         onNavigateBack = { onIntent(MembershipManageIntent.NavigateBack) },
@@ -95,62 +87,38 @@ internal fun MembershipManageScreenContent(
             )
         }
     ) { listState, headerHeight ->
+        // 첫 로딩 · 빈 목록은 셸이 보여 줌
+        if (state.plans.isEmpty()) return@PagedListScreenShell
         LazyColumn(
-            state = if (isInitialLoading) rememberLazyListState() else listState,
+            state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = headerHeight, bottom = 32.dp),
-            userScrollEnabled = !isInitialLoading
+            contentPadding = PaddingValues(top = headerHeight, bottom = 32.dp)
         ) {
-            if (isInitialLoading) {
-                // 커스텀 스켈레톤
-                item { SummarySectionSkeleton() }
-                items(5) { PlanItemSkeleton() }
-            } else {
-                // 요약 섹션
-                item {
-                    SummarySection(
-                        totalPlans = state.plans.size,
-                        totalSubscribers = state.totalSubscribers
-                    )
-                }
+            // 요약 섹션
+            item {
+                SummarySection(
+                    totalPlans = state.plans.size,
+                    totalSubscribers = state.totalSubscribers
+                )
+            }
 
-                // 빈 상태
-                if (state.plans.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "아직 멤버십 플랜이 없습니다",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    items(
-                        items = state.plans,
-                        key = { it.id }
-                    ) { plan ->
-                        Column(modifier = Modifier.animateItem()) {
-                            PlanItem(
-                                plan = plan,
-                                onMoreOptions = { onIntent(MembershipManageIntent.ShowPlanOptions(plan)) }
-                            )
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
+            items(
+                items = state.plans,
+                key = { it.id }
+            ) { plan ->
+                PlanItem(
+                    plan = plan,
+                    onMoreOptions = { onIntent(MembershipManageIntent.ShowPlanOptions(plan)) },
+                    modifier = Modifier
+                        // 위치 이동 애니메이션은 끔, 따로 출렁임 방지
+                        .animateItem(placementSpec = null)
+                        .padding(bottom = 10.dp)
+                )
+            }
 
-                    // 추가 로딩 스켈레톤
-                    if (state.isLoading && state.plans.isNotEmpty()) {
-                        items(3) { PlanItemSkeleton() }
-                    }
+            if (state.isLoading) {
+                item(key = "loading_more") {
+                    ListLoadMoreIndicator()
                 }
             }
         }

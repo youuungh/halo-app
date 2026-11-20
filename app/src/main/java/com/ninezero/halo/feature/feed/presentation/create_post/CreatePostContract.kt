@@ -14,23 +14,19 @@ data class CreatePostState(
     val selectedMediaUris: List<Uri> = emptyList(),
     val isSubmitting: Boolean = false,
     val snackbarState: SnackbarState? = null,
-
     // PostDraft 관련
     val drafts: List<PostDraft> = emptyList(),
     val isDraftLoading: Boolean = false,
     val showDraftBottomSheet: Boolean = false,
     val showDraftDeletedSnackbar: Boolean = false,
-
     // 수정 모드 관련
     val isEditMode: Boolean = false,
     val editPostId: Int? = null,
     val originalMediaItems: List<MediaItem> = emptyList(),
     val originalContent: String = "",  // 나가기 확인은 원본과 달라졌을 때만
-
     // 커뮤니티 글 작성 모드 관련
     val isCommunityMode: Boolean = false,
     val communityCreatorId: Int? = null,
-
     // 태그 관련
     val showTagBottomSheet: Boolean = false,
     val tags: List<String> = emptyList(),                       // 일반 태그 최대 5개
@@ -40,11 +36,10 @@ data class CreatePostState(
     val tempSectionTagId: Int? = null,                          // 바텀시트에서 선택 중인 임시 섹션 태그 ID
     val isLoadingSectionTags: Boolean = false,
     val tagSnackbarMessage: String? = null,
-
     // 상세설정 관련
     val showSettingsBottomSheet: Boolean = false,
     val isSecret: Boolean = false,                              // 비밀글, 커뮤니티 전용
-    val requiredTier: String = SubscriptionPlanTier.FREE.name,  // 멤버십 티어, 크리에이터 전용
+    val requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,  // 멤버십 티어, 크리에이터 전용
     val planTiers: Set<SubscriptionPlanTier> = emptySet()      // 활성 플랜이 있는 등급
 )
 
@@ -56,7 +51,6 @@ sealed interface CreatePostIntent {
     data object SubmitPost : CreatePostIntent
     data object NavigateBack : CreatePostIntent
     data object SnackbarDismissed : CreatePostIntent
-
     // PostDraft 관련
     data object OpenDraftBottomSheet : CreatePostIntent
     data object CloseDraftBottomSheet : CreatePostIntent
@@ -65,7 +59,6 @@ sealed interface CreatePostIntent {
     data class LoadDraft(val draft: PostDraft) : CreatePostIntent
     data class DeleteDraft(val draft: PostDraft) : CreatePostIntent
     data object DismissDraftDeletedSnackbar : CreatePostIntent
-
     // 태그 관련
     data object OpenTagBottomSheet : CreatePostIntent
     data object CloseTagBottomSheet : CreatePostIntent
@@ -77,12 +70,11 @@ sealed interface CreatePostIntent {
     data class UpdateSectionTag(val tagId: Int, val name: String) : CreatePostIntent
     data class DeleteSectionTag(val tagId: Int) : CreatePostIntent
     data object DismissTagSnackbar : CreatePostIntent
-
     // 상세설정 관련
     data object OpenSettingsBottomSheet : CreatePostIntent
     data object CloseSettingsBottomSheet : CreatePostIntent
     data class SetIsSecret(val isSecret: Boolean) : CreatePostIntent
-    data class SetRequiredTier(val tier: String) : CreatePostIntent
+    data class SetRequiredTier(val tier: SubscriptionPlanTier) : CreatePostIntent
 }
 
 sealed interface CreatePostSideEffect {

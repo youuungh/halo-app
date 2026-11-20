@@ -8,12 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,27 +24,39 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.checkbox.HaloCheckbox
-import com.ninezero.halo.core.ui.components.selector.QuantitySelector
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.badge.MembershipBadge
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.toggle.HaloCheckbox
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.previewUserSummary
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
+import com.ninezero.halo.core.ui.theme.SoldOutBgDark
+import com.ninezero.halo.core.ui.theme.SoldOutBgLight
+import com.ninezero.halo.core.ui.theme.SoldOutTextDark
+import com.ninezero.halo.core.ui.theme.SoldOutTextLight
 import com.ninezero.halo.feature.store.domain.model.CartItem
 import com.ninezero.halo.feature.store.domain.model.Product
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.store.domain.model.ProductStatus
+import com.ninezero.halo.feature.store.presentation.components.ProductStatusImage
+import com.ninezero.halo.feature.store.presentation.components.QuantitySelector
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import java.text.NumberFormat
+
+private val ItemImageSize = 64.dp
+private val StepperButtonSize = 30.dp
+private val StepperFieldWidth = 32.dp
+private val StepperWidth = StepperButtonSize * 2 + StepperFieldWidth + 4.dp  // 안쪽 여백 2씩
+private val PriceStepperGap = 14.dp
 
 @Composable
 fun CartItemRow(
@@ -53,164 +66,241 @@ fun CartItemRow(
     onClick: () -> Unit,
     onToggleSelection: () -> Unit,
     onUpdateQuantity: (Int) -> Unit,
+    onQuantityLimit: (Int) -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
+    isMembershipCard: Boolean = false,
     bottomReservedSpace: Dp = 0.dp
 ) {
     val product = cartItem.product
-    val price = product.price.toIntOrNull() ?: 0
-    val hasDiscount = product.originalPrice != null && product.discountRate != null && product.discountRate > 0
-    val isUnavailable = product.canAccess == false || !product.isActive || product.stock == 0 ||
-        product.status == "SOLD_OUT" || product.status == "DISCONTINUED"
-    val statusLabel = when {
-        product.canAccess == false -> "멤버십 전용"
-        !product.isActive || product.status == "DISCONTINUED" -> "판매종료"
-        product.stock == 0 || product.status == "SOLD_OUT" -> "품절"
+    val price = product.price
+    val discountRate = product.discountRate?.takeIf { it > 0 }
+    val originalPrice = product.originalPrice?.takeIf { discountRate != null }
+    val isDark = LocalIsDarkTheme.current
+    val statusTag = when {
+        product.canAccess == false -> StatusTag.MembershipOnly
+        !product.isActive || product.status == ProductStatus.DISCONTINUED -> StatusTag.Discontinued
+        product.stock == 0 || product.status == ProductStatus.SOLD_OUT -> StatusTag.SoldOut
         else -> null
     }
+    val isUnavailable = statusTag != null
 
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)
+            .padding(end = 16.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
+        // 48 터치 영역의 체크 표시를 사진 윗줄에 맞춤
+        if (isUnavailable) {
+            DisabledCheckbox(modifier = Modifier.offset(y = (-14).dp))
+        } else {
+            HaloCheckbox(
+                checked = isSelected,
+                onClick = onToggleSelection,
+                modifier = Modifier.offset(y = (-14).dp)
+            )
+        }
+
+        ProductStatusImage(
+            imageUrl = product.imageUrls.firstOrNull(),
+            contentDescription = product.name,
+            isMembersOnly = statusTag == StatusTag.MembershipOnly,
+            isUnavailable = isUnavailable,
+            size = ItemImageSize,
+            lockIconSize = 20.dp,
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(onClick = onClick)
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // 이름은 위, 금액은 사진 아랫선에
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .defaultMinSize(minHeight = ItemImageSize),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 체크박스
-            if (!isUnavailable) {
-                HaloCheckbox(
-                    checked = isSelected,
-                    onClick = onToggleSelection,
-                    modifier = Modifier.offset(y = (-12).dp)
-                )
-            } else {
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            // 상품 이미지
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable(onClick = onClick)
-                    .alpha(if (isUnavailable) 0.6f else 1f)
-            ) {
-                AsyncImage(
-                    model = product.imageUrls.firstOrNull(),
-                    contentDescription = product.name,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(10.dp)),
-                    contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.ic_img_placeholder),
-                    error = painterResource(R.drawable.ic_img_placeholder),
-                    fallback = painterResource(R.drawable.ic_img_placeholder)
-                )
-                if (statusLabel != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.Black.copy(alpha = 0.5f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = statusLabel,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // 상품명 + 가격
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .alpha(if (isUnavailable) 0.5f else 1f)
-            ) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                if (hasDiscount) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Text(
-                            text = "${product.discountRate}%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Normal,
-                            modifier = Modifier.alignByBaseline()
-                        )
-                        Text(
-                            text = "${numberFormat.format(price)}원",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.alignByBaseline()
-                        )
-                        Text(
-                            text = "${product.originalPrice.toBigDecimalOrNull()?.let { numberFormat.format(it) } ?: product.originalPrice}원",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textDecoration = TextDecoration.LineThrough,
-                            modifier = Modifier.alignByBaseline()
-                        )
-                    }
-                } else {
+            Column {
+                Row(verticalAlignment = Alignment.Top) {
                     Text(
-                        text = "${numberFormat.format(price)}원",
+                        text = product.name,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (isUnavailable) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onClick
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = "삭제",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .offset(y = (-1).dp)  // 상품명 첫 줄 가운데에 맞춤
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onRemove
+                            ),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (statusTag == null && product.stock in 1..10) {
+                    Text(
+                        text = "재고 ${product.stock}개 남음",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
 
-            // X 버튼
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                painter = painterResource(R.drawable.ic_close),
-                contentDescription = "삭제",
-                modifier = Modifier
-                    .size(18.dp)
-                    .offset(y = 2.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onRemove
-                    ),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (!isUnavailable) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Spacer(modifier = Modifier.width(140.dp))
-                QuantitySelector(
-                    quantity = cartItem.quantity,
-                    maxStock = minOf(product.stock, 99),
-                    onQuantityChange = onUpdateQuantity,
-                    showLabel = false,
-                    bottomReservedSpace = bottomReservedSpace
+            if (statusTag != null) {
+                StatusTagLabel(
+                    tag = statusTag,
+                    isDark = isDark,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            } else {
+                PriceStepperLayout(
+                    price = {
+                        Column {
+                            if (originalPrice != null) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${discountRate}%",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "${numberFormat.format(originalPrice * cartItem.quantity)}원",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textDecoration = TextDecoration.LineThrough
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "${numberFormat.format(price * cartItem.quantity)}원",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                        }
+                    },
+                    stepper = {
+                        QuantitySelector(
+                            quantity = cartItem.quantity,
+                            maxStock = minOf(product.stock, 99),
+                            onQuantityChange = onUpdateQuantity,
+                            onQuantityLimit = onQuantityLimit,
+                            modifier = Modifier.width(StepperWidth),
+                            showLabel = false,
+                            bottomReservedSpace = bottomReservedSpace,
+                            buttonShape = CircleShape,
+                            buttonSize = StepperButtonSize,
+                            fieldWidth = StepperFieldWidth,
+                            // 멤버십 카드 배경 위에선 회색 버튼이 탁해 흰색으로 띄움
+                            buttonColor = when {
+                                !isMembershipCard -> MaterialTheme.colorScheme.surfaceVariant
+                                isDark -> Color.White.copy(alpha = 0.2f)
+                                else -> Color.White
+                            },
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 )
             }
         }
+    }
+}
+
+/** 금액 · 수량 한 줄, 모자라면 수량을 다음 줄로 */
+@Composable
+private fun PriceStepperLayout(
+    price: @Composable () -> Unit,
+    stepper: @Composable () -> Unit
+) {
+    Layout(
+        contents = listOf(price, stepper),
+        modifier = Modifier.fillMaxWidth()
+    ) { (priceMeasurables, stepperMeasurables), constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val pricePlaceable = priceMeasurables.first().measure(loose)
+        val stepperPlaceable = stepperMeasurables.first().measure(loose)
+        val gap = PriceStepperGap.roundToPx()
+        val rowGap = 6.dp.roundToPx()
+        val width = constraints.maxWidth
+        val fitsOneLine = pricePlaceable.width + gap + stepperPlaceable.width <= width
+
+        if (fitsOneLine) {
+            val height = maxOf(pricePlaceable.height, stepperPlaceable.height)
+            layout(width, height) {
+                // 아랫선 맞춤
+                pricePlaceable.place(0, height - pricePlaceable.height)
+                stepperPlaceable.place(width - stepperPlaceable.width, height - stepperPlaceable.height)
+            }
+        } else {
+            val height = pricePlaceable.height + rowGap + stepperPlaceable.height
+            layout(width, height) {
+                pricePlaceable.place(0, 0)
+                stepperPlaceable.place(width - stepperPlaceable.width, pricePlaceable.height + rowGap)
+            }
+        }
+    }
+}
+
+private enum class StatusTag(val label: String) {
+    MembershipOnly("멤버십 전용"),
+    SoldOut("품절"),
+    Discontinued("판매종료")
+}
+
+@Composable
+private fun StatusTagLabel(tag: StatusTag, isDark: Boolean, modifier: Modifier = Modifier) {
+    if (tag == StatusTag.MembershipOnly) {
+        MembershipBadge(modifier = modifier, text = tag.label)
+        return
+    }
+    val (textColor, backgroundColor) = if (isDark) SoldOutTextDark to SoldOutBgDark else SoldOutTextLight to SoldOutBgLight
+    Text(
+        text = tag.label,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Medium,
+        color = textColor,
+        modifier = modifier
+            .background(backgroundColor, RoundedCornerShape(5.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    )
+}
+
+/** 구매할 수 없는 상품의 선택 불가 체크 칸 */
+@Composable
+private fun DisabledCheckbox(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.extraSmall)
+        )
     }
 }
 
@@ -218,30 +308,32 @@ private fun previewCartItem(
     id: Int,
     name: String,
     quantity: Int,
-    originalPrice: String? = null,
+    originalPrice: Long? = null,
     discountRate: Int? = null,
-    stock: Int = 50
+    stock: Int = 50,
+    status: ProductStatus = ProductStatus.ACTIVE,
+    canAccess: Boolean = true
 ) = CartItem(
     id = id,
     product = Product(
         id = id,
         name = name,
         description = "",
-        price = "89000",
+        price = 89000L,
         originalPrice = originalPrice,
         discountRate = discountRate,
         imageUrls = emptyList(),
         brandName = null,
         tags = emptyList(),
         stock = stock,
-        status = "ACTIVE",
+        status = status,
         isActive = true,
         viewCount = 0,
         likeCount = 0,
         salesCount = 0,
         creator = previewUserSummary(displayName = "크리에이터 샵"),
-        requiredTier = "FREE",
-        canAccess = true
+        requiredTier = SubscriptionPlanTier.FREE,
+        canAccess = canAccess
     ),
     quantity = quantity
 )
@@ -251,43 +343,45 @@ private fun previewCartItem(
 private fun CartItemRowPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
-            Column {
+            Column(modifier = Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 CartItemRow(
-                    cartItem = previewCartItem(1, "프리미엄 무선 이어폰 Pro Max", 1, "129000", 31),
+                    cartItem = previewCartItem(1, "프리미엄 무선 이어폰 Pro Max", 1, 129000L, 31),
                     numberFormat = rememberKoreanNumberFormat(),
                     isSelected = true,
                     onClick = {},
                     onToggleSelection = {},
                     onUpdateQuantity = {},
+                    onQuantityLimit = {},
                     onRemove = {}
                 )
                 CartItemRow(
-                    cartItem = previewCartItem(2, "기계식 키보드 청축", 3),
+                    cartItem = previewCartItem(2, "재고 3개 남은 상품", 3, stock = 3),
                     numberFormat = rememberKoreanNumberFormat(),
                     isSelected = false,
                     onClick = {},
                     onToggleSelection = {},
                     onUpdateQuantity = {},
+                    onQuantityLimit = {},
                     onRemove = {}
                 )
-            }
-        }
-    }
-}
-
-@HaloLightDarkPreview
-@Composable
-private fun CartItemRowLowStockPreview() {
-    HaloTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            Column {
                 CartItemRow(
-                    cartItem = previewCartItem(3, "재고 1개 남은 상품", quantity = 1, stock = 1),
+                    cartItem = previewCartItem(3, "멤버십 전용 상품", 1, canAccess = false),
                     numberFormat = rememberKoreanNumberFormat(),
-                    isSelected = true,
+                    isSelected = false,
                     onClick = {},
                     onToggleSelection = {},
                     onUpdateQuantity = {},
+                    onQuantityLimit = {},
+                    onRemove = {}
+                )
+                CartItemRow(
+                    cartItem = previewCartItem(4, "품절된 상품", 1, stock = 0, status = ProductStatus.SOLD_OUT),
+                    numberFormat = rememberKoreanNumberFormat(),
+                    isSelected = false,
+                    onClick = {},
+                    onToggleSelection = {},
+                    onUpdateQuantity = {},
+                    onQuantityLimit = {},
                     onRemove = {}
                 )
             }

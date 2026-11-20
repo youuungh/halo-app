@@ -5,7 +5,8 @@ data class PointHistory(
     val type: PointType,
     val amount: Int,
     val description: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val balanceAfter: Int = 0
 )
 
 data class PointHistoryPage(

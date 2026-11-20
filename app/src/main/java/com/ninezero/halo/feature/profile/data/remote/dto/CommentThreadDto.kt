@@ -3,12 +3,14 @@ package com.ninezero.halo.feature.profile.data.remote.dto
 import com.ninezero.halo.core.network.CursorDto
 import com.ninezero.halo.core.network.dto.UserSummaryDto
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.feed.data.remote.dto.MediaItemDto
 import com.ninezero.halo.feature.feed.data.remote.dto.toDomain
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
-import com.ninezero.halo.feature.profile.domain.model.PostSummaryData
-import com.ninezero.halo.feature.profile.domain.model.ThreadCommentData
-import com.ninezero.halo.feature.profile.domain.model.UserSummaryData
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
+import com.ninezero.halo.feature.profile.domain.model.ThreadComment
+import com.ninezero.halo.feature.profile.domain.model.ThreadPost
+import com.ninezero.halo.feature.profile.domain.model.ThreadUser
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import kotlinx.serialization.Serializable
 
 typealias UserCommentThreadsResponseDto = CursorDto<CommentThreadDto>
@@ -86,8 +88,8 @@ data class PostSummaryForCommentDto(
     val createdAt: String
 )
 
-fun UserSummaryDto.toUserSummaryData(): UserSummaryData {
-    return UserSummaryData(
+fun UserSummaryDto.toThreadUser(): ThreadUser {
+    return ThreadUser(
         id = id,
         username = username,
         displayName = displayName,
@@ -99,15 +101,15 @@ fun UserSummaryDto.toUserSummaryData(): UserSummaryData {
     )
 }
 
-fun ThreadCommentDto.toThreadCommentData(): ThreadCommentData {
+fun ThreadCommentDto.toThreadComment(): ThreadComment {
     val mappedMediaAttachments = mediaItems.sortedBy { it.sortOrder }.map { it.toDomain() }
 
-    return ThreadCommentData(
+    return ThreadComment(
         id = id,
         content = content,
         mediaAttachments = mappedMediaAttachments,
-        author = author.toUserSummaryData(),
-        replyTo = replyTo?.toUserSummaryData(),
+        author = author.toThreadUser(),
+        replyTo = replyTo?.toThreadUser(),
         createdAt = createdAt.parseTimestamp(),
         likeCount = likeCount,
         replyCount = replyCount,
@@ -120,14 +122,14 @@ fun ThreadCommentDto.toThreadCommentData(): ThreadCommentData {
     )
 }
 
-fun PostSummaryForCommentDto.toPostSummaryData(): PostSummaryData {
+fun PostSummaryForCommentDto.toThreadPost(): ThreadPost {
     val mappedMediaAttachments = mediaItems.sortedBy { it.sortOrder }.map { it.toDomain() }
 
-    return PostSummaryData(
+    return ThreadPost(
         id = id,
         excerpt = excerpt,
         mediaAttachments = mappedMediaAttachments,
-        author = author.toUserSummaryData(),
+        author = author.toThreadUser(),
         createdAt = createdAt.parseTimestamp(),
         likeCount = likeCount,
         commentCount = commentCount,
@@ -135,15 +137,15 @@ fun PostSummaryForCommentDto.toPostSummaryData(): PostSummaryData {
         isBookmarked = isBookmarked,
         isDeleted = isDeleted,
         isHidden = isHidden,
-        requiredTier = requiredTier,
+        requiredTier = requiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE),
         isSecret = isSecret,
         canAccess = canAccess
     )
 }
 
-fun CommentThreadDto.toCommentThreadData(): CommentThreadData {
-    return CommentThreadData(
-        comments = comments.map { it.toThreadCommentData() },
-        post = post.toPostSummaryData()
+fun CommentThreadDto.toCommentThread(): CommentThread {
+    return CommentThread(
+        comments = comments.map { it.toThreadComment() },
+        post = post.toThreadPost()
     )
 }

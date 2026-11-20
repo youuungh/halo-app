@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -58,18 +57,14 @@ fun EditorDetailImageBlock(
     val showCollapsed = isTall && !expanded
 
     // 로드 전·접힘은 상한 비율, 펼침은 실제 비율
-    val boxRatio = when {
-        aspectRatio == null -> 1f / COLLAPSED_MAX_HEIGHT_RATIO
-        showCollapsed -> 1f / COLLAPSED_MAX_HEIGHT_RATIO
-        else -> aspectRatio!!
-    }
+    val boxRatio = if (showCollapsed) 1f / COLLAPSED_MAX_HEIGHT_RATIO else aspectRatio ?: (1f / COLLAPSED_MAX_HEIGHT_RATIO)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .aspectRatio(boxRatio)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             // 이미지 탭은 아래 글칸 생성·포커스
             .pointerInput(Unit) { detectTapGestures { onTap() } }
     ) {

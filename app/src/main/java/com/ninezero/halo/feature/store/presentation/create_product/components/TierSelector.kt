@@ -12,26 +12,27 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 fun TierSelector(
-    selectedTier: String,
+    selectedTier: SubscriptionPlanTier,
     planTiers: Set<SubscriptionPlanTier>,
-    onTierSelected: (String) -> Unit,
+    onTierSelected: (SubscriptionPlanTier) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 전체 공개와 플랜이 있는 등급만, 이미 고른 등급은 유지
     val tiers = listOf(
-        SubscriptionPlanTier.FREE.name to "전체 공개",
-        SubscriptionPlanTier.TIER1.name to "Tier 1",
-        SubscriptionPlanTier.TIER2.name to "Tier 2"
+        SubscriptionPlanTier.FREE to "전체 공개",
+        SubscriptionPlanTier.TIER1 to SubscriptionPlanTier.TIER1.label,
+        SubscriptionPlanTier.TIER2 to SubscriptionPlanTier.TIER2.label
     ).filter { (tier, _) ->
-        tier == SubscriptionPlanTier.FREE.name || tier == selectedTier || planTiers.any { it.name == tier }
+        tier == SubscriptionPlanTier.FREE || tier == selectedTier || tier in planTiers
     }
 
     Column(modifier = modifier) {
@@ -60,6 +61,14 @@ fun TierSelector(
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    // 안 고른 칸은 입력칸과 같은 0.5 테두리
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = selectedTier == tier,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        borderWidth = 0.5.dp,
+                        selectedBorderColor = Color.Transparent
                     )
                 )
             }
@@ -73,8 +82,8 @@ private fun TierSelectorPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.padding(16.dp)) {
-                TierSelector(selectedTier = "FREE", planTiers = setOf(SubscriptionPlanTier.TIER1), onTierSelected = {})
-                TierSelector(selectedTier = "TIER2", planTiers = setOf(SubscriptionPlanTier.TIER1, SubscriptionPlanTier.TIER2), onTierSelected = {})
+                TierSelector(selectedTier = SubscriptionPlanTier.FREE, planTiers = setOf(SubscriptionPlanTier.TIER1), onTierSelected = {})
+                TierSelector(selectedTier = SubscriptionPlanTier.TIER2, planTiers = setOf(SubscriptionPlanTier.TIER1, SubscriptionPlanTier.TIER2), onTierSelected = {})
             }
         }
     }

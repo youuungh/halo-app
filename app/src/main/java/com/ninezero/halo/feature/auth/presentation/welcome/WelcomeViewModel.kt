@@ -1,7 +1,7 @@
 package com.ninezero.halo.feature.auth.presentation.welcome
 
 import androidx.lifecycle.ViewModel
-import com.ninezero.halo.core.fcm.FcmRegistrationManager
+import com.ninezero.halo.core.fcm.FcmIdStore
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.feature.auth.domain.model.SocialLoginResult
 import com.ninezero.halo.feature.auth.domain.usecase.SocialLoginUseCase
@@ -14,7 +14,7 @@ import javax.inject.Inject
 @HiltViewModel
 class WelcomeViewModel @Inject constructor(
     private val socialLoginUseCase: SocialLoginUseCase,
-    private val fcmRegistrationManager: FcmRegistrationManager
+    private val fcmIdStore: FcmIdStore
 ) : ViewModel(), OrbitContainerHost<WelcomeState, WelcomeState, WelcomeSideEffect> {
 
     override val container: OrbitContainer<WelcomeState, WelcomeState, WelcomeSideEffect> =
@@ -31,7 +31,7 @@ class WelcomeViewModel @Inject constructor(
     private fun socialLogin(provider: String, token: String) = intent {
         reduce { state.copy(loadingProvider = provider) }
 
-        val fid = fcmRegistrationManager.getFid()
+        val fid = fcmIdStore.getFid()
 
         socialLoginUseCase(
             provider = provider,

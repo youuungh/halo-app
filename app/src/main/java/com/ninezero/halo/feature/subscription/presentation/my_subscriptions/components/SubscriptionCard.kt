@@ -20,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,12 +29,13 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
-import com.ninezero.halo.core.ui.components.switch.HaloSwitch
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.toggle.HaloSwitch
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Success
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.feature.subscription.domain.model.Subscription
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionStatus
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 internal fun SubscriptionCard(
@@ -75,11 +75,11 @@ internal fun SubscriptionCard(
 
         // 정보
         Column(modifier = Modifier.weight(1f)) {
-            // 크리에이터명 + StatusBadge
+            // 크리에이터명 + 상태, 이용 중은 표시 없음
             Row {
                 Text(
                     text = subscription.creatorUsername,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
                     maxLines = 1,
@@ -93,43 +93,42 @@ internal fun SubscriptionCard(
                     modifier = Modifier.align(Alignment.CenterVertically),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha)
                 )
-                StatusBadge(
-                    status = subscription.status,
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .alignByBaseline()
-                )
+                if (!isActive) {
+                    StatusBadge(
+                        status = subscription.status,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .alignByBaseline()
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(2.dp))
 
             // 플랜명 · 가격
+            val price = numberFormat.format(subscription.planPrice)
             Text(
-                text = "${subscription.planName} · ₩${subscription.planPrice.toBigDecimalOrNull()?.let { numberFormat.format(it) } ?: subscription.planPrice}/월",
+                text = "${subscription.planName} · ${price}원/월",
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // 만료일 · 남은 일수
-            val infoText = buildString {
-                append("${subscription.expiresAt.toFormattedDate("yyyy.MM.dd")}까지")
-                if (subscription.daysRemaining > 0) {
-                    append(" · ${subscription.daysRemaining}일 남음")
-                }
+            // 자동 결제 켜짐은 다음 결제일, 아니면 끝나는 날
+            val dateText = subscription.expiresAt.toFormattedDate("yyyy.MM.dd")
+            val infoText = when {
+                subscription.status == SubscriptionStatus.EXPIRED -> "$dateText 만료"
+                isActive && subscription.autoRenew -> "다음 결제 $dateText"
+                else -> "${dateText}까지 이용"
             }
 
             Text(
                 text = infoText,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (subscription.daysRemaining in 1..3)
-                    MaterialTheme.colorScheme.error.copy(alpha = contentAlpha)
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -152,7 +151,7 @@ private fun StatusBadge(
     modifier: Modifier = Modifier
 ) {
     val (text, color) = when (status) {
-        SubscriptionStatus.ACTIVE -> "활성" to Color(0xFF22C55E)
+        SubscriptionStatus.ACTIVE -> "활성" to Success
         SubscriptionStatus.CANCELLED -> "취소됨" to MaterialTheme.colorScheme.error
         SubscriptionStatus.EXPIRED -> "만료됨" to MaterialTheme.colorScheme.outline
     }
@@ -166,7 +165,7 @@ private fun StatusBadge(
             )
             .padding(horizontal = 8.dp, vertical = 2.dp),
         style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         color = color
     )
 }
@@ -183,7 +182,7 @@ private fun SubscriptionCardPreview() {
                         id = 1, creatorId = 2,
                         creatorUsername = "크리에이터A",
                         creatorRole = "CREATOR",
-                        planName = "Premium", planPrice = "9,900",
+                        planName = "Premium", planPrice = 9900L,
                         status = SubscriptionStatus.ACTIVE,
                         expiresAt = System.currentTimeMillis() + 10 * 86_400_000L,
                         autoRenew = false, daysRemaining = 10
@@ -197,7 +196,7 @@ private fun SubscriptionCardPreview() {
                         id = 2, creatorId = 3,
                         creatorUsername = "크리에이터B",
                         creatorRole = "CREATOR",
-                        planName = "Basic", planPrice = "4,900",
+                        planName = "Basic", planPrice = 4900L,
                         status = SubscriptionStatus.CANCELLED,
                         expiresAt = System.currentTimeMillis() + 2 * 86_400_000L,
                         autoRenew = false, daysRemaining = 2
@@ -211,7 +210,7 @@ private fun SubscriptionCardPreview() {
                         id = 3, creatorId = 4,
                         creatorUsername = "크리에이터C",
                         creatorRole = "CREATOR",
-                        planName = "VIP", planPrice = "19,900",
+                        planName = "VIP", planPrice = 19900L,
                         status = SubscriptionStatus.EXPIRED,
                         expiresAt = System.currentTimeMillis() - 30 * 86_400_000L,
                         autoRenew = false, daysRemaining = 0

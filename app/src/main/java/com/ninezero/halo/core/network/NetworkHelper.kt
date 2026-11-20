@@ -24,7 +24,7 @@ suspend inline fun <reified T> safeApiCall(
             if (body != null && body.success) {
                 body.data?.let { return Result.success(it) }
 
-                // 페이로드 없는 성공 응답
+                // payload 없는 성공 응답
                 if (T::class == Unit::class) {
                     @Suppress("UNCHECKED_CAST")
                     return Result.success(Unit as T)

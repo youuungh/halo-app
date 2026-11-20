@@ -1,6 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   API 30 이하 Auto Backup 규칙 (31+는 data_extraction_rules.xml).
-   인증 토큰·기기 식별자는 백업에서 제외 — 사유는 data_extraction_rules.xml 주석 참고.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   API 30 이하 백업/기기이전 규칙.
+   인증 토큰·기기 식별자는 백업에서 제외
 -->
 <full-backup-content>
     <exclude

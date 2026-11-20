@@ -15,13 +15,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,13 +38,12 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.bottomsheet.MonthPickerBottomSheet
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.picker.MonthNavigationBar
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.point.presentation.components.PointBalanceCard
@@ -98,6 +96,14 @@ internal fun PointScreenContent(
     val density = LocalDensity.current
     val listState = rememberLazyListState()
     var headerHeight by rememberSaveableDp()
+    // 칩이 톱바에 붙었을 때만 블러, 가장자리 얼룩 방지
+    val isChipsPinned by remember(listState, density) {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val slot = info.visibleItemsInfo.firstOrNull { it.key == CHIP_SLOT_KEY }
+            slot == null || slot.offset - info.viewportStartOffset <= with(density) { headerHeight.roundToPx() }
+        }
+    }
 
     InfiniteScrollTrigger(
         listState = listState,
@@ -190,21 +196,11 @@ internal fun PointScreenContent(
                                         .height(300.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = state.error,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        OutlinedButton(
-                                            onClick = { onIntent(PointIntent.RefreshData) },
-                                            shape = RoundedCornerShape(12.dp),
-                                            modifier = Modifier.bounceClick()
-                                        ) {
-                                            Text("재시도")
-                                        }
-                                    }
+                                    ListErrorState(
+                                        title = "포인트 내역을 불러오지 못했습니다",
+                                        reason = state.error,
+                                        onRetry = { onIntent(PointIntent.RefreshData) }
+                                    )
                                 }
                             }
                         } else if (state.histories.isEmpty() && !state.isLoading) {
@@ -216,7 +212,7 @@ internal fun PointScreenContent(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "${state.selectedMonthDisplay} 포인트 내역이 없습니다",
+                                        text = "${state.selectedMonthDisplay} 포인트 내역이 없어요",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -261,14 +257,13 @@ internal fun PointScreenContent(
                             val y = slot?.let { it.offset - info.viewportStartOffset } ?: headerPx
                             IntOffset(0, y.coerceAtLeast(headerPx))
                         }
-                        .haloBlur(state = hazeState) {
-                            style = HaloBlurStyle(
-                                backgroundColor = backgroundColor,
-                                tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
-                                blurRadius = 20.dp,
-                                noiseFactor = 0f
-                            )
-                        }
+                        .then(
+                            if (isChipsPinned) {
+                                Modifier.haloBlur(hazeState, HaloBlurs.floatingHeader(backgroundColor))
+                            } else {
+                                Modifier.background(backgroundColor)
+                            }
+                        )
                         .onGloballyPositioned { coordinates ->
                             chipsHeight = with(density) { coordinates.size.height.toDp() }
                         }
@@ -286,14 +281,7 @@ internal fun PointScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.floatingHeader(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
@@ -342,4 +330,3 @@ internal fun PointScreenContent(
         )
     }
 }
-

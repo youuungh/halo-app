@@ -1,8 +1,7 @@
 package com.ninezero.halo.feature.tag.presentation
 
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -35,27 +32,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.chip.TagChipGroup
-import com.ninezero.halo.core.ui.components.input.TagInputField
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
+import com.ninezero.halo.core.ui.components.selector.SegmentedTabRow
+import com.ninezero.halo.core.ui.components.selector.segmentedTabTransition
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.tag.domain.model.Tag
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.tag.presentation.components.TagChipGroup
+import com.ninezero.halo.feature.tag.presentation.components.TagInputField
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -81,21 +77,17 @@ fun TagBottomSheet(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        sheetState = sheetState
     ) {
         val hazeState = remember { HazeState() }
-
-        BottomSheetDragHandle()
 
         // 헤더
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             GlassIconButton(
@@ -128,7 +120,7 @@ fun TagBottomSheet(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Box(modifier = Modifier.hazeSource(hazeState)) {
             if (isCreator) {
@@ -178,7 +170,7 @@ private fun NormalTagContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .padding(bottom = 32.dp)
+            .padding(bottom = 8.dp)
     ) {
         TagInputField(
             value = inputValue,
@@ -224,9 +216,9 @@ private fun CreatorTagContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp)
+            .padding(bottom = 8.dp)
     ) {
-        TagTabRow(
+        SegmentedTabRow(
             tabs = tabs,
             selectedIndex = selectedTab,
             onTabSelected = { selectedTab = it },
@@ -235,24 +227,30 @@ private fun CreatorTagContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        when (selectedTab) {
-            0 -> {
-                NormalTagTabContent(
-                    tags = tags,
-                    onAddTag = onAddTag,
-                    onRemoveTag = onRemoveTag
-                )
-            }
-            1 -> {
-                SectionTagTabContent(
-                    sectionTags = sectionTags,
-                    selectedSectionTagId = selectedSectionTagId,
-                    isLoading = isLoadingSectionTags,
-                    onSelectSectionTag = onSelectSectionTag,
-                    onCreateSectionTag = onCreateSectionTag,
-                    onUpdateSectionTag = onUpdateSectionTag,
-                    onDeleteSectionTag = onDeleteSectionTag
-                )
+        AnimatedContent(
+            targetState = selectedTab,
+            transitionSpec = { segmentedTabTransition() },
+            label = "tag_tab"
+        ) { tab ->
+            when (tab) {
+                0 -> {
+                    NormalTagTabContent(
+                        tags = tags,
+                        onAddTag = onAddTag,
+                        onRemoveTag = onRemoveTag
+                    )
+                }
+                1 -> {
+                    SectionTagTabContent(
+                        sectionTags = sectionTags,
+                        selectedSectionTagId = selectedSectionTagId,
+                        isLoading = isLoadingSectionTags,
+                        onSelectSectionTag = onSelectSectionTag,
+                        onCreateSectionTag = onCreateSectionTag,
+                        onUpdateSectionTag = onUpdateSectionTag,
+                        onDeleteSectionTag = onDeleteSectionTag
+                    )
+                }
             }
         }
     }
@@ -335,12 +333,8 @@ private fun SectionTagTabContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .clip(RoundedCornerShape(12.dp))
+                .cardBorder(MaterialTheme.shapes.medium)
+                .clip(MaterialTheme.shapes.medium)
         ) {
             if (isLoading) {
                 CenteredLoadingIndicator(
@@ -463,7 +457,7 @@ private fun SectionTagItem(
                 text = "선택 안함",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 modifier = Modifier.weight(1f)
             )
         } else if (isEditing) {
@@ -473,7 +467,7 @@ private fun SectionTagItem(
                 onAddClick = onEditConfirm,
                 placeholder = "섹션 이름",
                 buttonText = "완료",
-                isSubtleButton = true,
+                isPlainButton = true,
                 modifier = Modifier.weight(1f)
             )
         } else {
@@ -481,7 +475,7 @@ private fun SectionTagItem(
                 text = "#${tag.name}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 modifier = Modifier.weight(1f)
             )
 
@@ -538,73 +532,6 @@ private fun SectionTagItem(
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.error
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TagTabRow(
-    tabs: List<String>,
-    selectedIndex: Int,
-    onTabSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val density = LocalDensity.current
-    var tabSize by remember { mutableStateOf(IntSize.Zero) }
-
-    val indicatorOffset by animateDpAsState(
-        targetValue = with(density) { (tabSize.width * selectedIndex).toDp() },
-        label = "indicatorOffset"
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Box(
-            modifier = Modifier
-                .offset { IntOffset((indicatorOffset + 2.dp).roundToPx(), 0) }
-                .padding(vertical = 2.dp)
-                .width(with(density) { tabSize.width.toDp() } - 4.dp)
-                .height(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surface)
-        )
-
-        Row(modifier = Modifier.fillMaxWidth()) {
-            tabs.forEachIndexed { index, tab ->
-                val isSelected = index == selectedIndex
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp)
-                        .onSizeChanged { size ->
-                            if (tabSize.width == 0) {
-                                tabSize = size
-                            }
-                        }
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { onTabSelected(index) }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = tab,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
             }
         }
     }

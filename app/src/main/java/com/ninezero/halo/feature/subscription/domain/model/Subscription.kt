@@ -15,7 +15,7 @@ data class Subscription(
     val creatorAvatarUrl: String? = null,
     val creatorRole: String? = null,
     val planName: String,
-    val planPrice: String,
+    val planPrice: Long,
     val status: SubscriptionStatus,
     val expiresAt: Long,
     val autoRenew: Boolean,
@@ -43,5 +43,5 @@ data class UserTierInfo(
     val isSubscribed: Boolean,
     // 현재 구독 플랜, 비활성화된 플랜도 포함
     val planName: String? = null,
-    val planPrice: String? = null
+    val planPrice: Long? = null
 )

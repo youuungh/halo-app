@@ -26,13 +26,13 @@ class ResetCodeViewModel @Inject constructor(
     override val container: OrbitContainer<ResetCodeState, ResetCodeState, ResetCodeSideEffect> =
         orbitContainer(ResetCodeState(email = email))
 
-    private var validityTimerJob: Job? = null
-    private var resendCooldownJob: Job? = null
+    private var expireTimerJob: Job? = null
+    private var resendWaitJob: Job? = null
 
     init {
         // 직전 화면에서 코드가 막 발송된 상태로 진입
-        startValidityTimer()
-        startResendCooldown()
+        startExpireTimer()
+        startResendWait()
     }
 
     fun onIntent(intent: ResetCodeIntent) {
@@ -80,7 +80,7 @@ class ResetCodeViewModel @Inject constructor(
     }
 
     private fun resendCode() = intent {
-        if (state.resendCooldownSeconds > 0 || state.isLoading) return@intent
+        if (state.resendWaitSeconds > 0 || state.isLoading) return@intent
 
         reduce { state.copy(isLoading = true, codeError = null) }
 
@@ -90,12 +90,12 @@ class ResetCodeViewModel @Inject constructor(
                     state.copy(
                         isLoading = false,
                         code = "",
-                        remainingSeconds = ResetCodeState.CODE_VALIDITY_SECONDS,
-                        resendCooldownSeconds = ResetCodeState.RESEND_COOLDOWN_SECONDS
+                        remainingSeconds = ResetCodeState.CODE_EXPIRE_SECONDS,
+                        resendWaitSeconds = ResetCodeState.RESEND_WAIT_SECONDS
                     )
                 }
-                startValidityTimer()
-                startResendCooldown()
+                startExpireTimer()
+                startResendWait()
                 postSideEffect(ResetCodeSideEffect.ShowToast("인증 코드가 재전송되었습니다"))
             }
             .onFailure { error ->
@@ -103,9 +103,9 @@ class ResetCodeViewModel @Inject constructor(
             }
     }
 
-    private fun startValidityTimer() {
-        validityTimerJob?.cancel()
-        validityTimerJob = intent {
+    private fun startExpireTimer() {
+        expireTimerJob?.cancel()
+        expireTimerJob = intent {
             while (state.remainingSeconds > 0) {
                 delay(1_000)
                 reduce { state.copy(remainingSeconds = state.remainingSeconds - 1) }
@@ -113,12 +113,12 @@ class ResetCodeViewModel @Inject constructor(
         }
     }
 
-    private fun startResendCooldown() {
-        resendCooldownJob?.cancel()
-        resendCooldownJob = intent {
-            while (state.resendCooldownSeconds > 0) {
+    private fun startResendWait() {
+        resendWaitJob?.cancel()
+        resendWaitJob = intent {
+            while (state.resendWaitSeconds > 0) {
                 delay(1_000)
-                reduce { state.copy(resendCooldownSeconds = state.resendCooldownSeconds - 1) }
+                reduce { state.copy(resendWaitSeconds = state.resendWaitSeconds - 1) }
             }
         }
     }

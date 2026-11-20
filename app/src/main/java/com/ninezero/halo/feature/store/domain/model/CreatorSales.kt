@@ -40,6 +40,7 @@ data class MonthRevenue(
 )
 
 data class BestSeller(
+    val productId: Int,
     val productName: String,
     val productImageUrl: String?,
     val quantity: Int,

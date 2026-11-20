@@ -4,12 +4,16 @@ import com.ninezero.halo.core.network.PagedDto
 import com.ninezero.halo.core.network.dto.UserSummaryDto
 import com.ninezero.halo.core.network.dto.toDomain
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toAmountLong
+import com.ninezero.halo.core.util.toAmountLongOrNull
+import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.chat.domain.model.Chat
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.feature.chat.domain.model.LastMessageInfo
 import com.ninezero.halo.feature.chat.domain.model.Message
 import com.ninezero.halo.feature.chat.domain.model.PostMessageInfo
 import com.ninezero.halo.feature.chat.domain.model.ProductMessageInfo
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -197,14 +201,14 @@ fun MessageDto.toDomain() = Message(
 fun ProductMessageInfoDto.toDomain() = ProductMessageInfo(
     productId = productId,
     name = name,
-    price = price,
-    originalPrice = originalPrice,
+    price = price.toAmountLong(),
+    originalPrice = originalPrice.toAmountLongOrNull(),
     discountRate = discountRate,
     imageUrl = imageUrl,
     canAccess = canAccess,
     creatorId = creatorId,
     creatorName = creatorName,
-    requiredTier = requiredTier
+    requiredTier = requiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE)
 )
 
 fun PostMessageInfoDto.toDomain() = PostMessageInfo(
@@ -222,6 +226,6 @@ fun PostMessageInfoDto.toDomain() = PostMessageInfo(
     shareCount = shareCount,
     canAccess = canAccess,
     creatorId = creatorId,
-    requiredTier = requiredTier,
+    requiredTier = requiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE),
     isHidden = isHidden
 )

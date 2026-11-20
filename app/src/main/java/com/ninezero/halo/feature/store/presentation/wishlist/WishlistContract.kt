@@ -26,15 +26,12 @@ sealed interface WishlistIntent {
     data object LoadMore : WishlistIntent
     data object Refresh : WishlistIntent
     data object ScreenResumed : WishlistIntent
-
     // 아이템 액션
     data class RemoveItem(val productId: Int) : WishlistIntent
     data class MoveToCart(val productId: Int) : WishlistIntent
-
     // 네비게이션
     data object NavigateBack : WishlistIntent
     data class NavigateToProductDetail(val productId: Int) : WishlistIntent
-
     // Snackbar
     data object SnackbarActionClicked : WishlistIntent
     data object SnackbarSecondaryActionClicked : WishlistIntent

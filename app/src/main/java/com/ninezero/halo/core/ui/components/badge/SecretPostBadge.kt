@@ -17,7 +17,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
+/** 작성자 이름 옆 자물쇠 '비밀글' 알약 */
 @Composable
 fun SecretPostBadge(modifier: Modifier = Modifier) {
     Row(
@@ -41,5 +44,13 @@ fun SecretPostBadge(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1
         )
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun SecretPostBadgePreview() {
+    HaloSurfacePreview {
+        SecretPostBadge(modifier = Modifier.padding(16.dp))
     }
 }

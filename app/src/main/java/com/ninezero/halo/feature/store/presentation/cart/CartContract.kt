@@ -19,25 +19,22 @@ sealed interface CartIntent {
     // 데이터 로딩
     data object LoadCart : CartIntent
     data object Refresh : CartIntent
-
     // 아이템 액션
     data class UpdateQuantity(val cartItemId: Int, val quantity: Int) : CartIntent
     data class RemoveItem(val cartItemId: Int) : CartIntent
     data object RemoveSelectedItems : CartIntent
-
     // 선택
     data class ToggleItemSelection(val cartItemId: Int) : CartIntent
     data class ToggleCreatorSelection(val creatorId: Int) : CartIntent
     data object ToggleSelectAll : CartIntent
-
     // 네비게이션
     data object NavigateBack : CartIntent
     data object NavigateToCheckout : CartIntent
     data class NavigateToProductDetail(val productId: Int) : CartIntent
     data class NavigateToUserProfile(val userId: Int) : CartIntent
-
     // Snackbar
     data class ShowRestrictedContentSnackbar(val message: String) : CartIntent
+    data class ShowQuantityLimitSnackbar(val maxQuantity: Int) : CartIntent
     data object SnackbarDismissed : CartIntent
 }
 

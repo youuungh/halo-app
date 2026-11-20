@@ -37,16 +37,15 @@ sealed interface ReviewListIntent {
     data object Refresh : ReviewListIntent
     data object ScreenResumed : ReviewListIntent
     data class ChangeSortBy(val sortBy: ReviewSortType) : ReviewListIntent
-
     // 내 리뷰 옵션 시트
     data class ShowOptions(val review: Review) : ReviewListIntent
     data object DismissOptions : ReviewListIntent
     data object ShowDeleteConfirm : ReviewListIntent
     data object DismissDeleteConfirm : ReviewListIntent
     data object ConfirmDelete : ReviewListIntent
-
     data object NavigateBack : ReviewListIntent
     data class EditReview(val review: Review) : ReviewListIntent
+    // Snackbar
     data object SnackbarDismissed : ReviewListIntent
 }
 

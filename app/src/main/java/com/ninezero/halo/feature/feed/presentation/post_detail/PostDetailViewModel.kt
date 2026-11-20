@@ -200,9 +200,10 @@ class PostDetailViewModel @Inject constructor(
         pendingCommentRepository.getPendingCommentsByPostId(postId)
             .onEach { pending ->
                 val topLevel = pending.filter { it.parentCommentId == null }
+                // 부모 댓글 id별 펜딩 답글
                 val replies = pending
-                    .filter { it.parentCommentId != null }
-                    .groupBy { it.parentCommentId!! }  // 부모 댓글 id별 펜딩 답글
+                    .mapNotNull { comment -> comment.parentCommentId?.let { it to comment } }
+                    .groupBy({ it.first }, { it.second })
                 intent {
                     reduce { state.copy(pendingComments = topLevel, pendingReplies = replies) }
                 }
@@ -224,54 +225,45 @@ class PostDetailViewModel @Inject constructor(
     fun onIntent(intent: PostDetailIntent) {
         when (intent) {
             is PostDetailIntent.RefreshPost -> refreshPost()
-
             // 포스트 상호작용
             is PostDetailIntent.LikePost -> likePost()
             is PostDetailIntent.UnlikePost -> unlikePost()
             is PostDetailIntent.BookmarkPost -> bookmarkPost()
             is PostDetailIntent.FollowAuthor -> followAuthor()
             is PostDetailIntent.UnfollowAuthor -> unfollowAuthor()
-
             // 포스트 옵션
             is PostDetailIntent.ShowPostOptions -> showPostOptions()
             is PostDetailIntent.DismissPostOptions -> dismissPostOptions()
             is PostDetailIntent.DeletePost -> deletePost()
             is PostDetailIntent.EditPost -> editPost()
             is PostDetailIntent.PinPost -> pinPost()
-
             // 댓글 관련
             is PostDetailIntent.LoadMoreComments -> loadMoreComments()
             is PostDetailIntent.ChangeSortType -> changeSortType(intent.sortType)
             is PostDetailIntent.SetReplyTo -> setReplyTo(intent.comment)
-
             // 댓글 상호작용
             is PostDetailIntent.ToggleCommentLike -> toggleCommentLike(intent.commentId)
             is PostDetailIntent.ExpandReplies -> expandReplies(intent.commentId)
             is PostDetailIntent.LoadMoreReplies -> loadMoreReplies(intent.commentId)
-
             // 댓글 옵션
             is PostDetailIntent.ShowCommentOptions -> showCommentOptions(intent.commentId)
             is PostDetailIntent.DismissCommentOptions -> dismissCommentOptions()
             is PostDetailIntent.DeleteComment -> deleteComment()
             is PostDetailIntent.BookmarkComment -> bookmarkComment()
-
             // 차단 다이얼로그
             is PostDetailIntent.BlockAuthor -> blockAuthor()
             is PostDetailIntent.BlockCommentAuthor -> blockCommentAuthor()
             is PostDetailIntent.DismissBlockConfirmDialog -> dismissBlockConfirmDialog()
             is PostDetailIntent.ConfirmBlockUser -> confirmBlockUser()
             is PostDetailIntent.DismissBlockCompletedDialog -> dismissBlockCompletedDialog()
-
             // 공유
             is PostDetailIntent.SharePost -> sharePost()
             is PostDetailIntent.DismissShareSheet -> dismissShareSheet()
             is PostDetailIntent.ShareCompleted -> shareCompleted(intent.sharedRoomIds, intent.recipientCount)
             is PostDetailIntent.NavigateToChatRoom -> navigateToChatRoom(intent.roomId)
-
             // 네비게이션
             is PostDetailIntent.NavigateToUserProfile -> navigateToUserProfile(intent.userId)
             is PostDetailIntent.NavigateToCommentDetail -> navigateToCommentDetail(intent.commentId)
-
             // Snackbar
             is PostDetailIntent.SnackbarDismissed -> dismissSnackbar()
         }
@@ -300,10 +292,10 @@ class PostDetailViewModel @Inject constructor(
                 loadComments(id)
             }
             .onFailure { error ->
-                if (state.post == null || error.isPostUnavailable()) {
+                if (error.isPostUnavailable()) {
                     showPostError(error)
                 } else {
-                    // 그 외 오류는 캐시 본문 유지, 댓글은 스켈레톤 그대로
+                    // 그 외 오류는 지금 화면 유지
                     reduce { state.copy(snackbarState = SnackbarState(error.message ?: "포스트를 불러올 수 없습니다")) }
                 }
             }
@@ -320,8 +312,7 @@ class PostDetailViewModel @Inject constructor(
                 isRefreshing = false,
                 error = message,
                 isCommentsLoading = false,
-                commentsError = message,
-                snackbarState = SnackbarState(message)
+                commentsError = message
             )
         }
         if (error.isPostUnavailable()) removeCachedPostUseCase(postId)
@@ -339,10 +330,13 @@ class PostDetailViewModel @Inject constructor(
                     state.copy(
                         post = post,
                         isFollowing = post.author.isFollowing,
+                        isLoading = false,
                         isRefreshing = false,
+                        isViewCountLoaded = true,
+                        error = null,
                         comments = emptyList(),
                         commentsPage = 1,
-                        commentsHasMore = true,
+                        hasMoreComments = true,
                         expandedCommentReplies = emptyMap()
                     )
                 }
@@ -396,9 +390,10 @@ class PostDetailViewModel @Inject constructor(
 
     private fun followAuthor() = intent {
         val authorId = state.post?.author?.id ?: return@intent
+        // 캐시가 먼저 바뀌어 버튼이 깜빡이지 않게 미리 켬
+        reduce { state.copy(showFollowingButton = true) }
         postMutationDelegate.toggleAuthorFollow(authorId, shouldFollow = true)
             ?.onSuccess {
-                // 버튼만 사라져 결과를 따로 알림
                 postSideEffect(PostDetailSideEffect.ShowCenterToast("팔로우"))
             }
             ?.onFailure {
@@ -409,6 +404,9 @@ class PostDetailViewModel @Inject constructor(
     private fun unfollowAuthor() = intent {
         val authorId = state.post?.author?.id ?: return@intent
         postMutationDelegate.toggleAuthorFollow(authorId, shouldFollow = false)
+            ?.onSuccess {
+                postSideEffect(PostDetailSideEffect.ShowCenterToast("팔로우 취소"))
+            }
             ?.onFailure {
                 reduce { state.copy(snackbarState = SnackbarState("팔로우 취소 실패")) }
             }
@@ -497,7 +495,7 @@ class PostDetailViewModel @Inject constructor(
                         isChangingSort = false,
                         commentsError = null,
                         commentsPage = 1,
-                        commentsHasMore = comments.size >= 20
+                        hasMoreComments = comments.size >= 20
                     )
                 }
                 ensureHighlightCommentLoaded()
@@ -516,7 +514,7 @@ class PostDetailViewModel @Inject constructor(
         highlightCommentEnsured = true
 
         var attempts = 0
-        while (state.comments.none { it.id == targetId } && state.commentsHasMore && attempts < 20) {
+        while (state.comments.none { it.id == targetId } && state.hasMoreComments && attempts < 20) {
             val generation = commentsGeneration.current()
             val sortBy = state.commentSortBy
             val nextPage = state.commentsPage + 1
@@ -529,14 +527,14 @@ class PostDetailViewModel @Inject constructor(
                 state.copy(
                     comments = (state.comments + comments).distinctBy { it.id },
                     commentsPage = nextPage,
-                    commentsHasMore = comments.size >= 20
+                    hasMoreComments = comments.size >= 20
                 )
             }
         }
     }
 
     private fun loadMoreComments() = intent {
-        if (state.isCommentsLoading || !state.commentsHasMore) return@intent
+        if (state.isCommentsLoading || !state.hasMoreComments) return@intent
 
         val generation = commentsGeneration.current()
         val nextPage = state.commentsPage + 1
@@ -552,7 +550,7 @@ class PostDetailViewModel @Inject constructor(
                         comments = (state.comments + comments).distinctBy { it.id },
                         isCommentsLoading = false,
                         commentsPage = nextPage,
-                        commentsHasMore = comments.size >= 20
+                        hasMoreComments = comments.size >= 20
                     )
                 }
             }
@@ -577,7 +575,7 @@ class PostDetailViewModel @Inject constructor(
                 isChangingSort = true,
                 comments = emptyList(),
                 commentsPage = 1,
-                commentsHasMore = true,
+                hasMoreComments = true,
                 expandedCommentReplies = emptyMap()
             )
         }
@@ -622,7 +620,7 @@ class PostDetailViewModel @Inject constructor(
                         expandedCommentReplies = state.expandedCommentReplies + (commentId to replies),
                         loadingRepliesCommentIds = state.loadingRepliesCommentIds - commentId,
                         repliesPage = state.repliesPage + (commentId to 1),
-                        repliesHasMore = state.repliesHasMore + (commentId to (replies.size >= pageSize))
+                        hasMoreReplies = state.hasMoreReplies + (commentId to (replies.size >= pageSize))
                     )
                 }
             }
@@ -638,7 +636,7 @@ class PostDetailViewModel @Inject constructor(
 
     private fun loadMoreReplies(commentId: Int) = intent {
         if (state.loadingRepliesCommentIds.contains(commentId)) return@intent
-        if (state.repliesHasMore[commentId] != true) return@intent
+        if (state.hasMoreReplies[commentId] != true) return@intent
 
         reduce {
             state.copy(loadingRepliesCommentIds = state.loadingRepliesCommentIds + commentId)
@@ -656,7 +654,7 @@ class PostDetailViewModel @Inject constructor(
                         expandedCommentReplies = state.expandedCommentReplies + (commentId to (existingReplies + newReplies).distinctBy { it.id }),
                         loadingRepliesCommentIds = state.loadingRepliesCommentIds - commentId,
                         repliesPage = state.repliesPage + (commentId to nextPage),
-                        repliesHasMore = state.repliesHasMore + (commentId to (newReplies.size >= pageSize))
+                        hasMoreReplies = state.hasMoreReplies + (commentId to (newReplies.size >= pageSize))
                     )
                 }
             }

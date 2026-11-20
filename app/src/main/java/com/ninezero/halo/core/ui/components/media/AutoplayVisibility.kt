@@ -16,7 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 
-private const val START_FRACTION = 0.5f  // 새 영상 자동재생을 "시작"할 최소 가시 비율
+private const val START_FRACTION = 0.5f  // 새 영상 자동재생을 시작할 최소 가시 비율
 private const val KEEP_FRACTION = 0.15f  // 재생 중 영상을 유지할 최소 가시 비율
 private const val AUTOPLAY_DEBOUNCE_MS = 150L
 private const val START_MAX_VELOCITY_ITEMS_PER_SEC = 2.0f
@@ -34,20 +34,20 @@ private fun <K> selectAutoplayTarget(  // 시작은 중앙 가까운 것, 유지
     layoutInfo: LazyListLayoutInfo,
     prev: K?,
     allowNewStart: Boolean,
-    identityOf: (LazyListItemInfo) -> K?
+    keyOf: (LazyListItemInfo) -> K?
 ): K? {
     val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
     var startId: K? = null
-    var startDist = Int.MAX_VALUE
-    var prevKeepable = false
+    var startDistance = Int.MAX_VALUE
+    var canKeepPrev = false
     for (item in layoutInfo.visibleItemsInfo) {
-        val id = identityOf(item) ?: continue
+        val id = keyOf(item) ?: continue
         val fraction = item.visibleFraction(layoutInfo)
-        if (id == prev && fraction >= KEEP_FRACTION) prevKeepable = true
+        if (id == prev && fraction >= KEEP_FRACTION) canKeepPrev = true
         if (fraction >= START_FRACTION) {
-            val dist = abs((item.offset + item.size / 2) - viewportCenter)
-            if (dist < startDist) {
-                startDist = dist
+            val distance = abs((item.offset + item.size / 2) - viewportCenter)
+            if (distance < startDistance) {
+                startDistance = distance
                 startId = id
             }
         }
@@ -55,40 +55,40 @@ private fun <K> selectAutoplayTarget(  // 시작은 중앙 가까운 것, 유지
     // 빠른 스크롤 중 새 시작 보류, 직전 대상 유지
     val isNewStart = startId != null && startId != prev
     val resolved = if (isNewStart && !allowNewStart) null else startId
-    return resolved ?: prev?.takeIf { prevKeepable }
+    return resolved ?: prev?.takeIf { canKeepPrev }
 }
 
+/** 숨겨진 탭에서 자동재생을 끄는 값 */
 val LocalAutoplayEnabled = compositionLocalOf { true }
 
 /** 자동재생 대상 상태 */
 @Composable
 fun <K : Any> rememberAutoplayTarget(  // 빠른 플링에서는 새 시작 보류
     listState: LazyListState,
-    identityOf: (LazyListItemInfo) -> K?
+    keyOf: (LazyListItemInfo) -> K?
 ): State<K?> {
     val target = remember { mutableStateOf<K?>(null) }
-    // identityOf는 최신 것을 쓰도록 추적
-    val identityState = rememberUpdatedState(identityOf)
+    // keyOf는 최신 것을 쓰도록 추적
+    val keyState = rememberUpdatedState(keyOf)
     // 숨겨진 탭에서는 정지
     val enabled = LocalAutoplayEnabled.current
 
-    // 스크롤 속도, 플링 중 새 시작 차단용
-    // 정착 판정은 isScrollInProgress
+    // 스크롤 속도, 플링 중 새 시작 차단용, 정착 판정은 isScrollInProgress
     val scrollVelocity = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(listState) {
-        var lastPos = Float.NaN
+        var lastPosition = Float.NaN
         var lastTimeNanos = 0L
         snapshotFlow {
             val firstSize = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 1
             listState.firstVisibleItemIndex +
                 listState.firstVisibleItemScrollOffset.toFloat() / firstSize.coerceAtLeast(1)
-        }.collect { pos ->
+        }.collect { position ->
             val now = System.nanoTime()
-            if (!lastPos.isNaN() && lastTimeNanos != 0L) {
+            if (!lastPosition.isNaN() && lastTimeNanos != 0L) {
                 val dt = (now - lastTimeNanos) / 1_000_000_000f
-                if (dt > 0f) scrollVelocity.floatValue = abs(pos - lastPos) / dt
+                if (dt > 0f) scrollVelocity.floatValue = abs(position - lastPosition) / dt
             }
-            lastPos = pos
+            lastPosition = position
             lastTimeNanos = now
         }
     }
@@ -103,7 +103,7 @@ fun <K : Any> rememberAutoplayTarget(  // 빠른 플링에서는 새 시작 보�
             // 멈춰 있으면 새 시작 허용, 스크롤 중엔 느릴 때만
             val allowNewStart = !listState.isScrollInProgress ||
                 scrollVelocity.floatValue <= START_MAX_VELOCITY_ITEMS_PER_SEC
-            selectAutoplayTarget(listState.layoutInfo, target.value, allowNewStart, identityState.value)
+            selectAutoplayTarget(listState.layoutInfo, target.value, allowNewStart, keyState.value)
         }.collectLatest { value ->
             // collectLatest가 직전 delay 취소
             delay(AUTOPLAY_DEBOUNCE_MS)

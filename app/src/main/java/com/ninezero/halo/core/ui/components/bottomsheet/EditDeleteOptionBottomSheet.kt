@@ -3,9 +3,7 @@ package com.ninezero.halo.core.ui.components.bottomsheet
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -15,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.deeplink.copyCodeToClipboard
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 /** 수정·삭제 옵션 시트 */
 @Composable
@@ -32,15 +30,12 @@ fun EditDeleteOptionBottomSheet(
     val context = LocalContext.current
     val errorColor = MaterialTheme.colorScheme.error
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
         modifier = modifier
     ) {
-        BottomSheetDragHandle()
-        Column(modifier = Modifier.navigationBarsPadding()) {
+        Column {
             if (copyCode != null) {
                 BottomSheetMenuItem(
                     text = "코드 복사",

@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.explore.presentation.components.UserListItem
 import com.ninezero.halo.feature.explore.presentation.components.UserListItemSkeleton
-import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 

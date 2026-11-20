@@ -5,10 +5,8 @@ import androidx.lifecycle.ViewModel
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.ListGeneration
 import com.ninezero.halo.feature.store.domain.model.OrderItem
-import com.ninezero.halo.feature.store.domain.model.purchaseBlockedMessage
-import com.ninezero.halo.feature.store.domain.repository.CartRepository
 import com.ninezero.halo.feature.store.domain.repository.OrderRepository
-import com.ninezero.halo.feature.store.domain.repository.ProductRepository
+import com.ninezero.halo.feature.store.domain.usecase.AddOrderItemToCartUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.OrbitContainer
 import org.orbitmvi.orbit.OrbitContainerHost
@@ -20,8 +18,7 @@ import javax.inject.Inject
 class OrderDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val orderRepository: OrderRepository,
-    private val cartRepository: CartRepository,
-    private val productRepository: ProductRepository
+    private val addOrderItemToCartUseCase: AddOrderItemToCartUseCase
 ) : ViewModel(), OrbitContainerHost<OrderDetailState, OrderDetailState, OrderDetailSideEffect> {
 
     private val orderId: Int = savedStateHandle["orderId"] ?: 0
@@ -39,7 +36,7 @@ class OrderDetailViewModel @Inject constructor(
             is OrderDetailIntent.ShowCancelSheet -> showCancelSheet(intent.creatorId)
             is OrderDetailIntent.DismissCancelSheet -> dismissCancelSheet()
             is OrderDetailIntent.SelectCancelReason -> selectCancelReason(intent.reason)
-            is OrderDetailIntent.UpdateCancelReasonEtc -> updateCancelReasonEtc(intent.text)
+            is OrderDetailIntent.UpdateOtherCancelReason -> updateOtherCancelReason(intent.text)
             is OrderDetailIntent.ProceedCancelFromSheet -> proceedCancelFromSheet()
             is OrderDetailIntent.DismissCancelConfirm -> dismissCancelConfirm()
             is OrderDetailIntent.ConfirmCancel -> cancelOrder()
@@ -77,7 +74,7 @@ class OrderDetailViewModel @Inject constructor(
                 showCancelSheet = true,
                 cancelConfirmCreatorId = creatorId,
                 selectedCancelReason = CancelReason.CHANGED_MIND,
-                cancelReasonEtc = ""
+                otherCancelReason = ""
             )
         }
     }
@@ -90,8 +87,8 @@ class OrderDetailViewModel @Inject constructor(
         reduce { state.copy(selectedCancelReason = reason) }
     }
 
-    private fun updateCancelReasonEtc(text: String) = blockingIntent {
-        reduce { state.copy(cancelReasonEtc = text) }
+    private fun updateOtherCancelReason(text: String) = blockingIntent {
+        reduce { state.copy(otherCancelReason = text) }
     }
 
     private fun proceedCancelFromSheet() = intent {
@@ -104,8 +101,8 @@ class OrderDetailViewModel @Inject constructor(
 
     private fun cancelOrder() = intent {
         val creatorId = state.cancelConfirmCreatorId ?: return@intent
-        val reason = if (state.selectedCancelReason == CancelReason.ETC) {
-            state.cancelReasonEtc.trim().ifBlank { CancelReason.ETC.label }
+        val reason = if (state.selectedCancelReason == CancelReason.OTHER) {
+            state.otherCancelReason.trim().ifBlank { CancelReason.OTHER.label }
         } else {
             state.selectedCancelReason.label
         }
@@ -145,18 +142,7 @@ class OrderDetailViewModel @Inject constructor(
     }
 
     private fun addToCart(item: OrderItem) = intent {
-        val product = productRepository.getProduct(item.productId)
-            .onFailure { error ->
-                reduce { state.copy(snackbarState = SnackbarState(error.message ?: "상품 정보를 확인할 수 없습니다")) }
-            }
-            .getOrNull() ?: return@intent
-
-        product.purchaseBlockedMessage()?.let { message ->
-            reduce { state.copy(snackbarState = SnackbarState(message)) }
-            return@intent
-        }
-
-        cartRepository.addToCart(productId = item.productId, quantity = 1)
+        addOrderItemToCartUseCase(item.productId)
             .onSuccess {
                 reduce {
                     state.copy(
@@ -175,7 +161,7 @@ class OrderDetailViewModel @Inject constructor(
     private fun openProduct(item: OrderItem) = intent {
         val blockedMessage = when {
             !item.isProductActive -> "판매가 종료된 상품입니다"
-            !item.canAccess -> "${item.requiredTier} 멤버십 전용 상품입니다"
+            !item.canAccess -> "${item.requiredTier.label} 멤버십 전용 상품입니다"
             else -> null
         }
         if (blockedMessage != null) {

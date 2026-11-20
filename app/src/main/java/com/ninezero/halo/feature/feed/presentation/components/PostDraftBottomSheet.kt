@@ -2,7 +2,6 @@ package com.ninezero.halo.feature.feed.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,24 +9,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SnackbarHostState
@@ -44,9 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -55,25 +46,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
+import com.ninezero.halo.core.media.MediaUtils
+import com.ninezero.halo.core.ui.components.bottomsheet.FullScreenBottomSheet
+import com.ninezero.halo.core.ui.components.bottomsheet.SheetHeader
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
-import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.popup.HaloPopupMenu
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.core.util.MediaUtils
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.PostDraft
-import com.ninezero.halo.ui.theme.HaloTheme
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -95,23 +81,19 @@ fun PostDraftBottomSheet(
     val density = LocalDensity.current
     var headerHeight by remember { mutableStateOf(0.dp) }
 
-    // X 버튼 외 모든 dismiss 경로 차단
+    // X 버튼 · 뒤로가기로만 닫힘
     val sheetProperties = remember {
         ModalBottomSheetProperties(
-            shouldDismissOnBackPress = false,
+            shouldDismissOnBackPress = true,
             shouldDismissOnClickOutside = false
         )
     }
 
-    ModalBottomSheet(
+    FullScreenBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        sheetGesturesEnabled = false,
-        dragHandle = null,
-        containerColor = surfaceColor,
-        contentWindowInsets = { WindowInsets(0) },
-        properties = sheetProperties,
-        modifier = modifier.windowInsetsPadding(WindowInsets.statusBars)
+        modifier = modifier,
+        properties = sheetProperties
     ) {
         Box(
             modifier = Modifier
@@ -119,112 +101,79 @@ fun PostDraftBottomSheet(
                 .background(surfaceColor)
         ) {
             // 콘텐츠
-            when {
-                isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(40.dp),
-                            strokeWidth = 1.dp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                drafts.isEmpty() -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = headerHeight),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "임시 저장된 글이 없습니다",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .hazeSource(hazeState)
-                            .blockSheetFling(),
-                        contentPadding = PaddingValues(top = headerHeight),
-                        overscrollEffect = null
-                    ) {
-                        item {
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
-                        }
-                        items(
-                            items = drafts,
-                            key = { it.id }
-                        ) { draft ->
-                            PostDraftItem(
-                                draft = draft,
-                                onClick = { onDraftClick(draft) },
-                                onDelete = { onDeleteDraft(draft) }
-                            )
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 헤더
-            Column(
+            // 목록이 없을 때도 소스가 있어야 헤더 유리 모양이 같음
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = surfaceColor,
-                            tint = HaloBlurTint(surfaceColor),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0.5f,
-                            endIntensity = 0f
-                        )
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures { /* 터치 이벤트 소비 */ }
-                    }
-                    .onGloballyPositioned { coordinates ->
-                        headerHeight = with(density) { coordinates.size.height.toDp() }
-                    }
+                    .fillMaxSize()
+                    .hazeSource(hazeState)
             ) {
-                BottomSheetDragHandle()
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    GlassIconButton(
-                        onClick = onDismiss,
-                        icon = painterResource(R.drawable.ic_close),
-                        contentDescription = "닫기",
-                        hazeState = hazeState,
-                        backgroundColor = surfaceColor,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    )
-
-                    Text(
-                        text = "임시 저장",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                when {
+                    isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(40.dp),
+                                strokeWidth = 1.dp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    drafts.isEmpty() -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = headerHeight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "임시 저장된 글이 없어요",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .blockSheetFling(),
+                            contentPadding = PaddingValues(top = headerHeight),
+                            overscrollEffect = null
+                        ) {
+                            item {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                            items(
+                                items = drafts,
+                                key = { it.id }
+                            ) { draft ->
+                                PostDraftItem(
+                                    hazeState = hazeState,
+                                    draft = draft,
+                                    onClick = { onDraftClick(draft) },
+                                    onDelete = { onDeleteDraft(draft) }
+                                )
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
+
+            SheetHeader(
+                title = "임시 저장",
+                onClose = onDismiss,
+                hazeState = hazeState,
+                onHeightChange = { headerHeight = it }
+            )
 
             DefaultSnackbarHost(
                 hostState = snackbarHostState,
@@ -242,6 +191,7 @@ fun PostDraftBottomSheet(
 
 @Composable
 private fun PostDraftItem(
+    hazeState: HazeState?,
     draft: PostDraft,
     onClick: () -> Unit,
     onDelete: () -> Unit,
@@ -299,41 +249,37 @@ private fun PostDraftItem(
                 )
 
                 if (showMenu) {
-                    Popup(
+                    HaloPopupMenu(
+                        hazeState = hazeState,
                         alignment = Alignment.TopEnd,
-                        onDismissRequest = { showMenu = false },
-                        offset = IntOffset(24, with(LocalDensity.current) { 24.dp.roundToPx() }),
-                        properties = PopupProperties(focusable = true)
+                        onDismiss = { showMenu = false },
+                        offset = IntOffset(24, with(LocalDensity.current) { 24.dp.roundToPx() })
                     ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 4.dp,
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clickable {
-                                        showMenu = false
-                                        onDelete()
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 10.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "임시 저장 삭제",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_delete),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showMenu = false
+                                    onDelete()
                                 }
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "임시 저장 삭제",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_delete),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                     }
@@ -390,7 +336,7 @@ private fun PostDraftMediaThumbnail(
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
     ) {
         AsyncImage(
             model = model,
@@ -498,6 +444,7 @@ private fun PostDraftItemPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             PostDraftItem(
+                hazeState = null,
                 draft = PostDraft(
                     id = 1,
                     content = "오늘 새로운 프로젝트를 시작했습니다! 정말 기대되네요. 많은 분들이 관심 가져주시면 좋겠습니다.",

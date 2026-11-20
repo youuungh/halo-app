@@ -1,7 +1,8 @@
 package com.ninezero.halo.feature.store.presentation.product_detail.components
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -41,19 +42,57 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
+import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.DarkExpandText
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
 import com.ninezero.halo.feature.store.domain.model.DetailContentBlock
 import com.ninezero.halo.feature.store.domain.model.RichTextAlignment
 import com.ninezero.halo.feature.store.domain.model.RichTextBlockStyle
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.store.presentation.components.richTextAlign
+import com.ninezero.halo.feature.store.presentation.components.richTextColorOrNull
+import com.ninezero.halo.feature.store.presentation.components.richTextDecoration
+import com.ninezero.halo.feature.store.presentation.components.richTextStyle
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+
+private val DetailFadeHeight = 140.dp
+private const val DETAIL_FADE_SOLID_FRACTION = 0.55f  // 버튼 윗선에서 바탕색이 됨
+private val DetailExpandButtonShape = RoundedCornerShape(24.dp)
+
+/** 상품 상세 섹션 제목 */
+@Composable
+internal fun ProductDetailSectionTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+    count: Int? = null
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        if (count != null) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
 
 @Composable
 fun ProductDescriptionSection(
@@ -67,15 +106,11 @@ fun ProductDescriptionSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        Text(
-            text = "상품 정보",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        ProductDetailSectionTitle(text = "상품 정보")
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             text = description,
@@ -95,7 +130,7 @@ fun ProductDescriptionSection(
 
             OutlinedButton(
                 onClick = onToggleExpanded,
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = 1.dp),
@@ -127,24 +162,30 @@ fun DetailContentSection(
     modifier: Modifier = Modifier
 ) {
     val collapsedMaxHeight = 600.dp
-    val surfaceColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val hazeState = remember { HazeState() }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .padding(top = 16.dp)
+            .padding(top = 18.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                .then(
+                    if (isExpanded) Modifier
+                    else Modifier
+                        .height(collapsedMaxHeight)
+                        .clipToBounds()
+                )
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (isExpanded) Modifier
-                        else Modifier
-                            .height(collapsedMaxHeight)
-                            .clipToBounds()
-                    )
+                    .then(if (isExpanded) Modifier.fillMaxWidth() else Modifier.matchParentSize())
+                    .hazeSource(hazeState)
             ) {
                 Column(
                     modifier = Modifier
@@ -159,38 +200,26 @@ fun DetailContentSection(
             }
 
             if (!isExpanded) {
-                Column(
+                Box(
                     modifier = Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .align(Alignment.BottomCenter),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        surfaceColor
-                                    )
-                                )
+                        .height(DetailFadeHeight)
+                        .haloBlur(hazeState, HaloBlurs.fadeUp(backgroundColor, end = 1f, easing = LinearEasing))
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                DETAIL_FADE_SOLID_FRACTION to backgroundColor
                             )
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(surfaceColor)
-                            .padding(bottom = 4.dp)
-                    ) {
-                        DetailExpandToggleButton(
-                            isExpanded = false,
-                            onClick = onToggleExpanded
                         )
-                    }
-                }
+                )
+                DetailExpandToggleButton(
+                    isExpanded = false,
+                    onClick = onToggleExpanded,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 12.dp)
+                )
             }
         }
 
@@ -201,41 +230,49 @@ fun DetailContentSection(
                 onClick = onToggleExpanded
             )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
 private fun DetailExpandToggleButton(
     isExpanded: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
+    val isDark = LocalIsDarkTheme.current
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.background
+
+    Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier
+        modifier = modifier
+            .padding(horizontal = 12.dp)
+            .bounceClick()
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 1.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
+            .height(48.dp),
+        shape = DetailExpandButtonShape,
+        color = primary.copy(alpha = if (isDark) 0.18f else 0.1f).compositeOver(background),
+        contentColor = if (isDark) DarkExpandText else primary
     ) {
-        Text(
-            text = if (isExpanded) "상세정보 접기" else "상세정보 펼쳐보기",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Icon(
-            painter = painterResource(
-                if (isExpanded) R.drawable.ic_chevron_up
-                else R.drawable.ic_chevron_down
-            ),
-            contentDescription = null,
-            modifier = Modifier.size(20.dp)
-        )
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (isExpanded) "간략히 보기" else "자세히 보기",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                painter = painterResource(
+                    if (isExpanded) R.drawable.ic_chevron_up
+                    else R.drawable.ic_chevron_down
+                ),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
@@ -250,14 +287,14 @@ private fun DetailContentBlocks(blocks: List<DetailContentBlock>) {
                 // 크기 있으면 aspectRatio 즉시 확정
                 val imageModifier = Modifier
                     .fillMaxWidth()
-                    .let { mod ->
+                    .let { baseModifier ->
                         if (renderBlock.width != null && renderBlock.height != null &&
                             renderBlock.width > 0 && renderBlock.height > 0
                         ) {
-                            mod.aspectRatio(renderBlock.width.toFloat() / renderBlock.height.toFloat())
-                        } else mod
+                            baseModifier.aspectRatio(renderBlock.width.toFloat() / renderBlock.height.toFloat())
+                        } else baseModifier
                     }
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                 AsyncImage(
                     model = renderBlock.url,
                     contentDescription = "상세 이미지",
@@ -309,8 +346,8 @@ private fun DetailTextBlockItem(
                 )
                 Text(
                     text = block.text,
-                    style = detailTextStyle(block.textStyle),
-                    textAlign = detailTextAlign(block.textAlignment),
+                    style = richTextStyle(block.textStyle),
+                    textAlign = richTextAlign(block.textAlignment),
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -325,14 +362,14 @@ private fun DetailTextBlockItem(
             ) {
                 Text(
                     text = if (block.textStyle == RichTextBlockStyle.BULLET) "\u2022" else "${numberedIndex ?: 1}.",
-                    style = detailTextStyle(block.textStyle),
+                    style = richTextStyle(block.textStyle),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(
                     text = block.text,
-                    style = detailTextStyle(block.textStyle),
-                    textAlign = detailTextAlign(block.textAlignment),
+                    style = richTextStyle(block.textStyle),
+                    textAlign = richTextAlign(block.textAlignment),
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -342,8 +379,8 @@ private fun DetailTextBlockItem(
         else -> {
             Text(
                 text = block.text,
-                style = detailTextStyle(block.textStyle),
-                textAlign = detailTextAlign(block.textAlignment),
+                style = richTextStyle(block.textStyle),
+                textAlign = richTextAlign(block.textAlignment),
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -383,11 +420,11 @@ private fun buildDetailRenderBlocks(blocks: List<DetailContentBlock>): List<Deta
                     SpanStyle(
                         fontWeight = if (segment.bold) FontWeight.Bold else FontWeight.Normal,
                         fontStyle = if (segment.italic) FontStyle.Italic else FontStyle.Normal,
-                        textDecoration = detailTextDecoration(
+                        textDecoration = richTextDecoration(
                             segment.underline,
                             segment.strikethrough
                         ),
-                        color = detailTextColor(segment.textColor) ?: Color.Unspecified
+                        color = richTextColorOrNull(segment.textColor) ?: Color.Unspecified
                     )
                 ) {
                     append(content)
@@ -445,36 +482,6 @@ private fun buildDetailRenderBlocks(blocks: List<DetailContentBlock>): List<Deta
 
     flushText()
     return result
-}
-
-@Composable
-private fun detailTextStyle(textStyle: RichTextBlockStyle) = when (textStyle) {
-    RichTextBlockStyle.PARAGRAPH -> MaterialTheme.typography.bodyMedium
-    RichTextBlockStyle.HEADING1 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-    RichTextBlockStyle.HEADING2 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-    RichTextBlockStyle.QUOTE -> MaterialTheme.typography.bodyLarge.copy(fontStyle = FontStyle.Italic)
-    RichTextBlockStyle.BULLET,
-    RichTextBlockStyle.NUMBERED -> MaterialTheme.typography.bodyMedium
-}
-
-private fun detailTextAlign(alignment: RichTextAlignment) = when (alignment) {
-    RichTextAlignment.START -> TextAlign.Start
-    RichTextAlignment.CENTER -> TextAlign.Center
-    RichTextAlignment.END -> TextAlign.End
-}
-
-private fun detailTextDecoration(underline: Boolean, strikethrough: Boolean): TextDecoration {
-    val decorations = buildList {
-        if (underline) add(TextDecoration.Underline)
-        if (strikethrough) add(TextDecoration.LineThrough)
-    }
-    return if (decorations.isEmpty()) TextDecoration.None else TextDecoration.combine(decorations)
-}
-
-private fun detailTextColor(colorHex: String?): Color? {
-    return colorHex?.let {
-        runCatching { Color(it.toColorInt()) }.getOrNull()
-    }
 }
 
 private const val PREVIEW_DESCRIPTION =

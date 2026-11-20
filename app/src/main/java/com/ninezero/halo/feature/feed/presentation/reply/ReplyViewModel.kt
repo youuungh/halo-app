@@ -1,23 +1,22 @@
 package com.ninezero.halo.feature.feed.presentation.reply
 
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ninezero.halo.core.media.MediaFileReader
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.Constants.Content.MAX_COMMENT_CONTENT_LENGTH
-import com.ninezero.halo.core.util.MediaUtils
 import com.ninezero.halo.feature.feed.domain.delegate.PostMutationDelegate
 import com.ninezero.halo.feature.feed.domain.repository.PendingCommentRepository
 import com.ninezero.halo.feature.feed.domain.repository.PostRepository
 import com.ninezero.halo.feature.feed.domain.usecase.GetCachedCommentUseCase
 import com.ninezero.halo.feature.feed.domain.usecase.GetCachedPostUseCase
+import com.ninezero.halo.feature.feed.presentation.checkMediaSelection
 import com.ninezero.halo.feature.profile.domain.usecase.GetCachedMyProfileUseCase
 import com.ninezero.halo.feature.profile.domain.usecase.GetMyProfileUseCase
 import com.ninezero.halo.feature.profile.domain.usecase.ObserveMyProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
@@ -40,7 +39,7 @@ class ReplyViewModel @Inject constructor(
     private val getCachedMyProfileUseCase: GetCachedMyProfileUseCase,
     private val observeMyProfileUseCase: ObserveMyProfileUseCase,
     private val getMyProfileUseCase: GetMyProfileUseCase,
-    @param:ApplicationContext private val context: Context
+    private val mediaFileReader: MediaFileReader
 ) : ViewModel(), OrbitContainerHost<ReplyState, ReplyState, ReplySideEffect> {
 
     private val postId: Int = savedStateHandle.get<Int>("postId") ?: 0
@@ -136,26 +135,11 @@ class ReplyViewModel @Inject constructor(
             return@intent
         }
 
-        // 용량 검증
-        val validUris = uris.take(availableSlots).filter { uri ->
-            val fileInfo = MediaUtils.getFileInfo(context, uri) ?: return@filter false
-
-            if (fileInfo.fileSize > MAX_COMMENT_MEDIA_SIZE) {
-                reduce {
-                    state.copy(snackbarState = SnackbarState("파일은 최대 10MB까지 업로드 가능합니다"))
-                }
-                return@filter false
-            }
-            // 영상은 서버가 받는 형식만
-            val mimeType = MediaUtils.resolveMimeType(context, uri)
-            if (mimeType.startsWith("video/") && mimeType !in MediaUtils.ALLOWED_VIDEO_TYPES) {
-                reduce {
-                    state.copy(snackbarState = SnackbarState("지원하지 않는 비디오 형식입니다"))
-                }
-                return@filter false
-            }
-            true
+        val selection = checkMediaSelection(mediaFileReader, uris.take(availableSlots), MAX_COMMENT_MEDIA_SIZE)
+        selection.errors.forEach { message ->
+            reduce { state.copy(snackbarState = SnackbarState(message)) }
         }
+        val validUris = selection.validUris
 
         if (validUris.isEmpty()) return@intent
 
@@ -205,8 +189,7 @@ class ReplyViewModel @Inject constructor(
             return@intent
         }
 
-        // 연타/중복 가드
-        reduce { state.copy(isSubmitting = true) }
+        reduce { state.copy(isSubmitting = true) }  // 연타/중복 가드
 
         val mediaUris = state.selectedMediaUris.map { it.toString() }.ifEmpty { null }
 

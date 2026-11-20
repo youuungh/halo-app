@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.ninezero.halo.core.network.ApiException
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.feature.feed.domain.event.SubscriptionEventBus
+import com.ninezero.halo.feature.profile.domain.repository.ProfileRepository
 import com.ninezero.halo.feature.store.domain.model.billingAuthFailMessage
 import com.ninezero.halo.feature.store.domain.model.isBillingAuthCanceled
 import com.ninezero.halo.feature.store.domain.repository.BillingRepository
@@ -20,6 +21,7 @@ import javax.inject.Inject
 class SubscriptionSheetViewModel @Inject constructor(
     private val subscriptionRepository: SubscriptionRepository,
     private val billingRepository: BillingRepository,
+    private val profileRepository: ProfileRepository,
     private val subscriptionEventBus: SubscriptionEventBus
 ) : ViewModel(), OrbitContainerHost<SubscriptionSheetState, SubscriptionSheetState, SubscriptionSheetSideEffect> {
 
@@ -45,6 +47,8 @@ class SubscriptionSheetViewModel @Inject constructor(
                 isVisible = true,
                 creatorId = creatorId,
                 creatorName = creatorName,
+                creatorAvatarUrl = null,
+                creatorRole = null,
                 plans = emptyList(),
                 currentPlanId = null,
                 error = null,
@@ -54,6 +58,13 @@ class SubscriptionSheetViewModel @Inject constructor(
             )
         }
         loadPlans()
+        loadCreatorProfile(creatorId)
+    }
+
+    private fun loadCreatorProfile(creatorId: Int) = intent {  // 머리 사진 · 인증 뱃지, 실패하면 기본 사진
+        val profile = profileRepository.getUserProfile(creatorId).getOrNull() ?: return@intent
+        if (state.creatorId != creatorId) return@intent
+        reduce { state.copy(creatorAvatarUrl = profile.avatarThumbUrl ?: profile.avatarUrl, creatorRole = profile.role) }
     }
 
     private fun loadPlans() = intent {
@@ -151,8 +162,7 @@ class SubscriptionSheetViewModel @Inject constructor(
         if (currentPlanId == null) return null
         val currentPrice = plans.find { it.id == currentPlanId }?.price ?: currentTier?.planPrice ?: return null
         val target = plans.find { it.id == planId } ?: return null
-        return ((target.price.toBigDecimalOrNull()?.toLong() ?: 0L) -
-            (currentPrice.toBigDecimalOrNull()?.toLong() ?: 0L)).takeIf { it > 0L }
+        return (target.price - currentPrice).takeIf { it > 0L }
     }
 
     private fun onBillingAuthDismissed() = intent {

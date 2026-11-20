@@ -2,17 +2,15 @@ package com.ninezero.halo.feature.chat.domain.repository
 
 import com.ninezero.halo.core.model.UploadTicket
 import com.ninezero.halo.feature.chat.domain.model.Chat
-import com.ninezero.halo.feature.chat.domain.model.ChatImageUpload
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.feature.chat.domain.model.Message
 import com.ninezero.halo.feature.chat.domain.model.MessageListResult
 import com.ninezero.halo.feature.chat.domain.model.MessageSearchResult
 import kotlinx.coroutines.flow.Flow
-import okhttp3.MultipartBody
 
-// observe*는 로컬 DB 관찰, sync*는 서버 동기화
+
 /** 채팅방·메시지 저장소 */
-interface ChatRepository {
+interface ChatRepository {  // observe*는 로컬 DB 관찰, sync*는 서버 동기화
     /** 보관 안 된 채팅방 관찰 */
     fun observeChatRooms(): Flow<List<Chat>>
     /** 채팅방 관찰 */
@@ -84,6 +82,7 @@ interface ChatRepository {
     suspend fun markChatHistoryComplete(roomId: Int)
 
     // 낙관적 갱신
+
     /** 이미지 메시지 임시 저장 */
     suspend fun insertImageMessage(
         roomId: Int,
@@ -116,8 +115,7 @@ interface ChatRepository {
     suspend fun markMediaMessageSending(clientTempId: String)
 
     // 미디어 업로드
-    /** 채팅 이미지 업로드 */
-    suspend fun uploadImages(roomId: Int, images: List<MultipartBody.Part>): Result<ChatImageUpload>
+
     /** 채팅 영상·파일 업로드 준비 */
     suspend fun prepareUpload(
         roomId: Int,

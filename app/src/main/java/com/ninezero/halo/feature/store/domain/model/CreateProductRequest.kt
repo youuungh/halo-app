@@ -1,5 +1,7 @@
 package com.ninezero.halo.feature.store.domain.model
 
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
+
 data class CreateProductRequest(
     val name: String,
     val description: String,
@@ -11,7 +13,7 @@ data class CreateProductRequest(
     val imageDraftIds: List<Int> = emptyList(),  // 대표 이미지
     val detailContent: List<DetailContentBlock>? = null,
     val tags: List<String>? = null,
-    val requiredTier: String = "FREE",
+    val requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
     val tagIds: List<Int>? = null,
     val sectionTagId: Int? = null
 )

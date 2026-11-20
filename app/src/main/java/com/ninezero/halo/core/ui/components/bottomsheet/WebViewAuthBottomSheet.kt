@@ -10,21 +10,15 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -42,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import dev.chrisbanes.haze.HazeState
@@ -61,16 +56,10 @@ fun WebViewAuthBottomSheet(  // returnScheme 이동을 가로채 onReturn
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val hazeState = remember { HazeState() }
 
-    ModalBottomSheet(
+    FullScreenBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        sheetGesturesEnabled = false,
-        contentWindowInsets = { WindowInsets(0) },
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
-        modifier = Modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBars)
+        modifier = Modifier.fillMaxSize()
     ) {
         Column(modifier = Modifier.fillMaxHeight()) {
             BottomSheetDragHandle()
@@ -243,21 +232,15 @@ private fun AuthWebView(
         }
 
         if (errorMessage != null) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "페이지를 불러오지 못했습니다.",
-                    style = MaterialTheme.typography.bodyMedium
+                ListErrorState(
+                    title = "페이지를 불러오지 못했습니다",
+                    reason = "네트워크 연결을 확인해주세요",  // 웹뷰 오류 설명은 net::ERR_… 영문이라 쓰지 않음
+                    onRetry = { webViewRef?.let(::loadAuthUrl) }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(onClick = { webViewRef?.let(::loadAuthUrl) }) {
-                    Text("다시 시도")
-                }
             }
         }
     }

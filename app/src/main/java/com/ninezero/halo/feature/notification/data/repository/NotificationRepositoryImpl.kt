@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.notification.data.repository
 
+import com.ninezero.halo.core.di.ApplicationScope
 import com.ninezero.halo.core.network.safeApiCall
 import com.ninezero.halo.core.network.safeApiCallNoData
 import com.ninezero.halo.core.network.safeApiCallUnit
@@ -12,17 +13,13 @@ import com.ninezero.halo.feature.notification.domain.model.NotificationPreferenc
 import com.ninezero.halo.feature.notification.domain.model.UpdateNotificationPreference
 import com.ninezero.halo.feature.notification.domain.repository.NotificationRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import javax.inject.Inject
 
 class NotificationRepositoryImpl @Inject constructor(
-    private val api: NotificationApi
+    private val api: NotificationApi,
+    @param:ApplicationScope private val commitScope: CoroutineScope  // 스낵바 소멸 시 커밋이라 화면을 나가도 끝까지 진행
 ) : NotificationRepository {
-
-    // 스낵바 소멸 시 커밋이라 화면을 나가도 끝까지 진행
-    private val commitScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override suspend fun getNotifications(cursor: String?, limit: Int): Result<NotificationListResult> {
         return safeApiCall {

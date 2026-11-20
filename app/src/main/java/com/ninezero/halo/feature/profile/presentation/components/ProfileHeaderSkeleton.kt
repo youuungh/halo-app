@@ -5,13 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,7 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.shimmer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 @Composable
 fun ProfileHeaderSkeleton(
@@ -56,7 +57,7 @@ fun ProfileHeaderSkeleton(
                     modifier = Modifier
                         .width(100.dp)
                         .height(20.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
 
@@ -72,7 +73,7 @@ fun ProfileHeaderSkeleton(
                                 modifier = Modifier
                                     .width(32.dp)
                                     .height(16.dp)
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .shimmer()
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -80,7 +81,7 @@ fun ProfileHeaderSkeleton(
                                 modifier = Modifier
                                     .width(40.dp)
                                     .height(12.dp)
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .shimmer()
                             )
                         }
@@ -95,7 +96,7 @@ fun ProfileHeaderSkeleton(
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .height(14.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .shimmer()
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -103,7 +104,7 @@ fun ProfileHeaderSkeleton(
             modifier = Modifier
                 .fillMaxWidth(0.5f)
                 .height(14.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .shimmer()
         )
 
@@ -113,7 +114,7 @@ fun ProfileHeaderSkeleton(
             Box(
                 modifier = Modifier
                     .size(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -121,20 +122,28 @@ fun ProfileHeaderSkeleton(
                 modifier = Modifier
                     .width(60.dp)
                     .height(12.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
         }
 
-        // 프로필 편집 버튼
+        // 프로필 편집 + 공유 버튼
         Spacer(modifier = Modifier.height(16.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .shimmer()
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(CircleShape)
+                    .shimmer()
+            )
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .shimmer()
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         ProfileMenuGridSkeleton()
@@ -157,8 +166,8 @@ private fun ProfileMenuGridSkeleton(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(72.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .aspectRatio(4f / 3f)
+                            .clip(MaterialTheme.shapes.large)
                             .shimmer()
                     )
                 }

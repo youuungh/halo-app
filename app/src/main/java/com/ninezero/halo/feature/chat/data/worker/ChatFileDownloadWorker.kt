@@ -30,7 +30,7 @@ import java.net.URL
 class ChatFileDownloadWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
-    private val downloadResultManager: ChatDownloadResultManager
+    private val downloadEventBus: ChatDownloadEventBus
 ) : CoroutineWorker(context, workerParams) {
 
     private var foregroundActive = false
@@ -69,10 +69,8 @@ class ChatFileDownloadWorker @AssistedInject constructor(
             } else {
                 ChatTransferNotifications.notifyDownloadFailed(context, fileUrl, fileName)
             }
-            val success = saved != null
-
-            if (success) {
-                downloadResultManager.emitResult(
+            if (saved != null) {
+                downloadEventBus.emitResult(
                     ChatDownloadEvent.Success(
                         fileUrl = fileUrl,
                         fileName = fileName
@@ -80,7 +78,7 @@ class ChatFileDownloadWorker @AssistedInject constructor(
                 )
                 Result.success()
             } else {
-                downloadResultManager.emitResult(
+                downloadEventBus.emitResult(
                     ChatDownloadEvent.Failure(
                         fileUrl = fileUrl
                     )
@@ -93,7 +91,7 @@ class ChatFileDownloadWorker @AssistedInject constructor(
         } catch (e: Exception) {
             Timber.e(e, "ChatFileDownloadWorker: 다운로드 중 예외 발생")
             ChatTransferNotifications.notifyDownloadFailed(context, fileUrl, fileName)
-            downloadResultManager.emitResult(
+            downloadEventBus.emitResult(
                 ChatDownloadEvent.Failure(
                     fileUrl = fileUrl
                 )
@@ -176,7 +174,7 @@ class ChatFileDownloadWorker @AssistedInject constructor(
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastEmitTime >= 100 && totalBytes > 0) {
                 val progress = downloadedBytes.toFloat() / totalBytes
-                downloadResultManager.emitResult(
+                downloadEventBus.emitResult(
                     ChatDownloadEvent.Progress(
                         fileUrl = fileUrl,
                         progress = progress
@@ -218,10 +216,17 @@ class ChatFileDownloadWorker @AssistedInject constructor(
         fun enqueue(context: Context, fileUrl: String, fileName: String) {
             // 진행률이 뜨기 전 연타해도 같은 파일은 한 번만 받음
             WorkManager.getInstance(context).enqueueUniqueWork(
-                "chat_download_${fileUrl.hashCode()}",
+                uniqueWorkName(fileUrl),
                 ExistingWorkPolicy.KEEP,
                 createWorkRequest(fileUrl, fileName)
             )
         }
+
+        /** 받던 미완성 파일은 워커가 취소 처리에서 지움 */
+        fun cancel(context: Context, fileUrl: String) {
+            WorkManager.getInstance(context).cancelUniqueWork(uniqueWorkName(fileUrl))
+        }
+
+        private fun uniqueWorkName(fileUrl: String) = "chat_download_${fileUrl.hashCode()}"
     }
 }

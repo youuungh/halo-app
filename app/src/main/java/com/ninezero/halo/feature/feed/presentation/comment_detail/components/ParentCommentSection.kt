@@ -44,19 +44,19 @@ import com.ninezero.halo.core.ui.components.badge.PostAuthorBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.comment.BlindHideButton
 import com.ninezero.halo.core.ui.components.comment.CommentMedia
-import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlay
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlayShape
+import com.ninezero.halo.core.ui.components.text.AnimatedCounter
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.previewComment
 import com.ninezero.halo.core.ui.preview.previewMediaItem
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Like
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Comment
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.Like
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -98,7 +98,7 @@ fun ParentCommentSection(
     ) {
         if (isBlocked || comment.isDeleted) {
             // 삭제 자리는 좋아요·답글 불가
-            ObscuredParentContent(
+            CoveredParentContent(
                 comment = comment,
                 avatarSize = avatarSize,
                 avatarSpacing = avatarSpacing,
@@ -185,12 +185,12 @@ fun ParentCommentSection(
 
             // 본문·미디어·버튼, 본인 블라인드 댓글은 가림
             val hazeState = remember { HazeState() }
-            val isBlindObscured = comment.isBlinded && !isBlindRevealed
+            val isBlindCovered = comment.isBlinded && !isBlindRevealed
             Box {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(if (isBlindObscured) Modifier.clip(ObscuredOverlayShape) else Modifier)
+                        .then(if (isBlindCovered) Modifier.clip(CoverOverlayShape) else Modifier)
                         // 오버레이 꺼져도 블러 소스 유지
                         .then(if (comment.isBlinded) Modifier.hazeSource(state = hazeState) else Modifier)
                 ) {
@@ -202,7 +202,7 @@ fun ParentCommentSection(
                     )
 
                     // 미디어
-                    if (comment.mediaAttachments.isNotEmpty() && !isBlindObscured) {
+                    if (comment.mediaAttachments.isNotEmpty() && !isBlindCovered) {
                         CommentMedia(
                             mediaAttachments = comment.mediaAttachments,
                             startPadding = 0.dp,
@@ -222,8 +222,8 @@ fun ParentCommentSection(
                     )
                 }
 
-                if (isBlindObscured) {
-                    ObscuredOverlay(
+                if (isBlindCovered) {
+                    CoverOverlay(
                         hazeState = hazeState,
                         icon = R.drawable.ic_warning,
                         label = "신고 누적으로 블라인드 처리되었습니다",
@@ -240,7 +240,7 @@ fun ParentCommentSection(
 }
 
 @Composable
-private fun ObscuredParentContent(
+private fun CoveredParentContent(
     comment: Comment,
     avatarSize: Dp,
     avatarSpacing: Dp,
@@ -267,7 +267,7 @@ private fun ObscuredParentContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(ObscuredOverlayShape)
+                    .clip(CoverOverlayShape)
                     .hazeSource(state = hazeState)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -304,7 +304,7 @@ private fun ObscuredParentContent(
 
             // 차단·삭제·블라인드 자리 오버레이
             val isBlindedPlaceholder = comment.isBlinded && comment.isDeleted
-            ObscuredOverlay(
+            CoverOverlay(
                 hazeState = hazeState,
                 icon = when {
                     isBlindedPlaceholder -> R.drawable.ic_warning
@@ -355,7 +355,7 @@ private fun ParentSectionActionButtons(
         ) {
             Icon(
                 painter = painterResource(
-                    if (comment.isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart
+                    if (comment.isLiked) R.drawable.ic_post_heart_filled else R.drawable.ic_post_heart
                 ),
                 contentDescription = "좋아요",
                 modifier = Modifier
@@ -384,7 +384,7 @@ private fun ParentSectionActionButtons(
             )
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_comment),
+                painter = painterResource(R.drawable.ic_post_comment),
                 contentDescription = "답글",
                 modifier = Modifier
                     .size(20.dp)

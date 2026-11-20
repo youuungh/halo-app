@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,12 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.shimmer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 /** 섹션 헤더 */
 @Composable
@@ -34,18 +36,20 @@ fun SectionHeader(
     title: String,
     modifier: Modifier = Modifier,
     showViewAll: Boolean = true,
-    onViewAllClick: (() -> Unit)? = null
+    onViewAllClick: (() -> Unit)? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+    titleStyle: TextStyle = MaterialTheme.typography.titleMedium
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(contentPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = titleStyle,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -72,6 +76,28 @@ fun SectionHeader(
     }
 }
 
+/** 프로필 탭 섹션 헤더, 첫 섹션은 더 띄움 */
+@Composable
+fun ProfileSectionHeader(
+    title: String,
+    showViewAll: Boolean = true,
+    onViewAllClick: (() -> Unit)? = null,
+    groupStart: Boolean = false
+) {
+    SectionHeader(
+        title = title,
+        showViewAll = showViewAll,
+        onViewAllClick = onViewAllClick,
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = if (groupStart) 24.dp else 18.dp,
+            end = 16.dp,
+            bottom = 6.dp
+        ),
+        titleStyle = MaterialTheme.typography.titleLarge
+    )
+}
+
 /** 섹션 헤더 스켈레톤 */
 @Composable
 fun SectionHeaderSkeleton(
@@ -88,7 +114,7 @@ fun SectionHeaderSkeleton(
             modifier = Modifier
                 .width(100.dp)
                 .height(20.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .shimmer()
         )
     }

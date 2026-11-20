@@ -6,7 +6,7 @@ import com.ninezero.halo.feature.store.domain.model.ShippingStatus
 
 enum class OrderFilter(val label: String) {
     ALL("전체"),
-    PENDING("대기"),  // PENDING/CONFIRMED/PREPARING 포함
+    PENDING("대기"),  // PENDING·CONFIRMED·PREPARING 포함
     SHIPPED("배송중"),
     DELIVERED("완료"),
     CANCELLED("취소")

@@ -2,6 +2,7 @@ package com.ninezero.halo.feature.chat.data.repository
 
 import com.ninezero.halo.core.database.dao.CachedChatRoomDao
 import com.ninezero.halo.core.database.dao.CachedMessageDao
+import com.ninezero.halo.core.di.ApplicationScope
 import com.ninezero.halo.core.fcm.ActiveChatRoomTracker
 import com.ninezero.halo.core.model.UploadTicket
 import com.ninezero.halo.core.model.UserSummary
@@ -24,7 +25,6 @@ import com.ninezero.halo.feature.chat.data.remote.dto.SendMessageRequest
 import com.ninezero.halo.feature.chat.data.remote.dto.toDomain
 import com.ninezero.halo.feature.chat.domain.model.Chat
 import com.ninezero.halo.feature.chat.domain.model.ChatEvent
-import com.ninezero.halo.feature.chat.domain.model.ChatImageUpload
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.feature.chat.domain.model.Message
 import com.ninezero.halo.feature.chat.domain.model.MessageListResult
@@ -35,12 +35,10 @@ import com.ninezero.halo.feature.chat.domain.repository.ChatRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import okhttp3.MultipartBody
 import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -51,11 +49,10 @@ class ChatRepositoryImpl @Inject constructor(
     private val api: ChatApi,
     private val cachedMessageDao: CachedMessageDao,
     private val cachedChatRoomDao: CachedChatRoomDao,
-    private val chatEventRepository: ChatEventRepository
+    private val chatEventRepository: ChatEventRepository,
+    @param:ApplicationScope private val sendScope: CoroutineScope  // 방을 나가도 텍스트 전송은 끝까지 진행
 ) : ChatRepository {
 
-    // 방을 나가도 텍스트 전송은 끝까지 진행
-    private val sendScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val inFlightTempIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     override fun observeChatRooms(): Flow<List<Chat>> {
@@ -275,8 +272,8 @@ class ChatRepositoryImpl @Inject constructor(
         val tempId = clientTempId ?: UUID.randomUUID().toString()
         inFlightTempIds += tempId
         try {
-            val optimistic = if (messageType == ChatMessageType.TEXT && !content.isNullOrBlank()) {
-                insertOptimisticMessage(roomId, content, messageType, tempId)
+            val tempMessage = if (messageType == ChatMessageType.TEXT && !content.isNullOrBlank()) {
+                insertTempMessage(roomId, content, messageType, tempId)
             } else null
 
             val result = safeApiCall {
@@ -301,14 +298,14 @@ class ChatRepositoryImpl @Inject constructor(
             }.map { it.toDomain() }
 
             result.onSuccess { serverMessage ->
-                if (optimistic != null) {
-                    cachedMessageDao.replaceOptimisticMessage(tempId, serverMessage.toEntity())
+                if (tempMessage != null) {
+                    cachedMessageDao.replaceTempMessage(tempId, serverMessage.toEntity())
                     updateRoomForMessage(serverMessage)
                 } else {
                     handleIncomingMessage(serverMessage)
                 }
             }.onFailure {
-                optimistic?.let {
+                tempMessage?.let {
                     cachedMessageDao.updateStatusByClientTempId(
                         clientTempId = tempId,
                         status = MessageStatus.FAILED.name
@@ -347,7 +344,7 @@ class ChatRepositoryImpl @Inject constructor(
             }.map { it.toDomain() }
 
             result.onSuccess { serverMessage ->
-                cachedMessageDao.replaceOptimisticMessage(clientTempId, serverMessage.toEntity())
+                cachedMessageDao.replaceTempMessage(clientTempId, serverMessage.toEntity())
                 updateRoomForMessage(serverMessage)
             }.onFailure {
                 cachedMessageDao.updateStatusByClientTempId(clientTempId, MessageStatus.FAILED.name)
@@ -509,7 +506,7 @@ class ChatRepositoryImpl @Inject constructor(
         cachedMessageDao.updateUploadProgressByClientTempId(clientTempId, 0f)
     }
 
-    private suspend fun insertOptimisticMessage(
+    private suspend fun insertTempMessage(
         roomId: Int,
         content: String,
         messageType: ChatMessageType,
@@ -536,19 +533,6 @@ class ChatRepositoryImpl @Inject constructor(
         return placeholder
     }
 
-    // 미디어 업로드
-    override suspend fun uploadImages(
-        roomId: Int,
-        images: List<MultipartBody.Part>
-    ): Result<ChatImageUpload> {
-        return safeApiCall {
-            api.uploadImages(roomId, images)
-        }.map { response ->
-            val urls = response["imageUrls"] ?: emptyList()
-            val thumbnails = response["thumbnailUrls"] ?: urls
-            ChatImageUpload(urls = urls, thumbnails = thumbnails)
-        }
-    }
 
     override suspend fun prepareUpload(
         roomId: Int,

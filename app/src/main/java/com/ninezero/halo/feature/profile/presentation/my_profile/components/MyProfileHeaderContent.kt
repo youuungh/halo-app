@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,10 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -33,15 +32,21 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
 import com.ninezero.halo.R
+import com.ninezero.halo.core.deeplink.DeepLinks
+import com.ninezero.halo.core.deeplink.shareTextExternally
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.profile_image_viewer.LocalProfileImageOverlayVisible
-import com.ninezero.halo.core.ui.components.profile_image_viewer.LocalProfileImageTransitionScope
-import com.ninezero.halo.core.ui.components.profile_image_viewer.PROFILE_IMAGE_SHARED_KEY
+import com.ninezero.halo.core.ui.components.viewer.LocalProfileImageOverlayVisible
+import com.ninezero.halo.core.ui.components.viewer.LocalProfileImageTransitionScope
+import com.ninezero.halo.core.ui.components.viewer.PROFILE_IMAGE_SHARED_KEY
 import com.ninezero.halo.core.util.launchCustomTab
 import com.ninezero.halo.feature.profile.domain.model.UserProfile
 import com.ninezero.halo.feature.profile.presentation.components.ProfileMenuGrid
 import com.ninezero.halo.feature.profile.presentation.components.StatItem
+import com.ninezero.halo.feature.profile.presentation.components.profileTileSurface
+
+// 남 프로필 버튼과 같은 높이
+private val ProfileActionHeight = 44.dp
 
 @Composable
 fun MyProfileHeaderContent(
@@ -231,15 +236,43 @@ fun MyProfileHeaderContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 프로필 편집 버튼
-        OutlinedButton(
-            onClick = onEditClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .bounceClick(),
-            shape = RoundedCornerShape(12.dp)
+        // 프로필 편집 + 공유, 메뉴 칸과 같은 재질
+        val context = LocalContext.current
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("프로필 편집")
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(ProfileActionHeight)
+                    .bounceClick()
+                    .profileTileSurface(CircleShape)
+                    .clickable(onClick = onEditClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "프로필 편집",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(ProfileActionHeight)
+                    .bounceClick()
+                    .profileTileSurface(CircleShape)
+                    .clickable { context.shareTextExternally(DeepLinks.profileLink(profile.userId)) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_share),
+                    contentDescription = "프로필 공유",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))

@@ -8,8 +8,10 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-val LocalBottomBarPadding = compositionLocalOf { 16.dp }  // 떠 있는 하단 바가 차지하는 높이
+/** 떠 있는 하단 바가 차지하는 높이 */
+val LocalBottomBarPadding = compositionLocalOf { 16.dp }
 
+/** 떠 있는 하단 바 크기 값 */
 object BottomBarDefaults {
     /** 알약 높이 */
     val PillHeight: Dp = 56.dp
@@ -24,12 +26,12 @@ object BottomBarDefaults {
     val ContentGap: Dp = 16.dp
 
     /** 내비바 인셋 뺀 알약 높이 */
-    val PillFootprint: Dp = VerticalMargin + PillHeight + ContentGap  // navigationBarsPadding 이중 계산 방지용
+    val PillSpace: Dp = VerticalMargin + PillHeight + ContentGap  // navigationBarsPadding 이중 계산 방지용
 
     /** 알약을 피할 하단 여백 */
     @Composable
     fun reservedContentPadding(): Dp {
         val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        return navBottom + PillFootprint
+        return navBottom + PillSpace
     }
 }

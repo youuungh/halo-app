@@ -15,11 +15,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
@@ -27,17 +31,19 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.selector.CapsuleTabDefaults
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
 import com.ninezero.halo.feature.explore.presentation.ExploreTab
-import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import kotlin.math.roundToInt
 
-val ExploreTabRowHeight = 56.dp
+val ExploreTabRowHeight = CapsuleTabDefaults.Height + 16.dp
 
 @Composable
 fun ExploreTabRow(
@@ -46,7 +52,7 @@ fun ExploreTabRow(
     modifier: Modifier = Modifier,
     hazeState: HazeState? = null,
     hazeBackgroundColor: Color = MaterialTheme.colorScheme.background,
-    scrollFraction: Float = if (selectedTab == ExploreTab.POPULAR) 1f else 0f
+    scrollFraction: () -> Float = { if (selectedTab == ExploreTab.POPULAR) 1f else 0f }
 ) {
     val tabs = listOf(ExploreTab.TRENDING, ExploreTab.POPULAR)
     val density = LocalDensity.current
@@ -54,11 +60,10 @@ fun ExploreTabRow(
     val tabSize = remember { mutableStateOf(IntSize.Zero) }
 
     // pager 실제 위치를 따라 양방향 전환 대칭
-    val indicatorOffset = with(density) { (tabSize.value.width * scrollFraction).toDp() }
-
-    // haloBlur 블록은 컴포저블 아님
-    val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    val indicatorGlassTint = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+    val currentFraction by rememberUpdatedState(scrollFraction)
+    val currentSelectedIndex by remember(tabs.size) {
+        derivedStateOf { currentFraction().roundToInt().coerceIn(0, tabs.lastIndex) }
+    }
 
     Box(
         modifier = modifier
@@ -69,40 +74,37 @@ fun ExploreTabRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
-                .clip(CircleShape)
+                .height(CapsuleTabDefaults.Height)
                 .then(
                     if (hazeState != null) {
-                        Modifier.haloBlur(state = hazeState) {
-                            style = HaloBlurStyle(
-                                backgroundColor = hazeBackgroundColor,
-                                tint = HaloBlurTint(glassTint),
-                                blurRadius = 20.dp,
-                                noiseFactor = 0f
-                            )
-                        }
+                        Modifier
+                            .clip(CircleShape)
+                            .haloBlur(hazeState, HaloBlurs.glassField(hazeBackgroundColor))
                     } else {
-                        Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                        Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     }
                 )
         ) {
             // 선택 인디케이터
             Box(
                 modifier = Modifier
-                    .offset(x = indicatorOffset + 2.dp)
+                    .offset { IntOffset((tabSize.value.width * currentFraction()).roundToInt() + 2.dp.roundToPx(), 0) }
                     .padding(vertical = 2.dp)
                     .width(with(density) { tabSize.value.width.toDp() } - 4.dp)
-                    .height(36.dp)
+                    .height(CapsuleTabDefaults.Height - 4.dp)
+                    .then(
+                        // 밝은 블러 위에서 경계가 보이게 살짝 띄움
+                        if (!LocalIsDarkTheme.current) Modifier.dropShadow(CircleShape, CapsuleTabDefaults.IndicatorShadow) else Modifier
+                    )
                     .clip(CircleShape)
                     .then(
                         if (hazeState != null) {
-                            Modifier.haloBlur(state = hazeState) {
-                                style = HaloBlurStyle(
-                                    backgroundColor = hazeBackgroundColor,
-                                    tint = HaloBlurTint(indicatorGlassTint),
-                                    blurRadius = 20.dp,
-                                    noiseFactor = 0f
-                                )
+                            if (LocalIsDarkTheme.current) {
+                                Modifier.background(CapsuleTabDefaults.DarkIndicatorColor)
+                            } else {
+                                Modifier.haloBlur(hazeState, HaloBlurs.glassIndicator(hazeBackgroundColor))
                             }
                         } else {
                             Modifier.background(MaterialTheme.colorScheme.surface)
@@ -115,18 +117,15 @@ fun ExploreTabRow(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // 가까운 탭 기준으로 굵기·색 전환
-                val currentSelectedIndex = scrollFraction.roundToInt().coerceIn(0, tabs.lastIndex)
 
                 tabs.forEachIndexed { index, tab ->
                     val isSelected = index == currentSelectedIndex
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .height(CapsuleTabDefaults.Height)
                             .onSizeChanged { size ->
-                                if (tabSize.value.width == 0) {
-                                    tabSize.value = size
-                                }
+                                tabSize.value = size
                             }
                             .pointerInput(tab) {
                                 awaitEachGesture {

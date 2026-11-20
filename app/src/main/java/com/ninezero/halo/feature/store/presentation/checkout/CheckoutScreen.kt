@@ -6,7 +6,6 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,10 +23,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,10 +36,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
@@ -53,39 +50,43 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.BuildConfig
 import com.ninezero.halo.core.ui.components.bottomsheet.WebViewAuthBottomSheet
-import com.ninezero.halo.core.ui.components.button.GlassActionButton
-import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.AnimatedCounter
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.core.util.toFormattedPrice
+import com.ninezero.halo.feature.address.domain.model.Address
 import com.ninezero.halo.feature.coupon.domain.model.Coupon
-import com.ninezero.halo.feature.store.domain.model.OrderItem
+import com.ninezero.halo.feature.store.domain.model.calcCouponBenefit
 import com.ninezero.halo.feature.store.domain.model.calcMaxUsablePoints
 import com.ninezero.halo.feature.store.domain.model.calcSingleCouponDiscount
 import com.ninezero.halo.feature.store.domain.model.calcStorePricing
-import com.ninezero.halo.feature.store.domain.model.calcUsablePointsCap
+import com.ninezero.halo.feature.store.domain.model.calcUsablePointsLimit
+import com.ninezero.halo.feature.store.domain.model.earnRatePercent
+import com.ninezero.halo.feature.store.domain.model.isCouponApplicable
 import com.ninezero.halo.feature.store.domain.model.isFreeShippingReached
 import com.ninezero.halo.feature.store.presentation.checkout.components.CardPaymentBottomSheet
-import com.ninezero.halo.feature.store.presentation.checkout.components.CouponSection
+import com.ninezero.halo.feature.store.presentation.checkout.components.CheckoutCreatorCard
+import com.ninezero.halo.feature.store.presentation.checkout.components.CheckoutSectionTitle
+import com.ninezero.halo.feature.store.presentation.checkout.components.CouponBoxState
 import com.ninezero.halo.feature.store.presentation.checkout.components.CouponSelectBottomSheet
-import com.ninezero.halo.feature.store.presentation.checkout.components.EarnPointsSection
-import com.ninezero.halo.feature.store.presentation.checkout.components.OrderSummarySection
+import com.ninezero.halo.feature.store.presentation.checkout.components.PaymentAmountSection
 import com.ninezero.halo.feature.store.presentation.checkout.components.PaymentProviderSection
 import com.ninezero.halo.feature.store.presentation.checkout.components.PointSection
 import com.ninezero.halo.feature.store.presentation.checkout.components.checkoutSkeleton
-import com.ninezero.halo.feature.store.presentation.components.OrderCreatorGroupHeader
-import com.ninezero.halo.feature.store.presentation.components.OrderDetailItemRow
+import com.ninezero.halo.feature.store.presentation.components.calcMembershipBreakdown
 import com.tosspayments.paymentsdk.TossPayments
 import com.tosspayments.paymentsdk.model.TossPaymentResult
 import com.tosspayments.paymentsdk.model.paymentinfo.TossCardPaymentInfo
@@ -93,7 +94,6 @@ import com.tosspayments.paymentsdk.model.paymentinfo.TossMobilePaymentInfo
 import com.tosspayments.paymentsdk.model.paymentinfo.TossPaymentInfo
 import com.tosspayments.paymentsdk.model.paymentinfo.TossPaymentMethod
 import com.tosspayments.paymentsdk.model.paymentinfo.TossTransferPaymentInfo
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
@@ -280,6 +280,8 @@ internal fun CheckoutScreenContent(
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     var headerHeight by rememberSaveableDp()
+    var bottomBarHeight by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
     val numberFormat = rememberKoreanNumberFormat()
     val orderLines = state.orderLines
     val orderItems = orderLines.orEmpty()
@@ -306,8 +308,8 @@ internal fun CheckoutScreenContent(
     val paymentAmount = orderTotal - state.usedPoints
     val isFreeOrder = paymentAmount <= 0L  // 포인트·쿠폰으로 전액, 결제수단 없이 주문
     // 정책 상한과 결제 금액 둘 다 상한
-    val maxUsablePoints = remember(subtotal, orderTotal) { calcUsablePointsCap(subtotal, orderTotal) }
-    val isRateCapped = maxUsablePoints == calcMaxUsablePoints(subtotal)
+    val maxUsablePoints = remember(subtotal, orderTotal) { calcUsablePointsLimit(subtotal, orderTotal) }
+    val isRateLimited = maxUsablePoints == calcMaxUsablePoints(subtotal)
     val couponInfoByCreator = remember(orderItems, orderCreatorIds, state.subscribedCreatorIds) {
         val creatorNamesById = orderItems
             .groupBy { it.product.creator.id }
@@ -333,14 +335,46 @@ internal fun CheckoutScreenContent(
         }
     }
 
+    val membership = remember(orderItems, pricing, state.subscribedCreatorIds, state.creatorTiers) {
+        calcMembershipBreakdown(
+            items = orderItems,
+            pricing = pricing,
+            subscribedCreatorIds = state.subscribedCreatorIds,
+            tierOf = { creatorId -> state.creatorTiers[creatorId]?.takeIf { creatorId in state.subscribedCreatorIds } }
+        )
+    }
+    val couponStateByCreator = remember(
+        orderItems,
+        state.availableCoupons,
+        state.selectedCoupons,
+        state.isCouponLoading,
+        state.couponError,
+        state.subscribedCreatorIds
+    ) {
+        orderCreatorIds.associateWith { creatorId ->
+            val applied = state.selectedCoupons[creatorId]
+            val usableCount = state.availableCoupons.count { coupon ->
+                coupon.creatorId == creatorId && isCouponApplicable(coupon, orderItems, state.subscribedCreatorIds)
+            }
+            when {
+                applied != null -> CouponBoxState.Applied(
+                    couponName = applied.name,
+                    amount = calcCouponBenefit(applied, orderAmountByCreatorId[creatorId] ?: 0L)
+                )
+                state.isCouponLoading -> CouponBoxState.Loading
+                state.couponError != null -> CouponBoxState.Failed
+                usableCount > 0 -> CouponBoxState.Available(usableCount)
+                else -> CouponBoxState.None
+            }
+        }
+    }
+
     if (state.showCouponSheet) {
         CouponSelectBottomSheet(
             coupons = state.availableCoupons,
-            orderCreatorIds = orderCreatorIds,
             orderAmountByCreatorId = orderAmountByCreatorId,
             couponInfoByCreator = couponInfoByCreator,
             draftSelectedCoupons = state.draftSelectedCoupons,
-            canApply = state.draftSelectedCoupons != state.selectedCoupons,
             couponCode = state.couponCode,
             isClaiming = state.isClaiming,
             isLoading = state.isCouponLoading,
@@ -388,21 +422,11 @@ internal fun CheckoutScreenContent(
                             .padding(top = headerHeight),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = onRetry,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "주문 정보를 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = onRetry
+                        )
                     }
                 }
                 // 컨텐츠
@@ -417,10 +441,11 @@ internal fun CheckoutScreenContent(
                     ) {
                         // 배송지
                         item(key = "shipping_header") {
+                            // '변경' 글자 끝을 카드 끝선에 맞춤
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -433,7 +458,7 @@ internal fun CheckoutScreenContent(
                                 if (state.addresses.isNotEmpty()) {
                                     Text(
                                         text = "변경",
-                                        style = MaterialTheme.typography.labelMedium,
+                                        style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Medium,
                                         modifier = Modifier
@@ -443,96 +468,21 @@ internal fun CheckoutScreenContent(
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 onClick = onNavigateToAddressManage
                                             )
-                                            .padding(4.dp)
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
                                     )
                                 }
                             }
                         }
                         item(key = "shipping_form") {
-                            if (state.selectedAddress != null) {
-                                val addr = state.selectedAddress
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
-                                        .border(
-                                            width = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = addr.recipientName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = addr.recipientPhone,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    val fullAddress = buildString {
-                                        append(addr.address)
-                                        if (!addr.addressDetail.isNullOrBlank()) {
-                                            append(" ${addr.addressDetail}")
-                                        }
-                                        append(" (${addr.zipCode})")
-                                    }
-                                    Text(
-                                        text = fullAddress,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    if (!addr.memo.isNullOrBlank()) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "배송 메모: ${addr.memo}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
-                                        .border(
-                                            width = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable(onClick = onNavigateToAddressManage)
-                                        .padding(vertical = 24.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "+ 배송지 추가",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(24.dp))
+                            ShippingAddressContent(
+                                selectedAddress = state.selectedAddress,
+                                onNavigateToAddressManage = onNavigateToAddressManage
+                            )
                         }
 
                         // 주문 상품
                         item(key = "order_header") {
-                            Text(
-                                text = "주문 상품",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
+                            CheckoutSectionTitle(title = "주문 상품", count = orderItems.size)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
 
@@ -540,126 +490,34 @@ internal fun CheckoutScreenContent(
 
                         groupedItems.entries.forEachIndexed { groupIndex, (creatorId, items) ->
                             val creator = items.first().product.creator
-                            val groupSubtotal = items.sumOf { it.subtotal }
+                            val isSubscribed = creatorId in state.subscribedCreatorIds
+                            val appliedCoupon = state.selectedCoupons[creatorId]
 
                             item(key = "creator_group_$creatorId") {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(
-                                            horizontal = 12.dp,
-                                            vertical = if (groupIndex == 0) 0.dp else 8.dp
-                                        )
-                                        .border(
-                                            width = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clip(RoundedCornerShape(12.dp))
-                                ) {
-                                    OrderCreatorGroupHeader(
-                                        creatorName = creator.displayName ?: creator.username,
-                                        creatorAvatarUrl = creator.avatarThumbUrl ?: creator.avatarUrl,
-                                        creatorRole = creator.role,
-                                        isSubscribed = creatorId in state.subscribedCreatorIds
-                                    )
-                                    HorizontalDivider(
-                                        thickness = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                    )
-
-                                    items.forEachIndexed { index, line ->
-                                        OrderDetailItemRow(
-                                            item = OrderItem(
-                                                id = line.product.id,
-                                                productId = line.product.id,
-                                                productName = line.product.name,
-                                                productImageUrl = line.product.imageUrls.firstOrNull(),
-                                                price = line.product.price,
-                                                originalPrice = line.product.originalPrice,
-                                                quantity = line.quantity,
-                                                subtotal = line.subtotal.toString()
-                                            ),
-                                            numberFormat = numberFormat,
-                                            showActionButtons = false,
-                                            showPrice = false,
-                                            showLineTotal = true
-                                        )
-                                        if (index < items.lastIndex) {
-                                            HorizontalDivider(
-                                                thickness = 0.5.dp,
-                                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                                                modifier = Modifier.padding(horizontal = 16.dp)
-                                            )
-                                        }
-                                    }
-
-                                    // 그룹 소계, 쿠폰 반영
-                                    val appliedCoupon = state.selectedCoupons[creatorId]
-                                    val groupCouponDiscount = appliedCoupon
-                                        ?.let { calcSingleCouponDiscount(it, groupSubtotal) }
-                                        ?: 0L
-                                    val discountedSubtotal = (groupSubtotal - groupCouponDiscount).coerceAtLeast(0L)
-
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 12.dp, end = 12.dp, top = 0.dp, bottom = 12.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = "상품금액",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            if (groupCouponDiscount > 0L) {
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = "쿠폰 적용 -${numberFormat.format(groupCouponDiscount)}원",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                        if (groupCouponDiscount > 0L) {
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Text(
-                                                    text = "${numberFormat.format(groupSubtotal)}원",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    textDecoration = TextDecoration.LineThrough
-                                                )
-                                                Text(
-                                                    text = "${numberFormat.format(discountedSubtotal)}원",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            }
-                                        } else {
-                                            Text(
-                                                text = "${numberFormat.format(groupSubtotal)}원",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
+                                CheckoutCreatorCard(
+                                    creator = creator,
+                                    items = items,
+                                    isSubscribed = isSubscribed,
+                                    earnRatePercent = earnRatePercent(
+                                        state.creatorTiers[creatorId]?.takeIf { isSubscribed }
+                                    ),
+                                    shippingFee = pricing.shipping.finalShippingFeeByCreator[creatorId] ?: 0L,
+                                    couponDiscount = appliedCoupon
+                                        ?.let { calcSingleCouponDiscount(it, items.sumOf { line -> line.subtotal }) }
+                                        ?: 0L,
+                                    couponState = couponStateByCreator[creatorId] ?: CouponBoxState.None,
+                                    numberFormat = numberFormat,
+                                    onCouponClick = onShowCouponSheet,
+                                    modifier = Modifier.padding(top = if (groupIndex == 0) 0.dp else 12.dp)
+                                )
                             }
                         }
 
                         // 결제수단
                         if (!isFreeOrder) {
                             item(key = "payment_method") {
+                                Spacer(modifier = Modifier.height(28.dp))
+                                CheckoutSectionTitle(title = "결제수단")
                                 Spacer(modifier = Modifier.height(12.dp))
                                 PaymentProviderSection(
                                     selectedProvider = state.selectedPaymentProvider,
@@ -670,64 +528,41 @@ internal fun CheckoutScreenContent(
                             }
                         }
 
-                        // 할인/포인트
-                        item(key = "discount_section") {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp)
-                                    .border(
-                                        width = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .clip(RoundedCornerShape(12.dp))
-                            ) {
-                                CouponSection(
-                                    availableCount = state.availableCoupons.size,
-                                    selectedCount = state.selectedCoupons.size,
-                                    totalDiscount = state.couponDiscount + shippingDiscount,
-                                    numberFormat = numberFormat,
-                                    onShowCouponSheet = onShowCouponSheet
-                                )
-                                HorizontalDivider(
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-                                PointSection(
-                                    pointBalance = state.pointBalance,
-                                    usedPoints = state.usedPoints,
-                                    maxUsablePoints = maxUsablePoints,
-                                    isRateCapped = isRateCapped,
-                                    validationMessage = state.pointValidationMessage,
-                                    numberFormat = numberFormat,
-                                    onUpdateUsedPoints = onUpdateUsedPoints,
-                                    onUseAllPoints = onUseAllPoints
-                                )
-                            }
-                        }
-
-                        // 주문 요약
-                        item(key = "order_summary") {
-                            Spacer(modifier = Modifier.height(24.dp))
-                            OrderSummarySection(
-                                subtotal = subtotal,
-                                shippingFee = shippingFee,
-                                couponDiscount = couponDiscount,
-                                shippingDiscount = shippingDiscount,
-                                totalAmount = orderTotal,
-                                numberFormat = numberFormat
+                        // 포인트
+                        item(key = "point_section") {
+                            Spacer(modifier = Modifier.height(28.dp))
+                            CheckoutSectionTitle(
+                                title = "포인트",
+                                trailing = "보유 ${numberFormat.format(state.pointBalance?.totalPoints ?: 0)}P"
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            PointSection(
+                                pointBalance = state.pointBalance,
+                                usedPoints = state.usedPoints,
+                                maxUsablePoints = maxUsablePoints,
+                                isRateLimited = isRateLimited,
+                                validationMessage = state.pointValidationMessage,
+                                numberFormat = numberFormat,
+                                onUpdateUsedPoints = onUpdateUsedPoints,
+                                onUseAllPoints = onUseAllPoints,
+                                bottomBarHeight = bottomBarHeight
                             )
                         }
 
-                        // 적립 예정 포인트
-                        item(key = "earn_points") {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            EarnPointsSection(
-                                orderItems = orderItems,
-                                creatorTiers = state.creatorTiers,
+                        // 결제 금액
+                        item(key = "payment_amount") {
+                            Spacer(modifier = Modifier.height(28.dp))
+                            CheckoutSectionTitle(title = "결제 금액")
+                            Spacer(modifier = Modifier.height(12.dp))
+                            PaymentAmountSection(
+                                productAmount = subtotal + pricing.productDiscount,
+                                productDiscount = pricing.productDiscount,
+                                couponDiscount = couponDiscount,
+                                shippingFee = shippingFee + membership.freeShippingAmount,
+                                shippingCouponDiscount = shippingDiscount,
+                                membership = membership,
+                                usedPoints = state.usedPoints,
+                                paymentAmount = paymentAmount,
                                 numberFormat = numberFormat
                             )
                         }
@@ -750,34 +585,24 @@ internal fun CheckoutScreenContent(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = backgroundColor,
-                            tint = HaloBlurTint(backgroundColor),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0f,
-                            endIntensity = 0.5f
-                        )
-                    }
+                    .onGloballyPositioned { bottomBarHeight = with(density) { it.size.height.toDp() } }
+                    .haloBlur(hazeState, HaloBlurs.fadeUp(backgroundColor))
                     .pointerInput(Unit) {
                         detectTapGestures { /* 터치 이벤트 소비 */ }
                     }
                     .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                GlassActionButton(
+                PrimaryButton(
                     onClick = { if (!state.isProcessing) onPlaceOrder() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bounceClick()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.weight(1f)) {
                         AnimatedCounter(
                             count = paymentAmount.coerceAtLeast(0).coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                             suffix = if (isFreeOrder) "원 주문하기" else "원 결제하기",
+                            shiftDigits = false,
                             modifier = Modifier.align(Alignment.Center)
                         )
 
@@ -785,7 +610,7 @@ internal fun CheckoutScreenContent(
                             LoadingIndicator(
                                 modifier = Modifier.align(Alignment.CenterEnd),
                                 size = LoadingIndicatorSize.Small,
-                                color = MaterialTheme.colorScheme.inverseOnSurface
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
@@ -796,7 +621,7 @@ internal fun CheckoutScreenContent(
         DefaultSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
-            bottomBarPadding = if (orderLines != null) 64.dp else 0.dp
+            bottomBarPadding = if (orderLines != null) 60.dp else 0.dp  // 버튼 48 + 아래 여백 12
         )
 
         // 결제 중 터치·뒤로가기 차단, 나가면 요청 취소
@@ -811,4 +636,76 @@ internal fun CheckoutScreenContent(
             )
         }
     }
+}
+
+/** 배송지 칸, 없으면 등록 안내 */
+@Composable
+private fun ShippingAddressContent(
+    selectedAddress: Address?,
+    onNavigateToAddressManage: () -> Unit
+) {
+    if (selectedAddress != null) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .cardBorder(MaterialTheme.shapes.medium)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = selectedAddress.recipientName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = selectedAddress.recipientPhone,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            val fullAddress = buildString {
+                append(selectedAddress.address)
+                if (!selectedAddress.addressDetail.isNullOrBlank()) {
+                    append(" ${selectedAddress.addressDetail}")
+                }
+                append(" (${selectedAddress.zipCode})")
+            }
+            Text(
+                text = fullAddress,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!selectedAddress.memo.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "배송 메모: ${selectedAddress.memo}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .cardBorder(MaterialTheme.shapes.medium)
+                .clip(MaterialTheme.shapes.medium)
+                .clickable(onClick = onNavigateToAddressManage)
+                .padding(vertical = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "+ 배송지 추가",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(24.dp))
 }

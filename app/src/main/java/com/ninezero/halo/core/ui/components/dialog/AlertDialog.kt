@@ -26,7 +26,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.HaloPreview
-import com.ninezero.halo.ui.theme.Pretendard
+import com.ninezero.halo.core.ui.theme.Pretendard
 
 /** 알림 다이얼로그 */
 @Composable

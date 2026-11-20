@@ -24,14 +24,14 @@ data class PostDetailState(
     val isCommentsLoading: Boolean = true,
     val commentsError: String? = null,
     val commentsPage: Int = 1,
-    val commentsHasMore: Boolean = true,
+    val hasMoreComments: Boolean = true,
     val commentSortBy: CommentSortType = CommentSortType.POPULAR,
     val isChangingSort: Boolean = false,  // 정렬 바꿔 다시 받는 중, 정렬·입력창 유지
     // 확장된 답글
     val expandedCommentReplies: Map<Int, List<Comment>> = emptyMap(),
     val loadingRepliesCommentIds: Set<Int> = emptySet(),
     val repliesPage: Map<Int, Int> = emptyMap(),
-    val repliesHasMore: Map<Int, Boolean> = emptyMap(),
+    val hasMoreReplies: Map<Int, Boolean> = emptyMap(),
     // 옵션 시트
     val showPostOptionsSheet: Boolean = false,
     val showCommentOptionsSheet: Boolean = false,
@@ -39,6 +39,7 @@ data class PostDetailState(
     val replyToComment: Comment? = null,
     // 작성자
     val isFollowing: Boolean = false,
+    val showFollowingButton: Boolean = false,  // 이 화면에서 팔로우했을 때만 켬
     // 차단 다이얼로그
     val showBlockConfirmDialog: Boolean = false,
     val blockTargetUser: BlockTargetUser? = null,
@@ -51,52 +52,46 @@ data class PostDetailState(
 
 sealed interface PostDetailIntent {
     data object RefreshPost : PostDetailIntent
-
     // 포스트 상호작용
     data object LikePost : PostDetailIntent
     data object UnlikePost : PostDetailIntent
     data object BookmarkPost : PostDetailIntent
     data object FollowAuthor : PostDetailIntent
     data object UnfollowAuthor : PostDetailIntent
-
     // 포스트 옵션
     data object ShowPostOptions : PostDetailIntent
     data object DismissPostOptions : PostDetailIntent
     data object DeletePost : PostDetailIntent
     data object EditPost : PostDetailIntent
     data object PinPost : PostDetailIntent
-
     // 댓글
     data object LoadMoreComments : PostDetailIntent
     data class ChangeSortType(val sortType: CommentSortType) : PostDetailIntent
     data class SetReplyTo(val comment: Comment?) : PostDetailIntent
-
     // 댓글 상호작용
     data class ToggleCommentLike(val commentId: Int) : PostDetailIntent
     data class ExpandReplies(val commentId: Int) : PostDetailIntent
     data class LoadMoreReplies(val commentId: Int) : PostDetailIntent
-
     // 댓글 옵션
     data class ShowCommentOptions(val commentId: Int) : PostDetailIntent
     data object DismissCommentOptions : PostDetailIntent
     data object DeleteComment : PostDetailIntent
     data object BookmarkComment : PostDetailIntent
-
     // 차단 다이얼로그
     data object BlockAuthor : PostDetailIntent
     data object BlockCommentAuthor : PostDetailIntent
     data object DismissBlockConfirmDialog : PostDetailIntent
     data object ConfirmBlockUser : PostDetailIntent
     data object DismissBlockCompletedDialog : PostDetailIntent
-
     // 공유
     data object SharePost : PostDetailIntent
     data object DismissShareSheet : PostDetailIntent
     data class ShareCompleted(val sharedRoomIds: List<Int>, val recipientCount: Int) : PostDetailIntent
+    // 네비게이션
     data class NavigateToChatRoom(val roomId: Int) : PostDetailIntent
-
     data class NavigateToUserProfile(val userId: Int) : PostDetailIntent
     data class NavigateToCommentDetail(val commentId: Int) : PostDetailIntent
+    // Snackbar
     data object SnackbarDismissed : PostDetailIntent
 }
 

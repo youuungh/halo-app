@@ -5,8 +5,8 @@ import androidx.core.net.toUri
 import com.ninezero.halo.core.database.dao.PendingCommentDao
 import com.ninezero.halo.core.database.entity.PendingCommentEntity
 import com.ninezero.halo.core.database.entity.UploadStatus
-import com.ninezero.halo.core.util.MediaPersistenceManager
-import com.ninezero.halo.core.util.MediaUtils
+import com.ninezero.halo.core.media.MediaCopyStore
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.feature.feed.data.mapper.toComment
 import com.ninezero.halo.feature.feed.data.worker.CommentUploadWorker
 import com.ninezero.halo.feature.feed.domain.model.Comment
@@ -24,7 +24,7 @@ import javax.inject.Inject
 class PendingCommentRepositoryImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val pendingCommentDao: PendingCommentDao,
-    private val mediaPersistence: MediaPersistenceManager
+    private val mediaCopyStore: MediaCopyStore
 ) : PendingCommentRepository {
 
     override suspend fun addPendingComment(
@@ -53,19 +53,19 @@ class PendingCommentRepositoryImpl @Inject constructor(
 
         try {
             // 선택기 권한이 끝나도 쓰는 사본
-            val persisted = if (mediaUris.isNullOrEmpty()) {
+            val copied = if (mediaUris.isNullOrEmpty()) {
                 emptyList()
             } else {
-                mediaPersistence.persistForOwner(
+                mediaCopyStore.copyForOwner(
                     sourceUris = mediaUris.map { it.toUri() },
-                    ownerType = MediaPersistenceManager.OwnerType.PENDING_COMMENT,
+                    ownerType = MediaCopyStore.OwnerType.PENDING_COMMENT,
                     ownerId = id
                 )
             }
             // 하나라도 못 옮기면 게시 안 함
-            if (persisted.size != mediaUris.orEmpty().size) throw IOException("게시 미디어 복사 실패")
+            if (copied.size != mediaUris.orEmpty().size) throw IOException("게시 미디어 복사 실패")
             // 원본 크기 파싱
-            val mediaDimensions = persisted.map { uri ->
+            val mediaDimensions = copied.map { uri ->
                 val isVideo = MediaUtils.resolveMimeType(context, uri).startsWith("video/")
                 val (w, h) = if (isVideo) {
                     MediaUtils.getVideoDimensions(context, uri)
@@ -76,11 +76,11 @@ class PendingCommentRepositoryImpl @Inject constructor(
             }
 
             // 워커 시작 전에 미디어 먼저 저장
-            if (persisted.isNotEmpty()) {
+            if (copied.isNotEmpty()) {
                 pendingCommentDao.update(
                     initialEntity.copy(
                         id = id,
-                        mediaUris = Json.encodeToString(persisted.map { it.toString() }),
+                        mediaUris = Json.encodeToString(copied.map { it.toString() }),
                         mediaDimensions = Json.encodeToString(mediaDimensions)
                     )
                 )
@@ -89,7 +89,7 @@ class PendingCommentRepositoryImpl @Inject constructor(
             // 워커 없이 남는 대기 행·사본 정리
             withContext(NonCancellable) {
                 pendingCommentDao.deleteById(id)
-                mediaPersistence.cleanupOwner(MediaPersistenceManager.OwnerType.PENDING_COMMENT, id)
+                mediaCopyStore.cleanupOwner(MediaCopyStore.OwnerType.PENDING_COMMENT, id)
             }
             throw e
         }

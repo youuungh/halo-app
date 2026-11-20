@@ -3,6 +3,7 @@ package com.ninezero.halo.feature.feed.domain.repository
 import android.net.Uri
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.domain.model.PostType
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import kotlinx.coroutines.flow.Flow
 
 interface PendingPostRepository {
@@ -17,7 +18,7 @@ interface PendingPostRepository {
         authorAvatarUrl: String?,
         tagIds: List<Int>? = null,
         sectionTagId: Int? = null,
-        requiredTier: String = "FREE",
+        requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
         creatorId: Int? = null,
         isSecret: Boolean = false
     ): Long

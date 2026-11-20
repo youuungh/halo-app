@@ -357,7 +357,7 @@ class CommentDetailViewModel @Inject constructor(
                         isChangingSort = false,
                         isRefreshing = false,
                         repliesError = null,
-                        repliesHasMore = replies.size >= 20
+                        hasMoreReplies = replies.size >= 20
                     )
                 }
                 ensureHighlightReplyLoaded()
@@ -383,7 +383,7 @@ class CommentDetailViewModel @Inject constructor(
         highlightReplyEnsured = true
 
         var attempts = 0
-        while (state.replies.none { it.id == targetId } && state.repliesHasMore && attempts < 20) {
+        while (state.replies.none { it.id == targetId } && state.hasMoreReplies && attempts < 20) {
             val nextPage = state.repliesPage + 1
             val replies = getCommentRepliesUseCase(commentId, nextPage, 20, state.repliesSortBy.apiValue)
                 .getOrNull() ?: break
@@ -391,7 +391,7 @@ class CommentDetailViewModel @Inject constructor(
                 state.copy(
                     replies = (state.replies + replies).distinctBy { it.id },
                     repliesPage = nextPage,
-                    repliesHasMore = replies.size >= 20
+                    hasMoreReplies = replies.size >= 20
                 )
             }
             attempts++
@@ -399,7 +399,7 @@ class CommentDetailViewModel @Inject constructor(
     }
 
     private fun loadMoreReplies() = intent {
-        if (state.isRepliesLoading || !state.repliesHasMore) return@intent
+        if (state.isRepliesLoading || !state.hasMoreReplies) return@intent
 
         val nextPage = state.repliesPage + 1
         val sortBy = state.repliesSortBy
@@ -413,7 +413,7 @@ class CommentDetailViewModel @Inject constructor(
                         replies = (state.replies + replies).distinctBy { it.id },
                         isRepliesLoading = false,
                         repliesPage = nextPage,
-                        repliesHasMore = replies.size >= 20
+                        hasMoreReplies = replies.size >= 20
                     )
                 }
             }
@@ -443,7 +443,7 @@ class CommentDetailViewModel @Inject constructor(
                 replies = emptyList(),
                 isRepliesLoading = true,
                 repliesPage = 1,
-                repliesHasMore = true
+                hasMoreReplies = true
             )
         }
         loadReplies()

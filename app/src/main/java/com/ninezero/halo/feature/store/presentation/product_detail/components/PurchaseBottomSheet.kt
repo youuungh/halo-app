@@ -8,43 +8,48 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.model.UserSummary
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
-import com.ninezero.halo.core.ui.components.button.SheetActionButton
-import com.ninezero.halo.core.ui.components.button.SheetActionButtonStyle
-import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
-import com.ninezero.halo.core.ui.components.selector.QuantitySelector
-import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
+import com.ninezero.halo.core.ui.components.button.PrimaryButtonStyle
+import com.ninezero.halo.core.ui.components.text.AnimatedCounter
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.feature.store.domain.model.Product
-import com.ninezero.halo.feature.store.domain.model.isPurchasable
+import com.ninezero.halo.feature.store.domain.model.canBuy
 import com.ninezero.halo.feature.store.domain.model.purchaseBlockedMessage
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.store.presentation.components.QuantitySelector
+import com.ninezero.halo.feature.subscription.domain.model.UserTierInfo
 
 @Composable
 fun PurchaseBottomSheet(
     product: Product,
     quantity: Int,
     isAddingToCart: Boolean,
+    userTierInfo: UserTierInfo?,
     onDismiss: () -> Unit,
     onQuantityChange: (Int) -> Unit,
     onAddToCart: () -> Unit,
@@ -52,200 +57,171 @@ fun PurchaseBottomSheet(
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState()
 ) {
-    val sheetColor = MaterialTheme.colorScheme.surface
-    val price = product.price.toIntOrNull() ?: 0
-    val totalPrice = price * quantity
+    val numberFormat = rememberKoreanNumberFormat()
+    val price = product.price.toInt()
+    val productTotal = price * quantity
+    val isFreeShipping = userTierInfo?.isSubscribed == true ||
+            productTotal >= Constants.Commerce.FREE_SHIPPING_THRESHOLD
+    val shippingFee = if (isFreeShipping) 0 else product.shippingFee.toInt()
+    val earnPoints = productTotal * userTierInfo.earnRatePercent() / 100
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val maxSelectableQuantity = maxOf(1, minOf(product.stock, Constants.Commerce.MAX_CART_QUANTITY))
     val blockedMessage = product.purchaseBlockedMessage()
-    val isPurchasable = product.isPurchasable()
+    val canBuy = product.canBuy()
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = sheetColor,
-        dragHandle = null,
         modifier = modifier
     ) {
-        BottomSheetDragHandle()
-        Column(
-            modifier = Modifier
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 8.dp)
-        ) {
-            // 수량 선택
-            QuantitySelector(
-                quantity = quantity,
-                maxStock = maxSelectableQuantity,
-                onQuantityChange = onQuantityChange
-            )
+        Column {
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 총 금액
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 18.dp)
+                    .padding(top = 6.dp, bottom = 16.dp)
             ) {
-                Text(
-                    text = "합계",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                AnimatedCounter(
-                    count = totalPrice,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
-                    suffix = "원"
-                )
-            }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = product.imageUrls.firstOrNull(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(R.drawable.ic_image_placeholder),
+                        error = painterResource(R.drawable.ic_image_placeholder),
+                        fallback = painterResource(R.drawable.ic_image_placeholder)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = product.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${numberFormat.format(price)}원",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    QuantitySelector(
+                        quantity = quantity,
+                        maxStock = maxSelectableQuantity,
+                        onQuantityChange = onQuantityChange,
+                        // 시트 위라 화면 스낵바가 가려져 토스트로 안내
+                        onQuantityLimit = { max ->
+                            Toast.makeText(context, "최대 ${max}개까지 구매 가능합니다", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier
+                            .width(QuantitySelectorWidth)
+                            .offset(x = 2.dp),  // 안쪽 여백만큼 밀어 + 버튼을 금액 끝선에 맞춤
+                        showLabel = false,
+                        buttonShape = CircleShape
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 액션 버튼
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SheetActionButton(
-                    text = "장바구니",
-                    onClick = {
-                        focusManager.clearFocus()  // 수량 칸 입력을 먼저 확정
-                        if (!isPurchasable) {
-                            Toast.makeText(context, blockedMessage ?: "구매할 수 없는 상품입니다", Toast.LENGTH_SHORT).show()
-                            return@SheetActionButton
-                        }
-                        onAddToCart()
-                    },
-                    modifier = Modifier.weight(1f),
-                    style = SheetActionButtonStyle.Outlined,
-                    enabled = !isAddingToCart && isPurchasable
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 16.dp, bottom = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
 
-                SheetActionButton(
-                    text = "구매하기",
-                    onClick = {
-                        focusManager.clearFocus()  // 수량 칸 입력을 먼저 확정
-                        if (!isPurchasable) {
-                            Toast.makeText(context, blockedMessage ?: "구매할 수 없는 상품입니다", Toast.LENGTH_SHORT).show()
-                            return@SheetActionButton
-                        }
-                        onBuyNow()
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = !isAddingToCart && isPurchasable
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SummaryRow(label = "상품 금액", value = "${numberFormat.format(productTotal)}원")
+                    SummaryRow(
+                        label = "배송비",
+                        value = if (shippingFee > 0) "${numberFormat.format(shippingFee)}원" else "무료"
+                    )
+                    SummaryRow(label = "적립 예정", value = "${numberFormat.format(earnPoints)}P")
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "합계",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    AnimatedCounter(
+                        count = productTotal + shippingFee,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = 22.sp,
+                            lineHeight = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        suffix = "원"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PrimaryButton(
+                        text = "장바구니",
+                        onClick = {
+                            focusManager.clearFocus()  // 수량 칸 입력을 먼저 확정
+                            if (!canBuy) {
+                                Toast.makeText(context, blockedMessage ?: "구매할 수 없는 상품입니다", Toast.LENGTH_SHORT).show()
+                                return@PrimaryButton
+                            }
+                            onAddToCart()
+                        },
+                        modifier = Modifier.weight(1f),
+                        style = PrimaryButtonStyle.Tonal,
+                        enabled = !isAddingToCart && canBuy
+                    )
+
+                    PrimaryButton(
+                        text = "구매하기",
+                        onClick = {
+                            focusManager.clearFocus()  // 수량 칸 입력을 먼저 확정
+                            if (!canBuy) {
+                                Toast.makeText(context, blockedMessage ?: "구매할 수 없는 상품입니다", Toast.LENGTH_SHORT).show()
+                                return@PrimaryButton
+                            }
+                            onBuyNow()
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isAddingToCart && canBuy
+                    )
+                }
             }
         }
     }
 }
 
-private val previewCreator = UserSummary(
-    id = 1,
-    username = "creator_shop",
-    displayName = "크리에이터 샵",
-    avatarUrl = null,
-    role = "CREATOR",
-)
-
-private val previewProduct = Product(
-    id = 1,
-    name = "프리미엄 무선 이어폰 Pro Max",
-    description = "최고급 사운드 품질의 무선 이어폰",
-    price = "89000",
-    originalPrice = "129000",
-    discountRate = 31,
-    imageUrls = listOf("https://example.com/img1.jpg"),
-    detailContent = emptyList(),
-    brandName = "SoundWave",
-    tags = listOf("이어폰"),
-    stock = 50,
-    status = "ACTIVE",
-    isActive = true,
-    viewCount = 1234,
-    likeCount = 89,
-    salesCount = 567,
-    creator = previewCreator,
-    requiredTier = "FREE",
-    canAccess = true,
-)
-
-@HaloLightDarkPreview
+private val QuantitySelectorWidth = 124.dp  // 버튼 36·입력 48·버튼 36 + 안쪽 여백 2씩
 @Composable
-private fun PurchaseBottomSheetPreview() {
-    HaloTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-        ) {
-            var quantity by remember { mutableIntStateOf(2) }
-            val price = previewProduct.price.toIntOrNull() ?: 0
-            val totalPrice = price * quantity
-
-            QuantitySelector(
-                quantity = quantity,
-                maxStock = previewProduct.stock,
-                onQuantityChange = { quantity = it }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "합계",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                AnimatedCounter(
-                    count = totalPrice,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
-                    suffix = "원"
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SheetActionButton(
-                    text = "장바구니",
-                    onClick = {},
-                    modifier = Modifier.weight(1f),
-                    style = SheetActionButtonStyle.Outlined
-                )
-
-                SheetActionButton(
-                    text = "구매하기",
-                    onClick = {},
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+private fun SummaryRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

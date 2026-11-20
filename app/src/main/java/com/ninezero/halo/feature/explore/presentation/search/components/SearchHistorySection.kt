@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.explore.domain.model.SearchHistory
-import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -102,7 +102,7 @@ fun SearchHistorySection(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .clickable(onClick = onClearAll)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
@@ -112,7 +112,7 @@ fun SearchHistorySection(
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isEditing) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable(onClick = onEditClick)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )

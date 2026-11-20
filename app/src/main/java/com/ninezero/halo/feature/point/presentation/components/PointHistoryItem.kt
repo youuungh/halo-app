@@ -10,30 +10,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.feature.point.domain.model.PointHistory
 import com.ninezero.halo.feature.point.domain.model.PointType
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
 
 @Composable
 fun PointHistoryItem(
     history: PointHistory,
     modifier: Modifier = Modifier
 ) {
-    val isDarkTheme = LocalIsDarkTheme.current
     val isPositive = history.type in listOf(PointType.EARN, PointType.REFUND)
     val amountColor = when {
-        isPositive -> if (isDarkTheme) Color(0xFF64B5F6) else Color(0xFF1976D2)
+        isPositive -> MaterialTheme.colorScheme.primary
         history.type == PointType.USE -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant  // EXPIRE
     }
-    val formattedAmount = rememberKoreanNumberFormat().format(history.amount)
+    val numberFormat = rememberKoreanNumberFormat()
+    val formattedAmount = numberFormat.format(history.amount)
 
     Row(
         modifier = modifier
@@ -59,7 +57,7 @@ fun PointHistoryItem(
             )
         }
 
-        // 포인트 금액 및 타입
+        // 포인트 금액 및 그때의 잔액
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -71,7 +69,7 @@ fun PointHistoryItem(
                 color = amountColor
             )
             Text(
-                text = history.type.displayName,
+                text = "잔액 ${numberFormat.format(history.balanceAfter)}P",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

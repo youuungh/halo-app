@@ -12,21 +12,21 @@ private val previewCoupons = listOf(
     CreatorCoupon(
         id = 1, code = "WELCOME10", name = "신규 팬 할인 쿠폰",
         description = null, type = CouponType.PERCENTAGE, discountTarget = CouponDiscountTarget.ALL,
-        discountValue = "10", minOrderAmount = "10000", maxDiscountAmount = "5000",
+        discountValue = 10L, minOrderAmount = 10000L, maxDiscountAmount = 5000L,
         totalQuantity = 100, issuedQuantity = 23, maxUseCount = 1, status = CouponStatus.ACTIVE,
         startDate = System.currentTimeMillis(), endDate = System.currentTimeMillis() + 30 * 86_400_000L
     ),
     CreatorCoupon(
         id = 2, code = "SAVE5000", name = "5천원 할인 쿠폰",
         description = null, type = CouponType.FIXED_AMOUNT, discountTarget = CouponDiscountTarget.ALL,
-        discountValue = "5000", minOrderAmount = "30000", maxDiscountAmount = null,
+        discountValue = 5000L, minOrderAmount = 30000L, maxDiscountAmount = null,
         totalQuantity = 200, issuedQuantity = 45, maxUseCount = 1, status = CouponStatus.ACTIVE,
         startDate = System.currentTimeMillis(), endDate = System.currentTimeMillis() + 7 * 86_400_000L
     ),
     CreatorCoupon(
         id = 3, code = "EXPIRED", name = "만료된 쿠폰",
         description = null, type = CouponType.FIXED_AMOUNT, discountTarget = CouponDiscountTarget.ALL,
-        discountValue = "3000", minOrderAmount = "0", maxDiscountAmount = null,
+        discountValue = 3000L, minOrderAmount = 0L, maxDiscountAmount = null,
         totalQuantity = 50, issuedQuantity = 50, maxUseCount = 1, status = CouponStatus.EXPIRED,
         startDate = System.currentTimeMillis() - 30 * 86_400_000L, endDate = System.currentTimeMillis() - 1 * 86_400_000L
     )

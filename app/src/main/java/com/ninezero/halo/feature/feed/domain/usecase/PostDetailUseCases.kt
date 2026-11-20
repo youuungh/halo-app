@@ -6,7 +6,6 @@ import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.domain.repository.CommentRepository
 import com.ninezero.halo.feature.feed.domain.repository.PostRepository
 import kotlinx.coroutines.flow.Flow
-import okhttp3.MultipartBody
 import javax.inject.Inject
 
 class GetCachedPostUseCase @Inject constructor(
@@ -48,16 +47,14 @@ class UpdatePostUseCase @Inject constructor(
         postId: Int,
         content: String,
         keepMediaIds: List<Int>? = null,
-        newFiles: List<MultipartBody.Part> = emptyList(),
         reorder: List<Int>? = null,
         items: List<NewMediaItem>? = null
     ): Result<Post> {
-        return if (keepMediaIds != null || reorder != null || newFiles.isNotEmpty() || items != null) {
+        return if (keepMediaIds != null || reorder != null || items != null) {
             repository.updatePostWithMedia(
                 postId = postId,
                 content = content,
                 keepMediaIds = keepMediaIds,
-                newFiles = newFiles,
                 reorder = reorder,
                 items = items
             )

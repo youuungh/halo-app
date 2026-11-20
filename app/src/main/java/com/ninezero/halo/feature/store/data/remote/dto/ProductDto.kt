@@ -4,10 +4,14 @@ import com.ninezero.halo.core.network.PagedDto
 import com.ninezero.halo.core.network.dto.UserSummaryDto
 import com.ninezero.halo.core.network.dto.toDomain
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toAmountLong
+import com.ninezero.halo.core.util.toAmountLongOrNull
+import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.store.domain.model.CreateProductRequest
 import com.ninezero.halo.feature.store.domain.model.DetailContentBlock
 import com.ninezero.halo.feature.store.domain.model.Product
 import com.ninezero.halo.feature.store.domain.model.ProductImageRef
+import com.ninezero.halo.feature.store.domain.model.ProductStatus
 import com.ninezero.halo.feature.store.domain.model.RichTextAlignment
 import com.ninezero.halo.feature.store.domain.model.RichTextBlockStyle
 import com.ninezero.halo.feature.store.domain.model.UpdateProductRequest
@@ -115,7 +119,7 @@ fun CreateProductRequest.toDto(): CreateProductRequestDto = CreateProductRequest
     imageDraftIds = imageDraftIds,
     detailContent = detailContent?.map { it.toDto() },
     tags = tags,
-    requiredTier = requiredTier,
+    requiredTier = requiredTier.name,
     tagIds = tagIds,
     sectionTagId = sectionTagId
 )
@@ -131,8 +135,8 @@ fun UpdateProductRequest.toDto(): UpdateProductRequestDto = UpdateProductRequest
     images = images?.map { it.toDto() },
     detailContent = detailContent?.map { it.toDto() },
     tags = tags,
-    status = status,
-    requiredTier = requiredTier,
+    status = status?.name,
+    requiredTier = requiredTier?.name,
     tagIds = tagIds,
     sectionTagId = sectionTagId
 )
@@ -220,28 +224,30 @@ fun ProductDto.toDomain(): Product = Product(
     id = id,
     name = name,
     description = description,
-    price = price,
-    originalPrice = originalPrice,
+    price = price.toAmountLong(),
+    originalPrice = originalPrice.toAmountLongOrNull(),
     discountRate = discountRate,
-    dealPrice = dealPrice,
+    dealPrice = dealPrice.toAmountLongOrNull(),
     dealStartAt = dealStartAt?.parseTimestamp(),
     dealEndAt = dealEndAt?.parseTimestamp(),
     isDealActive = isDealActive,
-    basePrice = basePrice ?: price,
-    baseOriginalPrice = baseOriginalPrice,
+    basePrice = (basePrice ?: price).toAmountLong(),
+    baseOriginalPrice = baseOriginalPrice.toAmountLongOrNull(),
     imageUrls = imageUrls,
     detailContent = detailContent.map { it.toDomain() },
     brandName = brandName,
     tags = tags,
     sectionTag = sectionTag?.tagToDomain(),
     stock = stock,
-    status = status,
+    status = status.toEnumOrDefault(ProductStatus.ACTIVE),
     isActive = isActive,
     viewCount = viewCount,
     likeCount = likeCount,
     salesCount = salesCount,
+    rating = rating.toDoubleOrNull() ?: 0.0,
+    reviewCount = reviewCount,
     creator = creator.toDomain(),
-    requiredTier = requiredTier,
+    requiredTier = requiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE),
     canAccess = canAccess,
-    shippingFee = shippingFee,
+    shippingFee = shippingFee.toAmountLong(),
 )

@@ -30,7 +30,7 @@ class ResetPasswordViewModel @Inject constructor(
             is ResetPasswordIntent.PasswordChanged -> onPasswordChanged(intent.password)
             is ResetPasswordIntent.ConfirmPasswordChanged -> onConfirmPasswordChanged(intent.confirmPassword)
             is ResetPasswordIntent.TogglePasswordVisibility -> togglePasswordVisibility()
-            is ResetPasswordIntent.ToggleConfirmPwVisibility -> toggleConfirmPwVisibility()
+            is ResetPasswordIntent.ToggleConfirmPasswordVisibility -> toggleConfirmPasswordVisibility()
             is ResetPasswordIntent.Submit -> submit()
             is ResetPasswordIntent.NavigateBack -> navigateBack()
             is ResetPasswordIntent.SnackbarDismissed -> dismissSnackbar()
@@ -62,9 +62,9 @@ class ResetPasswordViewModel @Inject constructor(
         }
     }
 
-    private fun toggleConfirmPwVisibility() = intent {
+    private fun toggleConfirmPasswordVisibility() = intent {
         reduce {
-            state.copy(isConfirmPwVisible = !state.isConfirmPwVisible)
+            state.copy(isConfirmPasswordVisible = !state.isConfirmPasswordVisible)
         }
     }
 

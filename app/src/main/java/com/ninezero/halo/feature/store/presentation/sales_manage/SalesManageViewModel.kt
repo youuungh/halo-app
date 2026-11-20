@@ -24,6 +24,7 @@ class SalesManageViewModel @Inject constructor(
         orbitContainer(SalesManageState())
 
     private val listGeneration = ListGeneration()  // 새로고침 뒤 늦게 온 더보기 응답 버림
+    private val trackingGeneration = ListGeneration()  // 시트를 열고 닫을 때마다 올림, 옛 응답은 버림
 
     init {
         load()
@@ -44,7 +45,10 @@ class SalesManageViewModel @Inject constructor(
             is SalesManageIntent.NavigateBack -> navigateBack()
             is SalesManageIntent.OpenSalesStats -> openSalesStats()
             is SalesManageIntent.SelectFilter -> selectFilter(intent.filter)
-            is SalesManageIntent.ToggleOrderExpand -> toggleOrderExpand(intent.orderId)
+            is SalesManageIntent.ShowDeliveryInfo -> showDeliveryInfo(intent.orderId)
+            is SalesManageIntent.DismissDeliveryInfo -> dismissDeliveryInfo()
+            is SalesManageIntent.ShowTrackingSheet -> showTrackingSheet(intent.orderId)
+            is SalesManageIntent.DismissTrackingSheet -> dismissTrackingSheet()
             is SalesManageIntent.ConfirmOrder -> confirmOrder(intent.orderId)
             is SalesManageIntent.ShowCancelConfirm -> showCancelConfirm(intent.orderId)
             is SalesManageIntent.DismissCancelConfirm -> dismissCancelConfirm()
@@ -206,10 +210,46 @@ class SalesManageViewModel @Inject constructor(
     ): List<Order> =
         if (activeFilter == OrderFilter.ALL) this else filter { it.matches(activeFilter) }
 
-    private fun toggleOrderExpand(orderId: Int) = intent {
-        val newExpanded = state.expandedOrderIds.toMutableSet()
-        if (orderId in newExpanded) newExpanded.remove(orderId) else newExpanded.add(orderId)
-        reduce { state.copy(expandedOrderIds = newExpanded) }
+    private fun showDeliveryInfo(orderId: Int) = intent {
+        reduce { state.copy(deliveryInfoOrderId = orderId) }
+    }
+
+    private fun dismissDeliveryInfo() = intent {
+        reduce { state.copy(deliveryInfoOrderId = null) }
+    }
+
+    private fun showTrackingSheet(orderId: Int) = intent {
+        val generation = trackingGeneration.next()
+        reduce {
+            state.copy(
+                trackingSheetOrderId = orderId,
+                trackingStatus = null,
+                isTrackingStatusLoading = true
+            )
+        }
+
+        // creatorId 없이 부르면 서버가 내 배송 묶음을 골라 줌
+        orderRepository.getShippingStatus(orderId, null)
+            .onSuccess { shipping ->
+                if (trackingGeneration.current() != generation) return@intent
+                reduce { state.copy(trackingStatus = shipping, isTrackingStatusLoading = false) }
+            }
+            .onFailure {
+                if (trackingGeneration.current() != generation) return@intent
+                // 실패는 조용히, 시트는 주문에 있는 값으로
+                reduce { state.copy(isTrackingStatusLoading = false) }
+            }
+    }
+
+    private fun dismissTrackingSheet() = intent {
+        trackingGeneration.next()
+        reduce {
+            state.copy(
+                trackingSheetOrderId = null,
+                trackingStatus = null,
+                isTrackingStatusLoading = false
+            )
+        }
     }
 
     private fun confirmOrder(orderId: Int) = intent {
@@ -259,7 +299,8 @@ class SalesManageViewModel @Inject constructor(
             state.copy(
                 showCancelConfirm = false,
                 cancelConfirmOrderId = null,
-                statusUpdatingOrderId = orderId
+                statusUpdatingOrderId = orderId,
+                isCancellingOrder = true
             )
         }
 
@@ -267,6 +308,7 @@ class SalesManageViewModel @Inject constructor(
             reduce {
                 state.copy(
                     statusUpdatingOrderId = null,
+                    isCancellingOrder = false,
                     orders = state.orders.map { if (it.id == orderId) updated else it }
                         .applyActiveFilter(state.selectedFilter),
                     snackbarState = SnackbarState(message = "판매가 취소되었습니다")
@@ -276,6 +318,7 @@ class SalesManageViewModel @Inject constructor(
             reduce {
                 state.copy(
                     statusUpdatingOrderId = null,
+                    isCancellingOrder = false,
                     snackbarState = SnackbarState(message = error.message ?: "판매 취소에 실패했습니다")
                 )
             }

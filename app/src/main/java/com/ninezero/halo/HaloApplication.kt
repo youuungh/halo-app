@@ -23,23 +23,24 @@ import com.ninezero.halo.core.database.dao.PendingChatMessageDao
 import com.ninezero.halo.core.database.dao.PendingCommentDao
 import com.ninezero.halo.core.database.dao.PendingPostDao
 import com.ninezero.halo.core.database.dao.PostDraftDao
-import com.ninezero.halo.core.fcm.FcmRegistrationManager
+import com.ninezero.halo.core.di.ApplicationScope
+import com.ninezero.halo.core.fcm.FcmIdStore
 import com.ninezero.halo.core.fcm.FcmRegistrationRepository
+import com.ninezero.halo.core.media.MediaCopyStore
 import com.ninezero.halo.core.network.websocket.RealtimeSocket
-import com.ninezero.halo.core.ui.components.video_player.VideoPlayerHolder
-import com.ninezero.halo.core.util.MediaPersistenceManager
+import com.ninezero.halo.core.ui.components.media.VideoPlayerHolder
 import com.ninezero.halo.feature.auth.data.local.TokenManager
 import com.ninezero.halo.feature.auth.presentation.social.clearNaverSession
+import com.ninezero.halo.feature.chat.domain.cache.ChatMessageMemoryCache
 import com.ninezero.halo.feature.chat.domain.repository.ChatRepository
 import com.ninezero.halo.feature.feed.domain.repository.CommentRepository
 import com.ninezero.halo.feature.feed.domain.repository.PostRepository
 import com.ninezero.halo.feature.notification.fcm.FcmNotificationHelper
 import com.ninezero.halo.feature.profile.domain.repository.ProfileRepository
+import com.ninezero.halo.feature.store.domain.repository.CartRepository
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -70,7 +71,7 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
     lateinit var cachedMessageDao: CachedMessageDao
 
     @Inject
-    lateinit var mediaPersistence: MediaPersistenceManager
+    lateinit var mediaCopyStore: MediaCopyStore
 
     @Inject
     lateinit var realtimeSocket: RealtimeSocket
@@ -79,7 +80,7 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
     lateinit var tokenManager: TokenManager
 
     @Inject
-    lateinit var fcmRegistrationManager: FcmRegistrationManager
+    lateinit var fcmIdStore: FcmIdStore
 
     @Inject
     lateinit var fcmRegistrationRepository: FcmRegistrationRepository
@@ -96,7 +97,15 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
     @Inject
     lateinit var profileRepository: ProfileRepository
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Inject
+    lateinit var cartRepository: CartRepository
+
+    @Inject
+    lateinit var chatMessageMemoryCache: ChatMessageMemoryCache
+
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
     // FCM 토큰 서버 동기화 여부
     @Volatile
@@ -105,7 +114,7 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
     // 포그라운드 전용 job, onStop에서 먼저 취소
     private var foregroundJob: Job? = null
 
-    // 이미지 전용 OkHttp, 로깅 없음
+    // 이미지 전용 OkHttp
     private val imageOkHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -136,7 +145,7 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
         FcmNotificationHelper.createNotificationChannels(this)
 
         // FID는 onRegistered로만 도착
-        fcmRegistrationManager.requestRegistration()
+        fcmIdStore.requestRegistration()
 
         // 실시간 WebSocket 수명 관리
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
@@ -173,11 +182,13 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
                             profileRepository.clearMyProfileCache()  // 다음 계정에 이전 계정 프로필이 쓰이지 않게
                             postRepository.clearCachedPosts()  // 이전 계정 기준 글·댓글도
                             commentRepository.clearCachedComments()
+                            chatMessageMemoryCache.clear()  // 계정 사이 대화방 첫 화면 섞임 방지
+                            cartRepository.resetCartCount()
                             clearNaverSession()  // 다음 네이버 로그인에서 계정을 다시 고르게
                             return@collectLatest
                         }
                         if (!fcmSynced) {
-                            fcmRegistrationManager.getFid()?.let { token ->
+                            fcmIdStore.getFid()?.let { token ->
                                 fcmRegistrationRepository.registerFid(token)
                                     .onSuccess { fcmSynced = true }
                             }
@@ -201,35 +212,35 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
             // 워커 없이 남은 대기 글·댓글, 사본은 아래에서 정리
             runCatching {
                 val workManager = WorkManager.getInstance(this@HaloApplication)
-                pendingPostDao.getUnqueuedIds()
+                pendingPostDao.getIdsWithoutWorker()
                     .filter { workManager.getWorkInfosByTagFlow("post_upload_$it").first().isEmpty() }
                     .forEach { pendingPostDao.deleteById(it) }
-                pendingCommentDao.getUnqueuedIds()
+                pendingCommentDao.getIdsWithoutWorker()
                     .filter { workManager.getWorkInfosByTagFlow("comment_upload_$it").first().isEmpty() }
                     .forEach { pendingCommentDao.deleteById(it) }
             }.onFailure { Timber.e(it, "대기 글 정리 실패") }
 
             runCatching {
                 val draftIds = postDraftDao.getAllIds().toSet()
-                mediaPersistence.cleanupOrphans(
-                    MediaPersistenceManager.OwnerType.DRAFT,
+                mediaCopyStore.cleanupOrphans(
+                    MediaCopyStore.OwnerType.DRAFT,
                     draftIds
                 )
                 val pendingIds = pendingPostDao.getAllPendingPostIds().toSet()
-                mediaPersistence.cleanupOrphans(
-                    MediaPersistenceManager.OwnerType.PENDING_POST,
+                mediaCopyStore.cleanupOrphans(
+                    MediaCopyStore.OwnerType.PENDING_POST,
                     pendingIds
                 )
 
                 val pendingCommentIds = pendingCommentDao.getAllIds().toSet()
-                mediaPersistence.cleanupOrphans(
-                    MediaPersistenceManager.OwnerType.PENDING_COMMENT,
+                mediaCopyStore.cleanupOrphans(
+                    MediaCopyStore.OwnerType.PENDING_COMMENT,
                     pendingCommentIds
                 )
 
                 val pendingChatIds = pendingChatMessageDao.getAllIds().toSet()
-                mediaPersistence.cleanupOrphans(
-                    MediaPersistenceManager.OwnerType.PENDING_CHAT,
+                mediaCopyStore.cleanupOrphans(
+                    MediaCopyStore.OwnerType.PENDING_CHAT,
                     pendingChatIds
                 )
             }.onFailure { Timber.e(it, "고아 미디어 정리 실패") }
@@ -266,7 +277,7 @@ class HaloApplication : Application(), Configuration.Provider, SingletonImageLoa
                     .build()
             }
             .components {
-                // 로컬 동영상 프레임 디코딩, 없으면 회색 프리뷰
+                // 로컬 동영상 프레임 디코딩
                 add(VideoFrameDecoder.Factory())
                 add(
                     OkHttpNetworkFetcherFactory(

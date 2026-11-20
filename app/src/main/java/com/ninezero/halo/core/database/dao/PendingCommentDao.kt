@@ -40,5 +40,5 @@ interface PendingCommentDao {
     suspend fun getAllIds(): List<Long>
 
     @Query("SELECT id FROM pending_comments WHERE workerId IS NULL")
-    suspend fun getUnqueuedIds(): List<Long>
+    suspend fun getIdsWithoutWorker(): List<Long>
 }

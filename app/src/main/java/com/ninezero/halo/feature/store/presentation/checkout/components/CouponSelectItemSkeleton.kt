@@ -33,9 +33,9 @@ fun CouponSelectItemSkeleton(
             .border(
                 0.5.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                RoundedCornerShape(12.dp)
+                MaterialTheme.shapes.medium
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
     ) {
         // 좌측: 쿠폰 정보
         Column(
@@ -48,7 +48,7 @@ fun CouponSelectItemSkeleton(
                 modifier = Modifier
                     .width(100.dp)
                     .height(22.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -57,7 +57,7 @@ fun CouponSelectItemSkeleton(
                 modifier = Modifier
                     .width(150.dp)
                     .height(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -75,7 +75,7 @@ fun CouponSelectItemSkeleton(
                 modifier = Modifier
                     .width(100.dp)
                     .height(12.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -84,7 +84,7 @@ fun CouponSelectItemSkeleton(
                 modifier = Modifier
                     .width(120.dp)
                     .height(12.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .shimmer()
             )
         }

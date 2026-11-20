@@ -25,35 +25,40 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.post.LocalSubscribeRequester
 import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
 import com.ninezero.halo.core.ui.components.snackbar.showOrToast
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.core.util.toFormattedViewCount
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.Post
-import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlin.random.Random
 
-private val PostCardHeight = 140.dp
+/** 가로 줄 포스트 썸네일 폭 */
+internal val PostThumbnailWidth = 256.dp
+private val PostCardHeight = 130.dp
 
 /** 포스트 썸네일 */
 @Composable
@@ -61,7 +66,7 @@ fun PostThumbnail(
     post: Post,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    width: Dp = 270.dp
+    width: Dp = PostThumbnailWidth
 ) {
     // 잠금 글은 공용 잠금 썸네일
     if (post.isRestricted) {
@@ -96,11 +101,26 @@ private fun PostTextCard(
         ?: post.mediaAttachments.firstOrNull { it.type == MediaType.VIDEO }?.thumbnailUrl
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val hazeState = remember { HazeState() }
+    val density = LocalDensity.current
+    val imageTextShadow = remember(density) {
+        with(density) { Shadow(Color.Black.copy(alpha = 0.4f), Offset(0f, 1.dp.toPx()), 6.dp.toPx()) }
+    }
+    val typography = MaterialTheme.typography
+    val contentStyle = if (thumbnailUrl != null) {
+        typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.SemiBold, shadow = imageTextShadow)
+    } else {
+        typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+    }
+    val metaStyle = if (thumbnailUrl != null) {
+        typography.labelSmall.copy(color = Color.White.copy(alpha = 0.9f), shadow = imageTextShadow)
+    } else {
+        typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 
     Box(
         modifier = modifier
             .height(PostCardHeight)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(surfaceVariant)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -109,39 +129,26 @@ private fun PostTextCard(
     ) {
         if (thumbnailUrl != null) {
             // 배경 이미지
+            AsyncImage(
+                model = thumbnailUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(state = hazeState),
+                contentScale = ContentScale.Crop
+            )
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .hazeSource(state = hazeState)
-            ) {
-                AsyncImage(
-                    model = thumbnailUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Transparent,
-                                1f to surfaceVariant
-                            )
-                        )
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
+                    .haloBlur(
+                        hazeState,
+                        HaloBlurStyle(
                             backgroundColor = surfaceVariant,
-                            tint = HaloBlurTint(surfaceVariant.copy(alpha = 0.35f)),
+                            tint = Color.Black.copy(alpha = 0.5f),
                             blurRadius = 16.dp,
                             noiseFactor = 0f
                         )
-                    }
+                    )
             )
         }
         Column(
@@ -151,39 +158,37 @@ private fun PostTextCard(
         ) {
             Text(
                 text = post.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = contentStyle,
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.weight(1f))
-            PostMetaRow(post = post)
+            PostMetaRow(post = post, textStyle = metaStyle)
         }
     }
 }
 
 @Composable
-private fun PostMetaRow(post: Post, modifier: Modifier = Modifier) {
+private fun PostMetaRow(post: Post, textStyle: TextStyle, modifier: Modifier = Modifier) {
     val numberFormat = rememberKoreanNumberFormat()
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        MetaCount(iconRes = R.drawable.ic_heart, text = numberFormat.format(post.likeCount))
-        MetaCount(iconRes = R.drawable.ic_comment, text = numberFormat.format(post.commentCount))
-        MetaCount(iconRes = R.drawable.ic_eye, text = post.viewCount.toFormattedViewCount())
+        MetaCount(iconRes = R.drawable.ic_post_heart, text = numberFormat.format(post.likeCount), textStyle = textStyle)
+        MetaCount(iconRes = R.drawable.ic_post_comment, text = numberFormat.format(post.commentCount), textStyle = textStyle)
+        MetaCount(iconRes = R.drawable.ic_chart_column, text = post.viewCount.toFormattedViewCount(), textStyle = textStyle)
         Spacer(modifier = Modifier.weight(1f))
         Text(
             text = post.createdAt.toFormattedDate("MM.dd"),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = textStyle
         )
     }
 }
 
 @Composable
-private fun MetaCount(iconRes: Int, text: String) {
+private fun MetaCount(iconRes: Int, text: String, textStyle: TextStyle) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp)
@@ -192,12 +197,11 @@ private fun MetaCount(iconRes: Int, text: String) {
             painter = painterResource(iconRes),
             contentDescription = null,
             modifier = Modifier.size(13.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = textStyle.color
         )
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = textStyle
         )
     }
 }
@@ -219,7 +223,7 @@ private fun LockedPostThumbnail(
         modifier = modifier
             .then(if (width == null) Modifier.fillMaxWidth() else Modifier.width(width))
             .height(PostCardHeight)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -301,14 +305,15 @@ private fun LockedPostThumbnail(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
+                .haloBlur(
+                    hazeState,
+                    HaloBlurStyle(
                         backgroundColor = surfaceColor,
-                        tint = HaloBlurTint(Color.Black.copy(alpha = 0.5f)),
+                        tint = Color.Black.copy(alpha = 0.5f),
                         blurRadius = 14.dp,
                         noiseFactor = 0f
                     )
-                },
+                ),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -320,7 +325,7 @@ private fun LockedPostThumbnail(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (post.isSecret) "비밀글" else "${post.requiredTier} 이상 멤버십 전용",
+                    text = if (post.isSecret) "비밀글" else "${post.requiredTier.label} 이상 멤버십 전용",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White
                 )
@@ -333,13 +338,13 @@ private fun LockedPostThumbnail(
 @Composable
 fun PostThumbnailSkeleton(
     modifier: Modifier = Modifier,
-    width: Dp = 270.dp
+    width: Dp = PostThumbnailWidth
 ) {
     Box(
         modifier = modifier
             .width(width)
             .height(PostCardHeight)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant)
     )
 }

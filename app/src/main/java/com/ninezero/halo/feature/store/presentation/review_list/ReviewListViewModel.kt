@@ -79,7 +79,7 @@ class ReviewListViewModel @Inject constructor(
             is ReviewListIntent.LoadReviews -> loadReviews()
             is ReviewListIntent.LoadMore -> loadMore()
             is ReviewListIntent.Refresh -> refresh()
-            is ReviewListIntent.ScreenResumed -> refreshReviewsQuietly()
+            is ReviewListIntent.ScreenResumed -> refreshReviewsSilently()
             is ReviewListIntent.ChangeSortBy -> changeSortBy(intent.sortBy)
             is ReviewListIntent.ShowOptions -> showOptions(intent.review)
             is ReviewListIntent.DismissOptions -> dismissOptions()
@@ -199,7 +199,7 @@ class ReviewListViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-    private fun refreshReviewsQuietly() = intent {
+    private fun refreshReviewsSilently() = intent {
         if (state.isLoading || state.isRefreshing) return@intent
         val sortBy = state.sortBy
         val summary = getReviewSummaryUseCase(productId).getOrNull()

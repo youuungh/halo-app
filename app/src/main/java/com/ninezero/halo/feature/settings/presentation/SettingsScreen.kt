@@ -18,19 +18,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.R
-import com.ninezero.halo.core.local.ThemeMode
-import com.ninezero.halo.core.ui.components.bottomsheet.ThemeBottomSheet
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
@@ -40,6 +34,7 @@ import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.settings.presentation.components.SettingsMenuItem
 import com.ninezero.halo.feature.settings.presentation.components.SettingsMenuItemData
+import com.ninezero.halo.feature.settings.presentation.components.ThemeBottomSheet
 import com.ninezero.halo.feature.settings.presentation.my_account.MyAccountBottomSheet
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -89,19 +84,15 @@ fun SettingsScreen(
         snackbarHostState = snackbarHostState
     )
 
-    var isSheetParked by rememberSaveable { mutableStateOf(false) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { isSheetParked = false }
-
-    if (state.showMyAccountSheet && !isSheetParked) {
+    if (state.showMyAccountSheet) {
         MyAccountBottomSheet(
             onDismiss = { viewModel.onIntent(SettingsIntent.DismissMyAccountSheet) },
             onAccountDeleted = {
                 viewModel.onIntent(SettingsIntent.DismissMyAccountSheet)
                 onNavigateToLogin()
             },
-            // 시트 상태는 열린 채로 두고 이동, 복귀 시 다시 표시
             onNavigateToCreatorApplication = {
-                isSheetParked = true
+                viewModel.onIntent(SettingsIntent.DismissMyAccountSheet)
                 onNavigateToCreatorApplication()
             }
         )
@@ -165,7 +156,7 @@ internal fun SettingsScreenContent(
             SettingsMenuItem(
                 iconRes = R.drawable.ic_theme,
                 title = "테마",
-                trailingText = ThemeMode.toDisplayName(state.themeMode),
+                trailingText = state.themeMode.label,
                 onClick = { onIntent(SettingsIntent.ThemeClick) }
             )
 

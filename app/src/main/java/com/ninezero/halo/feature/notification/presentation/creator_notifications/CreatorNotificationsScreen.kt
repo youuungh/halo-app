@@ -18,10 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,22 +32,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
-import com.ninezero.halo.core.ui.components.layout.ListEmptyState
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListEmptyState
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.ui.components.switch.HaloSwitch
+import com.ninezero.halo.core.ui.components.toggle.HaloSwitch
 import com.ninezero.halo.feature.profile.domain.model.FollowedCreator
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -111,8 +108,7 @@ internal fun CreatorNotificationsScreenContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .hazeSource(hazeState)
-                        .padding(top = headerHeight),
+                        .hazeSource(hazeState),
                     contentAlignment = Alignment.Center
                 ) {
                     CenteredLoadingIndicator(size = LoadingIndicatorSize.Large)
@@ -123,26 +119,14 @@ internal fun CreatorNotificationsScreenContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .hazeSource(hazeState)
-                        .padding(top = headerHeight),
+                        .hazeSource(hazeState),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = state.error,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(
-                            onClick = { onIntent(CreatorNotificationsIntent.Retry) },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.bounceClick()
-                        ) {
-                            Text("재시도")
-                        }
-                    }
+                    ListErrorState(
+                        title = "크리에이터 목록을 불러오지 못했습니다",
+                        reason = state.error,
+                        onRetry = { onIntent(CreatorNotificationsIntent.Retry) }
+                    )
                 }
             }
 
@@ -150,8 +134,7 @@ internal fun CreatorNotificationsScreenContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .hazeSource(hazeState)
-                        .padding(top = headerHeight),
+                        .hazeSource(hazeState),
                     contentAlignment = Alignment.Center
                 ) {
                     ListEmptyState(

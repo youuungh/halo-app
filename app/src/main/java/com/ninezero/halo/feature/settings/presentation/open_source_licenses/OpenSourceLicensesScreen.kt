@@ -25,9 +25,9 @@ import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.settings.presentation.open_source_licenses.components.LibraryItem
 import com.ninezero.halo.feature.settings.presentation.open_source_licenses.components.LicenseBottomSheet
-import com.ninezero.halo.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState

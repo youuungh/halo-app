@@ -2,10 +2,16 @@ package com.ninezero.halo.feature.store.data.remote.dto
 
 import com.ninezero.halo.core.network.CursorDto
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toAmountLong
+import com.ninezero.halo.core.util.toAmountLongOrNull
+import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.store.domain.model.Order
 import com.ninezero.halo.feature.store.domain.model.OrderCreatorGroup
 import com.ninezero.halo.feature.store.domain.model.OrderItem
+import com.ninezero.halo.feature.store.domain.model.OrderStatus
+import com.ninezero.halo.feature.store.domain.model.PaymentStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingProgress
+import com.ninezero.halo.feature.store.domain.model.ShippingStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatusResponse
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import kotlinx.serialization.Serializable
@@ -155,20 +161,20 @@ fun OrderDto.toDomain(): Order = Order(
     orderNumber = orderNumber,
     items = items.map { it.toDomain() },
     creatorGroups = creatorGroups.map { it.toDomain() },
-    totalPrice = totalPrice,
-    status = status,
+    totalPrice = totalPrice.toAmountLong(),
+    status = status.toEnumOrDefault(OrderStatus.PENDING),
     shippingAddress = shippingAddress,
     shippingPhone = shippingPhone,
     shippingName = shippingName,
     paymentProvider = paymentProvider,
-    paymentStatus = paymentStatus,
+    paymentStatus = paymentStatus?.toEnumOrDefault(PaymentStatus.PENDING),
     memo = memo,
-    pointsUsed = pointsUsed,
-    couponDiscount = couponDiscount,
+    pointsUsed = pointsUsed.toAmountLong(),
+    couponDiscount = couponDiscount.toAmountLong(),
     trackingNumber = trackingNumber,
     carrier = carrier,
-    shippingFee = shippingFee,
-    shippingStatus = shippingStatus,
+    shippingFee = shippingFee.toAmountLong(),
+    shippingStatus = shippingStatus.toEnumOrDefault(ShippingStatus.PREPARING),
     actualDeliveryDate = actualDeliveryDate.parseTimestampOrNull(),
     createdAt = createdAt.parseTimestamp(),
     updatedAt = updatedAt.parseTimestamp()
@@ -179,19 +185,19 @@ fun OrderCreatorGroupDto.toDomain(): OrderCreatorGroup = OrderCreatorGroup(
     creatorName = creatorName,
     creatorAvatarUrl = creatorAvatarUrl,
     creatorRole = creatorRole,
-    status = status,
+    status = status.toEnumOrDefault(OrderStatus.PENDING),
     items = items.map { it.toDomain() },
-    subtotal = subtotal,
+    subtotal = subtotal.toAmountLong(),
     earnTier = runCatching { SubscriptionPlanTier.valueOf(earnTier) }.getOrDefault(SubscriptionPlanTier.FREE),
     earnRate = earnRate.toDoubleOrNull() ?: 0.0,
     earnPoints = earnPoints.toLongOrNull() ?: 0L,
     isSubscribed = isSubscribed,
-    shippingFee = shippingFee,
-    couponDiscount = couponDiscount,
+    shippingFee = shippingFee.toAmountLong(),
+    couponDiscount = couponDiscount.toAmountLong(),
     trackingNumber = trackingNumber,
     carrier = carrier,
-    shippingStatus = shippingStatus,
-    refundAmount = refundAmount,
+    shippingStatus = shippingStatus.toEnumOrDefault(ShippingStatus.PREPARING),
+    refundAmount = refundAmount.toAmountLongOrNull(),
     refundReason = refundReason,
     refundedAt = refundedAt.parseTimestampOrNull()
 )
@@ -201,22 +207,22 @@ fun OrderItemDto.toDomain(): OrderItem = OrderItem(
     productId = productId,
     productName = productName,
     productImageUrl = productImageUrl,
-    price = price,
-    originalPrice = originalPrice,
+    price = price.toAmountLong(),
+    originalPrice = originalPrice.toAmountLongOrNull(),
     quantity = quantity,
-    subtotal = subtotal,
+    subtotal = subtotal.toAmountLong(),
     creatorId = creatorId,
     creatorName = creatorName,
     creatorAvatarUrl = creatorAvatarUrl,
     hasReview = hasReview,
     isProductActive = isProductActive,
-    requiredTier = requiredTier,
+    requiredTier = requiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE),
     canAccess = canAccess
 )
 
 fun ShippingStatusResponseDto.toDomain(): ShippingStatusResponse =
     ShippingStatusResponse(
-        shippingStatus = shippingStatus,
+        shippingStatus = shippingStatus.toEnumOrDefault(ShippingStatus.PREPARING),
         trackingNumber = trackingNumber,
         carrier = carrier,
         courierName = courierName,

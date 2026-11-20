@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,9 +26,17 @@ import com.ninezero.halo.feature.explore.domain.model.Creator
 fun RecommendedCreatorsSection(
     creators: List<Creator>,
     isLoading: Boolean,
+    isRefreshing: Boolean,
     onCreatorClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberLazyListState()
+    // 새로고침하면 넘겨 둔 자리 대신 맨 앞부터
+    // 끝날 때도 맞춤, 보던 카드를 따라가 멈춤
+    LaunchedEffect(isRefreshing) {
+        listState.scrollToItem(0)
+    }
+
     // 로딩 중이 아니고 크리에이터가 없으면 섹션 숨김
     if (!isLoading && creators.isEmpty()) return
 
@@ -55,6 +65,7 @@ fun RecommendedCreatorsSection(
             )
         } else {
             LazyRow(
+                state = listState,
                 modifier = Modifier.blockHorizontalScrollLeak(),
                 contentPadding = PaddingValues(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)

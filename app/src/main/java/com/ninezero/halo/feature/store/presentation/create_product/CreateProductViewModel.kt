@@ -15,6 +15,7 @@ import com.ninezero.halo.feature.store.domain.model.RichTextAlignment
 import com.ninezero.halo.feature.store.domain.model.RichTextBlockStyle
 import com.ninezero.halo.feature.store.domain.model.UpdateProductRequest
 import com.ninezero.halo.feature.store.domain.repository.ProductRepository
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import com.ninezero.halo.feature.subscription.domain.usecase.GetMyPlanTiersUseCase
 import com.ninezero.halo.feature.tag.domain.model.TagTargetType
 import com.ninezero.halo.feature.tag.domain.usecase.CreateTagUseCase
@@ -140,8 +141,8 @@ class CreateProductViewModel @Inject constructor(
                     isLoading = false,
                     name = product.name,
                     description = product.description,
-                    price = product.basePrice.ifBlank { product.price },  // 딜 활성 중엔 basePrice로 prefill
-                    originalPrice = product.baseOriginalPrice ?: "",
+                    price = (product.basePrice ?: product.price).toString(),  // 딜 활성 중엔 basePrice로 prefill
+                    originalPrice = product.baseOriginalPrice?.toString() ?: "",
                     stock = product.stock.toString(),
                     brandName = product.brandName ?: "",
                     requiredTier = product.requiredTier,
@@ -189,7 +190,7 @@ class CreateProductViewModel @Inject constructor(
         }
     }
 
-    private fun updateRequiredTier(tier: String) = intent {
+    private fun updateRequiredTier(tier: SubscriptionPlanTier) = intent {
         reduce { state.copy(requiredTier = tier) }
     }
 
@@ -463,10 +464,10 @@ class CreateProductViewModel @Inject constructor(
         val continuationBlock: EditorBlock = when {
             anchorBlock == null || anchorBlock.type != EditorBlockType.TEXT -> {
                 // 기준이 이미지거나 없으면: 그 아래에 이미지 + 새 빈 텍스트
-                val cont = EditorBlock(type = EditorBlockType.TEXT)
+                val nextTextBlock = EditorBlock(type = EditorBlockType.TEXT)
                 val at = if (anchorIndex >= 0) anchorIndex + 1 else currentBlocks.size
-                currentBlocks.addAll(at, imageBlocks + cont)
-                cont
+                currentBlocks.addAll(at, imageBlocks + nextTextBlock)
+                nextTextBlock
             }
             anchorBlock.text.isEmpty() -> {
                 // 빈 블록은 앞에 이미지, 블록 재사용
@@ -484,13 +485,13 @@ class CreateProductViewModel @Inject constructor(
                     }
                     anchorBlock.text.length -> {
                         // 맨 뒤: 블록 뒤에 이미지 + 새 빈 텍스트
-                        val cont = EditorBlock(
+                        val nextTextBlock = EditorBlock(
                             type = EditorBlockType.TEXT,
                             textStyle = anchorBlock.textStyle,
                             textAlignment = anchorBlock.textAlignment
                         )
-                        currentBlocks.addAll(anchorIndex + 1, imageBlocks + cont)
-                        cont
+                        currentBlocks.addAll(anchorIndex + 1, imageBlocks + nextTextBlock)
+                        nextTextBlock
                     }
                     else -> {
                         val fullFormats = formatsOfLength(anchorBlock.text, anchorBlock.formats)
@@ -568,26 +569,26 @@ class CreateProductViewModel @Inject constructor(
     }
 
     private fun toggleBold(blockId: String, start: Int, end: Int) = intent {
-        toggleInlineFormat(blockId, start, end, { it.bold }) { fmt, enabled -> fmt.copy(bold = enabled) }
+        toggleInlineFormat(blockId, start, end, { it.bold }) { format, enabled -> format.copy(bold = enabled) }
     }
 
     private fun toggleItalic(blockId: String, start: Int, end: Int) = intent {
-        toggleInlineFormat(blockId, start, end, { it.italic }) { fmt, enabled -> fmt.copy(italic = enabled) }
+        toggleInlineFormat(blockId, start, end, { it.italic }) { format, enabled -> format.copy(italic = enabled) }
     }
 
     private fun toggleUnderline(blockId: String, start: Int, end: Int) = intent {
-        toggleInlineFormat(blockId, start, end, { it.underline }) { fmt, enabled -> fmt.copy(underline = enabled) }
+        toggleInlineFormat(blockId, start, end, { it.underline }) { format, enabled -> format.copy(underline = enabled) }
     }
 
     private fun toggleStrikethrough(blockId: String, start: Int, end: Int) = intent {
-        toggleInlineFormat(blockId, start, end, { it.strikethrough }) { fmt, enabled ->
-            fmt.copy(strikethrough = enabled)
+        toggleInlineFormat(blockId, start, end, { it.strikethrough }) { format, enabled ->
+            format.copy(strikethrough = enabled)
         }
     }
 
     private fun setTextColor(blockId: String, start: Int, end: Int, colorHex: String?) = intent {
-        toggleInlineFormat(blockId, start, end, { it.textColor == colorHex }) { fmt, enabled ->
-            fmt.copy(textColor = if (enabled) colorHex else null)
+        toggleInlineFormat(blockId, start, end, { it.textColor == colorHex }) { format, enabled ->
+            format.copy(textColor = if (enabled) colorHex else null)
         }
     }
 
@@ -713,11 +714,11 @@ class CreateProductViewModel @Inject constructor(
         val index = blocks.indexOfFirst { it.id == blockId }
         if (index < 0) return@intent
         val block = blocks[index]
-        val len = block.text.length
+        val length = block.text.length
         // 빈 줄 줄바꿈 제거, 앞은 인용·뒤는 새 문단
-        val stripPos = (splitOffset - 2).coerceIn(0, len)
-        val afterStart = (stripPos + 1).coerceIn(0, len)
-        val beforeText = block.text.substring(0, stripPos)
+        val stripPosition = (splitOffset - 2).coerceIn(0, length)
+        val afterStart = (stripPosition + 1).coerceIn(0, length)
+        val beforeText = block.text.substring(0, stripPosition)
         val afterText = block.text.substring(afterStart)
         val fullFormats = formatsOfLength(block.text, block.formats)
 
@@ -726,7 +727,7 @@ class CreateProductViewModel @Inject constructor(
             // 인용이 비어 있으면 이 블록 자체를 일반 문단으로 전환
             newBlocks[index] = block.copy(
                 text = afterText,
-                formats = fullFormats.subList(afterStart, len).toList(),
+                formats = fullFormats.subList(afterStart, length).toList(),
                 textStyle = RichTextBlockStyle.PARAGRAPH
             )
             reduce {
@@ -734,12 +735,12 @@ class CreateProductViewModel @Inject constructor(
             }
             return@intent
         }
-        val quoteBlock = block.copy(text = beforeText, formats = fullFormats.subList(0, stripPos).toList())
+        val quoteBlock = block.copy(text = beforeText, formats = fullFormats.subList(0, stripPosition).toList())
         val paragraphBlock = EditorBlock(
             type = EditorBlockType.TEXT,
             regionId = block.regionId,  // 인용 다음 문단, 같은 글 영역
             text = afterText,
-            formats = fullFormats.subList(afterStart, len).toList(),
+            formats = fullFormats.subList(afterStart, length).toList(),
             textStyle = RichTextBlockStyle.PARAGRAPH,
             textAlignment = block.textAlignment
         )
@@ -776,12 +777,12 @@ class CreateProductViewModel @Inject constructor(
                 detailBlocks = state.detailBlocks.map { block ->
                     if (block.id == blockId) {
                         if (start == end) return@map block
-                        val fmts = block.formats.toMutableList()
-                        val allEnabled = (start until end).all { i -> i < fmts.size && isEnabled(fmts[i]) }
-                        for (i in start until end.coerceAtMost(fmts.size)) {
-                            fmts[i] = update(fmts[i], !allEnabled)
+                        val newFormats = block.formats.toMutableList()
+                        val allEnabled = (start until end).all { i -> i < newFormats.size && isEnabled(newFormats[i]) }
+                        for (i in start until end.coerceAtMost(newFormats.size)) {
+                            newFormats[i] = update(newFormats[i], !allEnabled)
                         }
-                        block.copy(formats = fmts)
+                        block.copy(formats = newFormats)
                     } else block
                 },
                 typingFormats = state.typingFormats.toMutableMap().apply {
@@ -810,9 +811,9 @@ class CreateProductViewModel @Inject constructor(
         while (formats.size < oldText.length) formats.add(CharFormat())
 
         if (delta > 0) {
-            val insertPos = (cursorPosition - delta).coerceIn(0, formats.size)
-            val inheritFormat = typingFormat ?: if (insertPos > 0) formats[insertPos - 1] else CharFormat()
-            repeat(delta) { formats.add(insertPos, inheritFormat) }
+            val insertPosition = (cursorPosition - delta).coerceIn(0, formats.size)
+            val inheritFormat = typingFormat ?: if (insertPosition > 0) formats[insertPosition - 1] else CharFormat()
+            repeat(delta) { formats.add(insertPosition, inheritFormat) }
         } else if (delta < 0) {
             val deleteStart = cursorPosition.coerceIn(0, formats.size)
             repeat((-delta).coerceAtMost(formats.size - deleteStart)) {
@@ -1126,10 +1127,10 @@ class CreateProductViewModel @Inject constructor(
         var currentFormat = formats.getOrElse(0) { CharFormat() }
         var start = 0
         for (i in text.indices) {
-            val fmt = formats.getOrElse(i) { CharFormat() }
-            if (fmt != currentFormat) {
+            val format = formats.getOrElse(i) { CharFormat() }
+            if (format != currentFormat) {
                 result.add(text.substring(start, i) to currentFormat)
-                currentFormat = fmt
+                currentFormat = format
                 start = i
             }
         }

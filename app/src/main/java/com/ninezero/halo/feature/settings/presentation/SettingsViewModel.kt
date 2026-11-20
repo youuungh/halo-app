@@ -2,7 +2,8 @@ package com.ninezero.halo.feature.settings.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ninezero.halo.core.local.PreferencesManager
+import com.ninezero.halo.core.datastore.PreferencesManager
+import com.ninezero.halo.core.datastore.ThemeMode
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.feature.auth.domain.usecase.LogoutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -98,7 +99,7 @@ class SettingsViewModel @Inject constructor(
         reduce { state.copy(showThemeSheet = false) }
     }
 
-    private fun changeTheme(mode: Int) = intent {
+    private fun changeTheme(mode: ThemeMode) = intent {
         reduce { state.copy(showThemeSheet = false, themeMode = mode) }
         preferencesManager.setThemeMode(mode)
     }

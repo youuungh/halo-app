@@ -18,10 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.store.domain.model.OrderItem
+import com.ninezero.halo.feature.store.domain.model.creatorGroupsOrFallback
+import com.ninezero.halo.feature.store.presentation.components.ShippingTrackingBottomSheet
 import com.ninezero.halo.feature.store.presentation.order_list.components.OrderCard
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -77,7 +79,9 @@ fun OrderListScreen(
         onLoadMore = { viewModel.onIntent(OrderListIntent.LoadMore) },
         onToggleExpand = { orderId -> viewModel.onIntent(OrderListIntent.ToggleOrderExpand(orderId)) },
         onWriteReview = { item, orderId -> viewModel.onIntent(OrderListIntent.WriteReview(item, orderId)) },
-        onAddToCart = { item -> viewModel.onIntent(OrderListIntent.AddToCart(item)) }
+        onAddToCart = { item -> viewModel.onIntent(OrderListIntent.AddToCart(item)) },
+        onTrackShipping = { orderId, creatorId -> viewModel.onIntent(OrderListIntent.ShowShippingSheet(orderId, creatorId)) },
+        onDismissShippingSheet = { viewModel.onIntent(OrderListIntent.DismissShippingSheet) }
     )
 }
 
@@ -92,7 +96,9 @@ internal fun OrderListScreenContent(
     onLoadMore: () -> Unit = {},
     onToggleExpand: (Int) -> Unit = {},
     onWriteReview: (OrderItem, Int) -> Unit = { _, _ -> },
-    onAddToCart: (OrderItem) -> Unit = {}
+    onAddToCart: (OrderItem) -> Unit = {},
+    onTrackShipping: (orderId: Int, creatorId: Int?) -> Unit = { _, _ -> },
+    onDismissShippingSheet: () -> Unit = {}
 ) {
     PagedListScreenShell(
         title = "주문/배송",
@@ -101,6 +107,7 @@ internal fun OrderListScreenContent(
         hasMore = state.hasMore,
         isEmpty = state.orders.isEmpty(),
         error = state.error,
+        errorTitle = "주문 목록을 불러오지 못했습니다",
         emptyTitle = "주문 내역이 없어요",
         emptyDescription = "상품을 주문하면 여기에 표시돼요",
         onNavigateBack = onNavigateBack,
@@ -124,7 +131,8 @@ internal fun OrderListScreenContent(
                     onOrderClick = { onOrderClick(order.id) },
                     onToggleExpand = { onToggleExpand(order.id) },
                     onWriteReview = { item -> onWriteReview(item, order.id) },
-                    onAddToCart = onAddToCart
+                    onAddToCart = onAddToCart,
+                    onTrackShipping = { creatorId -> onTrackShipping(order.id, creatorId) }
                 )
                 HorizontalDivider(
                     thickness = 0.5.dp,
@@ -138,5 +146,16 @@ internal fun OrderListScreenContent(
                 }
             }
         }
+    }
+
+    val shippingOrderId = state.shippingSheetOrderId
+    if (shippingOrderId != null) {
+        val groups = state.orders.firstOrNull { it.id == shippingOrderId }?.creatorGroupsOrFallback().orEmpty()
+        ShippingTrackingBottomSheet(
+            group = groups.firstOrNull { it.creatorId == state.shippingSheetCreatorId } ?: groups.firstOrNull(),
+            shippingStatus = state.shippingStatus,
+            isLoading = state.isShippingStatusLoading,
+            onDismiss = onDismissShippingSheet
+        )
     }
 }

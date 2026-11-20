@@ -8,20 +8,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,19 +41,17 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.chip.HaloFilterChip
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionStatus
 import com.ninezero.halo.feature.subscription.presentation.my_subscriptions.components.SubscriptionCard
 import com.ninezero.halo.feature.subscription.presentation.my_subscriptions.components.SubscriptionCardSkeleton
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
@@ -134,14 +128,8 @@ internal fun MySubscriptionsScreenContent(
                             .hazeSource(hazeState),
                         contentPadding = PaddingValues(top = headerHeight, bottom = 32.dp)
                     ) {
-                        items(5) { index ->
+                        items(5) {
                             SubscriptionCardSkeleton()
-                            if (index < 4) {
-                                HorizontalDivider(
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
-                            }
                         }
                     }
                 }
@@ -152,21 +140,11 @@ internal fun MySubscriptionsScreenContent(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(MySubscriptionsIntent.RefreshSubscriptions) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "구독 목록을 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = { onIntent(MySubscriptionsIntent.RefreshSubscriptions) }
+                        )
                     }
                 }
 
@@ -176,7 +154,7 @@ internal fun MySubscriptionsScreenContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "구독 중인 크리에이터가 없습니다",
+                            text = "구독 중인 크리에이터가 없어요",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -252,17 +230,7 @@ internal fun MySubscriptionsScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1.0f,
-                        endIntensity = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }

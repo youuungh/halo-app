@@ -3,7 +3,6 @@ package com.ninezero.halo.feature.creator.presentation.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +23,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.ninezero.halo.core.ui.components.input.inputBorder
+import com.ninezero.halo.core.ui.components.modifiers.bringIntoViewOnFocus
 
 @Composable
 internal fun CreatorFormTextField(
@@ -41,15 +41,6 @@ internal fun CreatorFormTextField(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isFocused -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.outline
-        },
-        animationSpec = tween(150),
-        label = "borderColor"
-    )
-
     val hasContent = value.isNotEmpty()
     val showSmallLabel = isFocused || hasContent
 
@@ -63,7 +54,7 @@ internal fun CreatorFormTextField(
         label = "labelColor"
     )
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().bringIntoViewOnFocus(isFocused)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -71,14 +62,10 @@ internal fun CreatorFormTextField(
                     if (singleLine) Modifier.height(56.dp)
                     else Modifier.height(minHeight)
                 )
-                .border(
-                    width = 1.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(12.dp)
-                )
+                .inputBorder(MaterialTheme.shapes.medium, isFocused = isFocused)
                 .background(
                     color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.medium
                 )
                 .padding(horizontal = 16.dp)
         ) {

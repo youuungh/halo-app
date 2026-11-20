@@ -1,42 +1,43 @@
 package com.ninezero.halo.feature.address.presentation.address_manage.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetMenuItemData
+import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetMenuItemGroup
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
+import com.ninezero.halo.core.ui.theme.CardShape
 import com.ninezero.halo.feature.address.domain.model.Address
 
+/** 배송지 카드 */
 @Composable
 fun AddressItem(
     address: Address,
@@ -45,123 +46,147 @@ fun AddressItem(
     onSetDefault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .bounceClick()
+            .cardBorder(CardShape)
+            .clip(CardShape)
             .clickable(
-                indication = null,
                 interactionSource = remember { MutableInteractionSource() },
-                onClick = onSetDefault
+                indication = null,
+                onClick = onEdit
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 14.dp)
     ) {
-        Row(
-            modifier = Modifier.heightIn(min = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val nameColor by animateColorAsState(
-                targetValue = if (address.isDefault) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                label = "addressNameColor"
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = address.recipientName,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = nameColor
+                color = MaterialTheme.colorScheme.onSurface
             )
-
+            if (address.isDefault) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "기본",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                )
+            }
             Spacer(modifier = Modifier.weight(1f))
-
-            AnimatedVisibility(
-                visible = address.isDefault,
-                enter = fadeIn() + scaleIn(initialScale = 0.6f),
-                exit = fadeOut() + scaleOut(targetScale = 0.6f)
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showMenu = true }
+                    .bounceClick(),
+                contentAlignment = Alignment.CenterEnd
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_check_circle),
-                    contentDescription = "기본 배송지",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    painter = painterResource(R.drawable.ic_ellipsis_horizontal),
+                    contentDescription = "옵션",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = address.recipientPhone,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = "${address.address} (${address.zipCode})",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        if (!address.addressDetail.isNullOrBlank()) {
+        Column {
             Text(
-                text = address.addressDetail,
+                text = address.recipientPhone,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-
-        if (!address.memo.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = address.memo,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = listOfNotNull(address.address, address.addressDetail?.takeIf { it.isNotBlank() }, "(${address.zipCode})")
+                    .joinToString(" "),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
+            if (!address.memo.isNullOrBlank()) {
+                Text(
+                    text = address.memo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
+    }
 
-        Spacer(modifier = Modifier.height(12.dp))
+    if (showMenu) {
+        AddressOptionSheet(
+            isDefault = address.isDefault,
+            onDismiss = { showMenu = false },
+            onSetDefault = onSetDefault,
+            onEdit = onEdit,
+            onDelete = onDelete
+        )
+    }
+}
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-        ) {
-            OutlinedButton(
-                onClick = onEdit,
-                shape = RoundedCornerShape(50),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 4.dp),
-                modifier = Modifier
-                    .height(30.dp)
-                    .bounceClick()
-            ) {
-                Text(
-                    text = "수정",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium
+/** 배송지 옵션 시트 */
+@Composable
+private fun AddressOptionSheet(
+    isDefault: Boolean,
+    onDismiss: () -> Unit,
+    onSetDefault: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val errorColor = MaterialTheme.colorScheme.error
+    FloatingBottomSheet(onDismissRequest = onDismiss) {
+        Column {
+            if (!isDefault) {
+                BottomSheetMenuItemGroup(
+                    items = listOf(
+                        BottomSheetMenuItemData(
+                            text = "기본 배송지로 설정",
+                            iconRes = R.drawable.ic_location,
+                            onClick = {
+                                onSetDefault()
+                                onDismiss()
+                            }
+                        )
+                    )
                 )
             }
-
-            OutlinedButton(
-                onClick = onDelete,
-                shape = RoundedCornerShape(50),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 4.dp),
-                modifier = Modifier
-                    .height(30.dp)
-                    .bounceClick()
-            ) {
-                Text(
-                    text = "삭제",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium
+            BottomSheetMenuItemGroup(
+                items = listOf(
+                    BottomSheetMenuItemData(
+                        text = "수정",
+                        iconRes = R.drawable.ic_edit,
+                        onClick = {
+                            onEdit()
+                            onDismiss()
+                        }
+                    ),
+                    BottomSheetMenuItemData(
+                        text = "삭제",
+                        iconRes = R.drawable.ic_delete,
+                        onClick = {
+                            onDelete()
+                            onDismiss()
+                        },
+                        textColor = errorColor,
+                        iconTint = errorColor
+                    )
                 )
-            }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

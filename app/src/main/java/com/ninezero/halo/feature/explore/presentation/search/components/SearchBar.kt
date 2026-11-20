@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,11 +38,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 
 @Composable
@@ -77,23 +75,15 @@ fun SearchBar(
         }
     }
 
-    val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
 
     Box(
         modifier = modifier
             .padding(start = startPadding, end = endPadding)
             .height(40.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .then(
                 if (hazeState != null) {
-                    Modifier.haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = hazeBackgroundColor,
-                            tint = HaloBlurTint(glassTint),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0f
-                        )
-                    }
+                    Modifier.haloBlur(hazeState, HaloBlurs.glassField(hazeBackgroundColor))
                 } else {
                     Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
                 }

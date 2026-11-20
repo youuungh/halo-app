@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -49,8 +50,7 @@ import com.ninezero.halo.core.ui.components.button.GlassActionButton
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.modifiers.statusBarsPaddingIgnoringVisibility
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupData
@@ -60,7 +60,6 @@ import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.util.createCameraImageUri
 import com.ninezero.halo.feature.feed.presentation.reply.components.ReplyThreadSection
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.flow.collectLatest
@@ -144,7 +143,7 @@ internal fun ReplyScreenContent(
             }
     }
 
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -157,9 +156,7 @@ internal fun ReplyScreenContent(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && cameraImageUri != null) {
-            onIntent(ReplyIntent.AddMedia(listOf(cameraImageUri!!)))
-        }
+        if (success) cameraImageUri?.let { onIntent(ReplyIntent.AddMedia(listOf(it))) }
     }
 
     val videoPickerLauncher = rememberLauncherForActivityResult(
@@ -284,17 +281,7 @@ internal fun ReplyScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 0.5f,
-                        endIntensity = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
@@ -368,6 +355,7 @@ internal fun ReplyScreenContent(
 
         ProfilePopupHost(
             state = profilePopupState,
+            hazeState = hazeState,
             resolveAuthor = { authorId ->
                 val author = state.post?.author?.takeIf { it.id == authorId }
                     ?: state.parentComment?.author?.takeIf { it.id == authorId }
@@ -379,4 +367,3 @@ internal fun ReplyScreenContent(
         )
     }
 }
-

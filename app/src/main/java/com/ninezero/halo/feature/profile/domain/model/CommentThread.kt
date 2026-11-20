@@ -2,8 +2,9 @@ package com.ninezero.halo.feature.profile.domain.model
 
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.Post
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 
-data class UserSummaryData(
+data class ThreadUser(
     val id: Int,
     val username: String,
     val displayName: String?,
@@ -14,11 +15,11 @@ data class UserSummaryData(
     val isDeleted: Boolean = false  // 탈퇴한 사용자, 남은 글·댓글의 작성자
 )
 
-data class PostSummaryData(
+data class ThreadPost(
     val id: Int,
     val excerpt: String,
     val mediaAttachments: List<MediaItem> = emptyList(),
-    val author: UserSummaryData,
+    val author: ThreadUser,
     val createdAt: Long = System.currentTimeMillis(),
     val likeCount: Int = 0,
     val commentCount: Int = 0,
@@ -26,17 +27,17 @@ data class PostSummaryData(
     val isBookmarked: Boolean = false,
     val isDeleted: Boolean = false,
     val isHidden: Boolean = false,  // 크리에이터 해제로 숨김, isDeleted와 구분
-    val requiredTier: String = "FREE",
+    val requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
     val isSecret: Boolean = false,
     val canAccess: Boolean = true
 )
 
-data class ThreadCommentData(
+data class ThreadComment(
     val id: Int,
     val content: String,
     val mediaAttachments: List<MediaItem> = emptyList(),
-    val author: UserSummaryData,
-    val replyTo: UserSummaryData?,
+    val author: ThreadUser,
+    val replyTo: ThreadUser?,
     val createdAt: Long,
     val likeCount: Int,
     val replyCount: Int,
@@ -48,40 +49,40 @@ data class ThreadCommentData(
     val isBlinded: Boolean = false
 )
 
-data class CommentThreadData(
-    val comments: List<ThreadCommentData>,
-    val post: PostSummaryData
+data class CommentThread(
+    val comments: List<ThreadComment>,
+    val post: ThreadPost
 )
 
 /** 스레드 안 댓글 한 개 갱신 */
-fun List<CommentThreadData>.updateComment(
+fun List<CommentThread>.updateComment(
     commentId: Int,
-    transform: (ThreadCommentData) -> ThreadCommentData
-): List<CommentThreadData> = map { thread ->
+    transform: (ThreadComment) -> ThreadComment
+): List<CommentThread> = map { thread ->
     if (thread.comments.none { it.id == commentId }) thread
     else thread.copy(comments = thread.comments.map { if (it.id == commentId) transform(it) else it })
 }
 
 /** 스레드 원글 갱신, 같은 글의 스레드 전부 */
-fun List<CommentThreadData>.updatePost(
+fun List<CommentThread>.updatePost(
     postId: Int,
-    transform: (PostSummaryData) -> PostSummaryData
-): List<CommentThreadData> = map { if (it.post.id == postId) it.copy(post = transform(it.post)) else it }
+    transform: (ThreadPost) -> ThreadPost
+): List<CommentThread> = map { if (it.post.id == postId) it.copy(post = transform(it.post)) else it }
 
 /** 팔로우 이벤트 반영 */
-fun UserSummaryData.applyFollow(authorId: Int, isFollowing: Boolean): UserSummaryData =
+fun ThreadUser.applyFollow(authorId: Int, isFollowing: Boolean): ThreadUser =
     if (id == authorId && this.isFollowing != isFollowing) copy(isFollowing = isFollowing) else this
 
-fun PostSummaryData.applyFollow(authorId: Int, isFollowing: Boolean): PostSummaryData =
+fun ThreadPost.applyFollow(authorId: Int, isFollowing: Boolean): ThreadPost =
     copy(author = author.applyFollow(authorId, isFollowing))
 
-fun ThreadCommentData.applyFollow(authorId: Int, isFollowing: Boolean): ThreadCommentData =
+fun ThreadComment.applyFollow(authorId: Int, isFollowing: Boolean): ThreadComment =
     copy(
         author = author.applyFollow(authorId, isFollowing),
         replyTo = replyTo?.applyFollow(authorId, isFollowing)
     )
 
-fun CommentThreadData.applyFollow(authorId: Int, isFollowing: Boolean): CommentThreadData =
+fun CommentThread.applyFollow(authorId: Int, isFollowing: Boolean): CommentThread =
     copy(
         post = post.applyFollow(authorId, isFollowing),
         comments = comments.map { it.applyFollow(authorId, isFollowing) }

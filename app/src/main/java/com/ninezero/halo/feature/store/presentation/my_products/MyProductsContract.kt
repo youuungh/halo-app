@@ -34,17 +34,14 @@ sealed interface MyProductsIntent {
     data object Refresh : MyProductsIntent
     data object ScreenResumed : MyProductsIntent
     data object LoadMore : MyProductsIntent
-
     data object NavigateBack : MyProductsIntent
     data object NavigateToCreateProduct : MyProductsIntent
     data class NavigateToEditProduct(val product: Product) : MyProductsIntent
     data class NavigateToProductDetail(val productId: Int) : MyProductsIntent
-
     // 판매 상태·옵션
     data class ToggleProductStatus(val productId: Int) : MyProductsIntent
     data class ShowOptions(val product: Product) : MyProductsIntent
     data object DismissOptions : MyProductsIntent
-
     // 타임딜
     data class RequestSetDeal(val product: Product) : MyProductsIntent
     data object DismissDealSetup : MyProductsIntent
@@ -55,16 +52,13 @@ sealed interface MyProductsIntent {
         val endAtMillis: Long
     ) : MyProductsIntent
     data class ClearDeal(val productId: Int) : MyProductsIntent
-
     // 삭제
     data class ShowDeleteDialog(val product: Product) : MyProductsIntent
     data object DismissDeleteDialog : MyProductsIntent
     data object ConfirmDelete : MyProductsIntent
-
     // 피드백
     data object DismissToast : MyProductsIntent
     data object SnackbarDismissed : MyProductsIntent
-
     // 그룹 접기·색상
     data class ToggleGroupCollapse(val tagId: Int) : MyProductsIntent
     data object ToggleTimeDealCollapse : MyProductsIntent

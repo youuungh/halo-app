@@ -43,19 +43,19 @@ import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.PostAuthorBadge
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
-import com.ninezero.halo.core.ui.components.counter.AnimatedCounter
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlay
-import com.ninezero.halo.core.ui.components.overlay.ObscuredOverlayShape
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlay
+import com.ninezero.halo.core.ui.components.overlay.CoverOverlayShape
+import com.ninezero.halo.core.ui.components.text.AnimatedCounter
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
+import com.ninezero.halo.core.ui.theme.Like
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Comment
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
-import com.ninezero.halo.ui.theme.Like
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -99,9 +99,9 @@ fun CommentItem(
 ) {
     val hazeState = remember { HazeState() }
     var isBlindRevealed by rememberSaveable { mutableStateOf(false) }
-    val obscuredByPolicy = isBlocked || isDeleted
-    val isObscured = obscuredByPolicy || (isBlinded && !isBlindRevealed)
-    val hasMedia = mediaAttachments.isNotEmpty() && !isObscured
+    val coveredByPolicy = isBlocked || isDeleted
+    val isCovered = coveredByPolicy || (isBlinded && !isBlindRevealed)
+    val hasMedia = mediaAttachments.isNotEmpty() && !isCovered
     val contentStartPadding = horizontalPadding + indentStart + avatarSize + avatarSpacing
 
     val likeAction = if (isDeleted) ({}) else onLikeClick
@@ -134,7 +134,7 @@ fun CommentItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(avatarSize)
             ) {
-                if (obscuredByPolicy) {
+                if (coveredByPolicy) {
                     Image(
                         painter = painterResource(R.drawable.ic_profile_placeholder),
                         contentDescription = null,
@@ -193,10 +193,10 @@ fun CommentItem(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(if (isObscured) Modifier.clip(ObscuredOverlayShape) else Modifier)
+                        .then(if (isCovered) Modifier.clip(CoverOverlayShape) else Modifier)
                         // 오버레이 꺼져도 블러 소스 유지
                         .then(
-                            if (isObscured || isBlinded) Modifier.hazeSource(state = hazeState) else Modifier
+                            if (isCovered || isBlinded) Modifier.hazeSource(state = hazeState) else Modifier
                         )
                 ) {
                     // 작성자 정보 + 시간 + 더보기
@@ -279,8 +279,8 @@ fun CommentItem(
                 }
 
                 // 차단/삭제/블라인드 댓글 오버레이
-                if (isObscured) {
-                    ObscuredOverlay(
+                if (isCovered) {
+                    CoverOverlay(
                         hazeState = hazeState,
                         // 블라인드가 차단·삭제보다 우선, 본문 없는 블라인드 자리는 남의 댓글
                         icon = when {
@@ -398,7 +398,7 @@ private fun CommentActionButtons(
         ) {
             Icon(
                 painter = painterResource(
-                    if (isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart
+                    if (isLiked) R.drawable.ic_post_heart_filled else R.drawable.ic_post_heart
                 ),
                 contentDescription = "좋아요",
                 modifier = Modifier
@@ -428,7 +428,7 @@ private fun CommentActionButtons(
                 )
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_comment),
+                    painter = painterResource(R.drawable.ic_post_comment),
                     contentDescription = "답글",
                     modifier = Modifier
                         .size(20.dp)
@@ -448,6 +448,7 @@ private fun CommentActionButtons(
     }
 }
 
+/** 펼쳐 본 블라인드 댓글을 다시 가리는 버튼 */
 @Composable
 fun BlindHideButton(
     onClick: () -> Unit,

@@ -11,6 +11,7 @@ import com.ninezero.halo.feature.coupon.domain.model.UserCouponStatus
 import com.ninezero.halo.feature.point.domain.model.PointBalance
 import com.ninezero.halo.feature.store.domain.model.OrderLine
 import com.ninezero.halo.feature.store.domain.model.Product
+import com.ninezero.halo.feature.store.domain.model.ProductStatus
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 
 private val previewAddresses = listOf(
@@ -34,30 +35,30 @@ private val previewOrderLines = listOf(
     OrderLine(
         product = Product(
             id = 1, name = "프리미엄 블루투스 이어폰", description = "",
-            price = "89000", originalPrice = null, discountRate = null,
-            tags = emptyList(), stock = 10, status = "ACTIVE", isActive = true,
+            price = 89000L, originalPrice = null, discountRate = null,
+            tags = emptyList(), stock = 10, status = ProductStatus.ACTIVE, isActive = true,
             imageUrls = emptyList(), brandName = null, viewCount = 0, likeCount = 0, salesCount = 0,
-            creator = previewCreator, requiredTier = "FREE", canAccess = true,
+            creator = previewCreator, requiredTier = SubscriptionPlanTier.FREE, canAccess = true,
         ),
         quantity = 1
     ),
     OrderLine(
         product = Product(
             id = 2, name = "기계식 키보드 청축", description = "",
-            price = "65000", originalPrice = null, discountRate = null,
-            tags = emptyList(), stock = 5, status = "ACTIVE", isActive = true,
+            price = 65000L, originalPrice = null, discountRate = null,
+            tags = emptyList(), stock = 5, status = ProductStatus.ACTIVE, isActive = true,
             imageUrls = emptyList(), brandName = null, viewCount = 0, likeCount = 0, salesCount = 0,
-            creator = previewCreator, requiredTier = "FREE", canAccess = true,
+            creator = previewCreator, requiredTier = SubscriptionPlanTier.FREE, canAccess = true,
         ),
         quantity = 1
     ),
     OrderLine(
         product = Product(
             id = 3, name = "무선 충전 마우스", description = "",
-            price = "45000", originalPrice = null, discountRate = null,
-            tags = emptyList(), stock = 15, status = "ACTIVE", isActive = true,
+            price = 45000L, originalPrice = null, discountRate = null,
+            tags = emptyList(), stock = 15, status = ProductStatus.ACTIVE, isActive = true,
             imageUrls = emptyList(), brandName = null, viewCount = 0, likeCount = 0, salesCount = 0,
-            creator = previewCreator, requiredTier = "FREE", canAccess = true,
+            creator = previewCreator, requiredTier = SubscriptionPlanTier.FREE, canAccess = true,
         ),
         quantity = 1
     )
@@ -66,8 +67,8 @@ private val previewOrderLines = listOf(
 private val previewCoupons = listOf(
     Coupon(
         id = 1, creatorId = 1, code = "WELCOME10", name = "신규 가입 할인 쿠폰",
-        type = CouponType.PERCENTAGE, discountValue = "10", minOrderAmount = "10000",
-        maxDiscountAmount = "5000", status = UserCouponStatus.AVAILABLE,
+        type = CouponType.PERCENTAGE, discountValue = 10L, minOrderAmount = 10000L,
+        maxDiscountAmount = 5000L, status = UserCouponStatus.AVAILABLE,
         expiresAt = System.currentTimeMillis() + 30 * 86_400_000L, daysRemaining = 30
     )
 )

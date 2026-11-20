@@ -2,17 +2,12 @@ package com.ninezero.halo.feature.profile.presentation.section_detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,12 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.profile.domain.model.SectionType
@@ -147,21 +141,11 @@ internal fun SectionDetailScreenContent(
                         .padding(top = headerHeight),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = state.error,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(
-                            onClick = { onIntent(SectionDetailIntent.Refresh) },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.bounceClick()
-                        ) {
-                            Text("재시도")
-                        }
-                    }
+                    ListErrorState(
+                        title = if (state.sectionType == SectionType.PRODUCT_TAG) "상품을 불러오지 못했습니다" else "포스트를 불러오지 못했습니다",
+                        reason = state.error,
+                        onRetry = { onIntent(SectionDetailIntent.Refresh) }
+                    )
                 }
             }
             // 포스트 목록
@@ -189,7 +173,7 @@ internal fun SectionDetailScreenContent(
                         if (product.canAccess == false) {
                             onIntent(
                                 SectionDetailIntent.ShowRestrictedContentSnackbar(
-                                    "${product.requiredTier} 멤버십 전용 상품입니다"
+                                    "${product.requiredTier.label} 멤버십 전용 상품입니다"
                                 )
                             )
                         } else {

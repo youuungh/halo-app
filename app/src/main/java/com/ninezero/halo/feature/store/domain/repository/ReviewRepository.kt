@@ -1,9 +1,9 @@
 package com.ninezero.halo.feature.store.domain.repository
 
+import android.net.Uri
 import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.feature.store.domain.model.Review
 import com.ninezero.halo.feature.store.domain.model.ReviewSummary
-import okhttp3.MultipartBody
 
 interface ReviewRepository {
     /** 상품 리뷰 목록 조회 */
@@ -17,7 +17,7 @@ interface ReviewRepository {
         orderId: Int,
         rating: Int,
         content: String,
-        images: List<MultipartBody.Part>
+        images: List<Uri>
     ): Result<Review>
     /** 리뷰 상세 조회 */
     suspend fun getReviewById(reviewId: Int): Result<Review>
@@ -27,7 +27,7 @@ interface ReviewRepository {
         rating: Int?,
         content: String?,
         keepImages: List<String>?,
-        newImages: List<MultipartBody.Part>
+        newImages: List<Uri>
     ): Result<Review>
     /** 리뷰 삭제 */
     suspend fun deleteReview(reviewId: Int): Result<Unit>

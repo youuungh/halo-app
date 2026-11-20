@@ -27,7 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.button.ActionButton
-import com.ninezero.halo.core.ui.components.input.AuthTextField
+import com.ninezero.halo.core.ui.components.input.LabeledTextField
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
@@ -116,7 +116,7 @@ internal fun SocialUsernameScreenContent(
                     .padding(bottom = 24.dp)
             )
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.username,
                 onValueChange = { onIntent(SocialUsernameIntent.UsernameChanged(it)) },
                 label = "사용자 이름",

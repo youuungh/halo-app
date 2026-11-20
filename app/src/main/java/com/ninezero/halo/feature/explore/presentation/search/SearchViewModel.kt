@@ -150,7 +150,7 @@ class SearchViewModel @Inject constructor(
                     state.copy(
                         isSearching = false,
                         searchResults = result.creators,
-                        searchHasMore = result.hasMore,
+                        hasMoreSearchResults = result.hasMore,
                         searchPage = 1
                     )
                 }
@@ -167,7 +167,7 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun loadMoreSearchResults() = intent {
-        if (state.isSearching || !state.searchHasMore || state.searchQuery.isBlank()) return@intent
+        if (state.isSearching || !state.hasMoreSearchResults || state.searchQuery.isBlank()) return@intent
 
         val nextPage = state.searchPage + 1
         val query = state.searchQuery
@@ -180,7 +180,7 @@ class SearchViewModel @Inject constructor(
                     state.copy(
                         isSearching = false,
                         searchResults = (state.searchResults + result.creators).distinctBy { it.id },
-                        searchHasMore = result.hasMore,
+                        hasMoreSearchResults = result.hasMore,
                         searchPage = nextPage
                     )
                 }
@@ -199,7 +199,7 @@ class SearchViewModel @Inject constructor(
                 isSearching = false,
                 searchResults = emptyList(),
                 searchPage = 1,
-                searchHasMore = true,
+                hasMoreSearchResults = true,
                 isSearchFocused = false
             )
         }

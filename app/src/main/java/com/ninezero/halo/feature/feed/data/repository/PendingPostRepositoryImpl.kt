@@ -5,14 +5,15 @@ import android.net.Uri
 import com.ninezero.halo.core.database.dao.PendingPostDao
 import com.ninezero.halo.core.database.entity.PendingPostEntity
 import com.ninezero.halo.core.database.entity.UploadStatus
-import com.ninezero.halo.core.util.MediaPersistenceManager
-import com.ninezero.halo.core.util.MediaUtils
+import com.ninezero.halo.core.media.MediaCopyStore
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.feature.feed.data.mapper.isVideoMediaUrl
 import com.ninezero.halo.feature.feed.data.mapper.toPost
 import com.ninezero.halo.feature.feed.data.worker.PostUploadWorker
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.domain.model.PostType
 import com.ninezero.halo.feature.feed.domain.repository.PendingPostRepository
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +27,7 @@ import javax.inject.Inject
 class PendingPostRepositoryImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val pendingPostDao: PendingPostDao,
-    private val mediaPersistence: MediaPersistenceManager
+    private val mediaCopyStore: MediaCopyStore
 ) : PendingPostRepository {
 
     override suspend fun addPendingPost(
@@ -39,7 +40,7 @@ class PendingPostRepositoryImpl @Inject constructor(
         authorAvatarUrl: String?,
         tagIds: List<Int>?,
         sectionTagId: Int?,
-        requiredTier: String,
+        requiredTier: SubscriptionPlanTier,
         creatorId: Int?,
         isSecret: Boolean
     ): Long {
@@ -56,7 +57,7 @@ class PendingPostRepositoryImpl @Inject constructor(
             authorAvatarUrl = authorAvatarUrl,
             tagIds = tagIdsJson,
             sectionTagId = sectionTagId,
-            requiredTier = requiredTier,
+            requiredTier = requiredTier.name,
             creatorId = creatorId,
             isSecret = isSecret,
             status = UploadStatus.PENDING
@@ -65,27 +66,27 @@ class PendingPostRepositoryImpl @Inject constructor(
 
         try {
             // 재시도에도 쓰는 사본
-            val persisted = if (mediaUris.isNullOrEmpty()) {
+            val copied = if (mediaUris.isNullOrEmpty()) {
                 emptyList()
             } else {
-                mediaPersistence.persistForOwner(
+                mediaCopyStore.copyForOwner(
                     sourceUris = mediaUris,
-                    ownerType = MediaPersistenceManager.OwnerType.PENDING_POST,
+                    ownerType = MediaCopyStore.OwnerType.PENDING_POST,
                     ownerId = id
                 )
             }
             // 하나라도 못 옮기면 게시 안 함
-            if (persisted.size != mediaUris.orEmpty().size) throw IOException("게시 미디어 복사 실패")
-            val persistedJson: String? = if (persisted.isEmpty()) {
+            if (copied.size != mediaUris.orEmpty().size) throw IOException("게시 미디어 복사 실패")
+            val copiedJson: String? = if (copied.isEmpty()) {
                 null
             } else {
-                Json.encodeToString(persisted.map { it.toString() })
+                Json.encodeToString(copied.map { it.toString() })
             }
             // 원본 크기 파싱
-            val dimensionsJson: String? = if (persisted.isEmpty()) {
+            val dimensionsJson: String? = if (copied.isEmpty()) {
                 null
             } else {
-                val dimensions = persisted.map { uri ->
+                val dimensions = copied.map { uri ->
                     val (width, height) = if (isVideoMediaUrl(uri.toString())) {
                         MediaUtils.getVideoDimensions(context, uri)
                     } else {
@@ -97,12 +98,12 @@ class PendingPostRepositoryImpl @Inject constructor(
             }
 
             // 워커 시작 전에 미디어 먼저 저장
-            pendingPostDao.update(initialEntity.copy(id = id, mediaUris = persistedJson, mediaDimensions = dimensionsJson))
+            pendingPostDao.update(initialEntity.copy(id = id, mediaUris = copiedJson, mediaDimensions = dimensionsJson))
         } catch (e: Exception) {
             // 워커 없이 남는 대기 행·사본 정리
             withContext(NonCancellable) {
                 pendingPostDao.deleteById(id)
-                mediaPersistence.cleanupOwner(MediaPersistenceManager.OwnerType.PENDING_POST, id)
+                mediaCopyStore.cleanupOwner(MediaCopyStore.OwnerType.PENDING_POST, id)
             }
             throw e
         }

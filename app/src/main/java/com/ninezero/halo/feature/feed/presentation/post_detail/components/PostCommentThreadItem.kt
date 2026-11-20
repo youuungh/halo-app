@@ -33,16 +33,16 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.comment.CommentItem
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.Comment
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.UserPreview
 import com.ninezero.halo.feature.feed.presentation.components.ReplyCurveContainer
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 fun PostCommentThreadItem(
@@ -178,8 +178,8 @@ fun PostCommentThreadItem(
                 (listOfNotNull(firstAuthorPreview) + comment.replyPreviewUsers).take(2)
             }
             // 겹친 프사 + 아이콘 너비
-            val clusterItemCount = previewUsers.size + 1
-            val clusterWidth = ((clusterItemCount - 1) * overlapOffset.value + previewAvatarSize.value).dp
+            val stackItemCount = previewUsers.size + 1
+            val stackWidth = ((stackItemCount - 1) * overlapOffset.value + previewAvatarSize.value).dp
 
             // 답글 보기 행
             val viewRepliesContent: @Composable () -> Unit = {
@@ -198,7 +198,7 @@ fun PostCommentThreadItem(
                     // 왼쪽: 스택형 프로필
                     Box(
                         modifier = Modifier
-                            .width(clusterWidth)
+                            .width(stackWidth)
                             .height(previewAvatarSize)
                     ) {
                         // 프로필 사진들 + 아이콘
@@ -314,8 +314,8 @@ fun PostCommentThreadItem(
                             onMoreClick = { onMoreClick(reply.id) },
                             onProfileClick = { offset -> if (!reply.author.isDeleted) onProfileClick(reply.author.id, offset) },
                             onCommentClick = { onCommentClick(reply.id) },
-                            onMediaClick = { idx ->
-                                onMediaClick(reply.mediaAttachments.toViewerItems(), idx)
+                            onMediaClick = { mediaIndex ->
+                                onMediaClick(reply.mediaAttachments.toViewerItems(), mediaIndex)
                             },
                             isVideoPlaying = isVideoPlaying
                         )

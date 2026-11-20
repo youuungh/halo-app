@@ -1,5 +1,8 @@
 package com.ninezero.halo.feature.profile.data.repository
 
+import android.content.Context
+import android.net.Uri
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.core.model.PaginatedResult
 import com.ninezero.halo.core.model.UserSummary
@@ -10,29 +13,29 @@ import com.ninezero.halo.feature.feed.data.remote.dto.toDomain
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.profile.data.remote.api.ProfileApi
 import com.ninezero.halo.feature.profile.data.remote.dto.CommunityPostRequest
-import com.ninezero.halo.feature.profile.data.remote.dto.toCommentThreadData
+import com.ninezero.halo.feature.profile.data.remote.dto.toCommentThread
 import com.ninezero.halo.feature.profile.data.remote.dto.toCreatorStoreSection
 import com.ninezero.halo.feature.profile.data.remote.dto.toDomain
 import com.ninezero.halo.feature.profile.data.remote.dto.toDto
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
 import com.ninezero.halo.feature.profile.domain.model.CreatorProfileSection
 import com.ninezero.halo.feature.profile.domain.model.CreatorStoreSection
 import com.ninezero.halo.feature.profile.domain.model.UpdateProfileRequest
 import com.ninezero.halo.feature.profile.domain.model.UserProfile
 import com.ninezero.halo.feature.profile.domain.repository.ProfileRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import okhttp3.MultipartBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ProfileRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: ProfileApi
 ) : ProfileRepository {
 
-    // SSOT: 내 프로필 캐시
     private val myProfileFlow = MutableStateFlow<UserProfile?>(null)
 
     override suspend fun getUserProfile(userId: Int): Result<UserProfile> {
@@ -65,7 +68,9 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun uploadAvatar(avatarPart: MultipartBody.Part): Result<UserProfile> {
+    override suspend fun uploadAvatar(avatarUri: Uri): Result<UserProfile> {
+        val avatarPart = MediaUtils.createUploadPart(context, avatarUri, "avatar", "avatar")
+            ?: return Result.failure(IllegalStateException("이미지를 읽을 수 없습니다"))
         return safeApiCall {
             api.uploadAvatar(avatarPart)
         }.map { it.toDomain() }.also { result ->
@@ -79,11 +84,11 @@ class ProfileRepositoryImpl @Inject constructor(
         limit: Int,
         sort: String?,
         contextType: String?
-    ): Result<CursorPage<CommentThreadData>> {
+    ): Result<CursorPage<CommentThread>> {
         return safeApiCall {
             api.getUserCommentThreads(userId, cursor, limit, sort, contextType)
         }.map { response ->
-            CursorPage(response.items.map { it.toCommentThreadData() }, response.nextCursor)
+            CursorPage(response.items.map { it.toCommentThread() }, response.nextCursor)
         }
     }
 

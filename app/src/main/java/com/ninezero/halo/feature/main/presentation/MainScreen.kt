@@ -24,19 +24,19 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.ninezero.halo.core.ui.components.media.LocalAutoplayEnabled
 import com.ninezero.halo.core.ui.components.modifiers.LocalActiveViewerMediaKey
 import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransitionScope
-import com.ninezero.halo.core.ui.components.navigation.BottomBarAccessoryState
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
-import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarAccessory
+import com.ninezero.halo.core.ui.components.navigation.BottomBarSideButtonState
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
-import com.ninezero.halo.core.ui.components.profile_image_viewer.LocalProfileImageOverlayVisible
-import com.ninezero.halo.core.ui.components.profile_image_viewer.LocalProfileImageTransitionScope
-import com.ninezero.halo.core.ui.components.profile_image_viewer.ProfileImageViewerOverlay
-import com.ninezero.halo.core.ui.components.profile_image_viewer.ProfileImageViewerState
+import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarSideButton
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.LocalSnackbarRelay
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarRelay
+import com.ninezero.halo.core.ui.components.viewer.LocalProfileImageOverlayVisible
+import com.ninezero.halo.core.ui.components.viewer.LocalProfileImageTransitionScope
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.ProfileImageViewerOverlay
+import com.ninezero.halo.core.ui.components.viewer.ProfileImageViewerState
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
 import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostState
 import com.ninezero.halo.feature.chat.presentation.chat_list.ChatListScreen
@@ -103,7 +103,7 @@ fun MainScreen(
 
     val bottomBarBackdrop = rememberLayerBackdrop()
     val bottomBarReservePadding = BottomBarDefaults.reservedContentPadding()  // BottomNavBar 만큼 각 탭 스크롤이 예약할 패딩
-    val bottomBarAccessory = remember { BottomBarAccessoryState() }
+    val bottomBarSideButton = remember { BottomBarSideButtonState() }
 
     val viewerHostState = rememberViewerOverlayHostState()  // 이미지/비디오 뷰어 호스트
 
@@ -132,7 +132,7 @@ fun MainScreen(
             LocalMediaSharedTransitionScope provides this@SharedTransitionLayout,
             LocalActiveViewerMediaKey provides viewerHostState.activeMediaKey,
             LocalBottomBarPadding provides bottomBarReservePadding,
-            LocalBottomBarAccessory provides bottomBarAccessory
+            LocalBottomBarSideButton provides bottomBarSideButton
         ) {
             // 오버레이는 Scaffold 밖이라 바 위 풀스크린
             Box(modifier = Modifier.fillMaxSize()) {
@@ -143,7 +143,7 @@ fun MainScreen(
                         snackbarHost = {
                             DefaultSnackbarHost(
                                 hostState = snackbarHostState,
-                                modifier = Modifier.padding(bottom = BottomBarDefaults.PillFootprint)
+                                modifier = Modifier.padding(bottom = BottomBarDefaults.PillSpace)
                             )
                         },
                         contentWindowInsets = WindowInsets(0)
@@ -232,7 +232,7 @@ fun MainScreen(
                         hasUnreadMessage = state.hasUnreadMessage,
                         backdrop = bottomBarBackdrop,
                         // 탭 화면은 숨겨져도 남아 있어서 보이는 탭 것만
-                        accessory = bottomBarAccessory.accessory.takeIf { state.selectedTab == MainTab.PROFILE },
+                        sideButton = bottomBarSideButton.sideButton.takeIf { state.selectedTab == MainTab.PROFILE },
                         modifier = Modifier.align(Alignment.BottomCenter),
                         onTabSelected = { tab ->
                             if (tab == state.selectedTab && tab != MainTab.CREATE) {

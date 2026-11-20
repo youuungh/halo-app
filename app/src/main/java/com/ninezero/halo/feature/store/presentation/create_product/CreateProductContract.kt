@@ -71,11 +71,11 @@ data class CreateProductState(
     val originalPrice: String = "",
     val stock: String = "",
     val brandName: String = "",
-    val requiredTier: String = SubscriptionPlanTier.FREE.name,
+    val requiredTier: SubscriptionPlanTier = SubscriptionPlanTier.FREE,
     val planTiers: Set<SubscriptionPlanTier> = emptySet(),  // 활성 플랜이 있는 등급
     // 수정 폼을 연 때 값, 바뀐 경우만 보냄
     val loadedStock: Int? = null,
-    val loadedRequiredTier: String? = null,
+    val loadedRequiredTier: SubscriptionPlanTier? = null,
     // 대표 이미지
     val selectedImageUris: List<Uri> = emptyList(),
     val existingImageUrls: List<String> = emptyList(),
@@ -106,7 +106,7 @@ data class CreateProductState(
     // 나가기 확인, 기준은 새 상품이면 처음 값·수정이면 불러온 값
     val initialForm: ProductFormSnapshot? = null,
     val showExitConfirmDialog: Boolean = false,
-
+    // Snackbar
     val snackbarState: SnackbarState? = null
 ) {
     val hasUnsavedChanges: Boolean
@@ -121,7 +121,7 @@ data class ProductFormSnapshot(
     val originalPrice: String,
     val stock: String,
     val brandName: String,
-    val requiredTier: String,
+    val requiredTier: SubscriptionPlanTier,
     val selectedImageUris: List<Uri>,
     val existingImageUrls: List<String>,
     val removedImageUrls: List<String>,
@@ -155,11 +155,12 @@ sealed interface CreateProductIntent {
     data class UpdatePrice(val price: String) : CreateProductIntent
     data class UpdateOriginalPrice(val originalPrice: String) : CreateProductIntent
     data class UpdateStock(val stock: String) : CreateProductIntent
-    data class UpdateRequiredTier(val tier: String) : CreateProductIntent
+    data class UpdateRequiredTier(val tier: SubscriptionPlanTier) : CreateProductIntent
     data class AddImages(val uris: List<Uri>) : CreateProductIntent
     data class RemoveImage(val uri: Uri) : CreateProductIntent
     data class RemoveExistingImage(val url: String) : CreateProductIntent
     data object Save : CreateProductIntent
+    // Snackbar
     data object SnackbarDismissed : CreateProductIntent
     // 상세 콘텐츠 블록 에디터
     data class UpdateBlockText(val blockId: String, val text: String, val cursorPosition: Int) : CreateProductIntent

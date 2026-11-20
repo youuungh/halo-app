@@ -45,7 +45,7 @@ class NotificationViewModel @Inject constructor(
         when (intent) {
             is NotificationIntent.LoadNotifications -> loadNotifications()
             is NotificationIntent.RefreshNotifications -> refreshNotifications()
-            is NotificationIntent.RefreshOnResume -> refreshNotificationsQuietly()
+            is NotificationIntent.RefreshOnResume -> refreshNotificationsSilently()
             is NotificationIntent.LoadMore -> loadMore()
             is NotificationIntent.DeleteNotification -> deleteNotification(intent.notificationId)
             is NotificationIntent.UndoDelete -> undoDelete()
@@ -76,7 +76,7 @@ class NotificationViewModel @Inject constructor(
                     }
 
                     NotificationEvent.RefreshRequired -> refreshNotifications()
-                    is NotificationEvent.Connected -> refreshNotificationsQuietly()
+                    is NotificationEvent.Connected -> refreshNotificationsSilently()
                 }
             }
             .launchIn(viewModelScope)
@@ -132,7 +132,7 @@ class NotificationViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-    private fun refreshNotificationsQuietly() = intent {
+    private fun refreshNotificationsSilently() = intent {
         repository.getNotifications(cursor = null, limit = 20)
             .onSuccess { result ->
                 listGeneration.next()

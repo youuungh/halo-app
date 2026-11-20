@@ -2,18 +2,13 @@ package com.ninezero.halo.feature.notification.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,10 +27,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.notification.domain.model.Notification
@@ -167,21 +162,11 @@ internal fun NotificationScreenContent(
                             .padding(top = headerHeight),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(NotificationIntent.LoadNotifications) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "알림을 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = { onIntent(NotificationIntent.LoadNotifications) }
+                        )
                     }
                 }
 
@@ -198,66 +183,73 @@ internal fun NotificationScreenContent(
                             .hazeSource(hazeState),
                         contentPadding = PaddingValues(top = headerHeight, bottom = 16.dp)
                     ) {
-                        if (state.notifications.isEmpty() && !state.isLoading) {
-                            item(key = "empty") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillParentMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "아직 알림이 없어요",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                        grouped.forEach { (section, notifications) ->
+                            item(key = "section_$section", contentType = "section_header") {
+                                NotificationSectionHeader(
+                                    title = section,
+                                    modifier = Modifier.animateItem()
+                                )
                             }
-                        } else {
-                            grouped.forEach { (section, notifications) ->
-                                item(key = "section_$section", contentType = "section_header") {
-                                    NotificationSectionHeader(
-                                        title = section,
-                                        modifier = Modifier.animateItem()
-                                    )
-                                }
 
-                                items(
-                                    items = notifications,
-                                    key = { it.id },
-                                    contentType = { "notification" }
-                                ) { notification ->
-                                    NotificationItem(
-                                        notification = notification,
-                                        onClick = {
+                            items(
+                                items = notifications,
+                                key = { it.id },
+                                contentType = { "notification" }
+                            ) { notification ->
+                                NotificationItem(
+                                    notification = notification,
+                                    // 열린 칸이 있으면 첫 탭은 닫기만
+                                    onClick = {
+                                        if (swipedOpenId != -1) {
                                             swipedOpenId = -1
+                                        } else {
                                             onIntent(NotificationIntent.NavigateToTarget(notification))
-                                        },
-                                        onDelete = {
+                                        }
+                                    },
+                                    onDelete = {
+                                        swipedOpenId = -1
+                                        onIntent(NotificationIntent.DeleteNotification(notification.id))
+                                    },
+                                    onProfileClick = {
+                                        if (swipedOpenId != -1) {
                                             swipedOpenId = -1
-                                            onIntent(NotificationIntent.DeleteNotification(notification.id))
-                                        },
-                                        onProfileClick = {
-                                            swipedOpenId = -1
-                                            notification.senderId?.let { senderId ->
-                                                // 아바타 탭은 프로필로, deepLink 비움
-                                                onIntent(NotificationIntent.NavigateToTarget(
-                                                    notification.copy(targetType = "USER", targetId = senderId, deepLink = null)
-                                                ))
-                                            }
-                                        },
-                                        isSwipeOpen = swipedOpenId == notification.id,
-                                        onSwipeOpen = { swipedOpenId = notification.id },
-                                        modifier = Modifier.animateItem()
-                                    )
-                                }
+                                            return@NotificationItem
+                                        }
+                                        notification.senderId?.let { senderId ->
+                                            // 아바타 탭은 프로필로, deepLink 비움
+                                            onIntent(NotificationIntent.NavigateToTarget(
+                                                notification.copy(targetType = "USER", targetId = senderId, deepLink = null)
+                                            ))
+                                        }
+                                    },
+                                    isSwipeOpen = swipedOpenId == notification.id,
+                                    onSwipeStart = { if (swipedOpenId != notification.id) swipedOpenId = -1 },
+                                    onSwipeOpen = { swipedOpenId = notification.id },
+                                    onSwipeClose = { if (swipedOpenId == notification.id) swipedOpenId = -1 },
+                                    modifier = Modifier.animateItem()
+                                )
                             }
+                        }
 
-                            // 페이지네이션 로딩
-                            if (state.isLoading && state.notifications.isNotEmpty()) {
-                                items(3) {
-                                    NotificationItemSkeleton()
-                                }
+                        // 페이지네이션 로딩
+                        if (state.isLoading && state.notifications.isNotEmpty()) {
+                            items(3) {
+                                NotificationItemSkeleton()
                             }
+                        }
+                    }
+
+                    // 다른 목록 화면처럼 화면 가운데
+                    if (state.notifications.isEmpty() && !state.isLoading) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "아직 알림이 없어요",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -289,8 +281,7 @@ internal fun NotificationScreenContent(
 private fun groupNotificationsBySection(
     notifications: List<Notification>
 ): List<Pair<String, List<Notification>>> {
-    // 반드시 Long, Int 곱은 오버플로
-    val dayMillis = 86_400_000L
+    val dayMillis = 86_400_000L  // 반드시 Long, Int 곱은 오버플로
     val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     val yesterdayStart = todayStart - dayMillis
     val weekStart = todayStart - 6 * dayMillis

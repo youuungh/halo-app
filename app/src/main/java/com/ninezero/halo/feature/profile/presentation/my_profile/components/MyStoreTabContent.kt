@@ -24,12 +24,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.components.section.ProductThumbnail
 import com.ninezero.halo.core.ui.components.section.ProductThumbnailRow
 import com.ninezero.halo.core.ui.components.section.ProductThumbnailSkeleton
-import com.ninezero.halo.core.ui.components.section.SectionHeader
+import com.ninezero.halo.core.ui.components.section.ProfileSectionHeader
 import com.ninezero.halo.feature.profile.domain.model.SectionType
 import com.ninezero.halo.feature.profile.presentation.components.ProductSortChip
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTabRowHeight
@@ -39,6 +40,7 @@ import com.ninezero.halo.feature.profile.presentation.my_profile.MyProfileState
 @Composable
 fun MyStoreTabContent(
     state: MyProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onIntent: (MyProfileIntent) -> Unit,
     onProductClick: (Int) -> Unit
@@ -58,7 +60,7 @@ fun MyStoreTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight + 16.dp, bottom = LocalBottomBarPadding.current)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight + 16.dp, bottom = LocalBottomBarPadding.current)
         ) {
             items(3) {
                 Row(
@@ -78,7 +80,7 @@ fun MyStoreTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
         ) {
             item(key = "empty_store") {
                 Box(
@@ -99,13 +101,13 @@ fun MyStoreTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
         ) {
             // 상단: 태그 섹션
             if (productSections.isNotEmpty()) {
                 productSections.forEach { section ->
                     item(key = "section_header_${section.tag.id}") {
-                        SectionHeader(
+                        ProfileSectionHeader(
                             title = section.tag.name,
                             showViewAll = section.hasMore,
                             onViewAllClick = {
@@ -146,8 +148,8 @@ fun MyStoreTabContent(
                     ) {
                         Text(
                             text = "전체 상품",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
                         )
                         ProductSortChip(
                             currentSort = state.storeSortType,
@@ -202,7 +204,7 @@ fun MyStoreTabContent(
                     }
 
                     // 추가 로딩
-                    if (state.storeHasMore) {
+                    if (state.hasMoreStoreProducts) {
                         item(key = "load_more_trigger") {
                             // 목록 수당 한 번, InfiniteScrollTrigger와 같은 규칙
                             var firedAtCount by remember { mutableStateOf<Int?>(null) }

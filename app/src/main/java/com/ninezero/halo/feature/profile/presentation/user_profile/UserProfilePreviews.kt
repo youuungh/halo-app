@@ -8,15 +8,17 @@ import com.ninezero.halo.core.ui.preview.previewAuthor
 import com.ninezero.halo.core.ui.preview.previewPost
 import com.ninezero.halo.core.ui.preview.previewUserProfile
 import com.ninezero.halo.core.ui.preview.previewUserSummary
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
-import com.ninezero.halo.feature.profile.domain.model.PostSummaryData
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
 import com.ninezero.halo.feature.profile.domain.model.PostTagSection
 import com.ninezero.halo.feature.profile.domain.model.ProductTagSection
 import com.ninezero.halo.feature.profile.domain.model.SectionTag
-import com.ninezero.halo.feature.profile.domain.model.ThreadCommentData
-import com.ninezero.halo.feature.profile.domain.model.UserSummaryData
+import com.ninezero.halo.feature.profile.domain.model.ThreadComment
+import com.ninezero.halo.feature.profile.domain.model.ThreadPost
+import com.ninezero.halo.feature.profile.domain.model.ThreadUser
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTab
 import com.ninezero.halo.feature.store.domain.model.Product
+import com.ninezero.halo.feature.store.domain.model.ProductStatus
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 
 private val previewAuthor = previewAuthor(2, "creator_user", "크리에이터")
 
@@ -81,20 +83,20 @@ private val previewProducts = List(6) { index ->
         id = index + 1,
         name = "상품 ${index + 1}",
         description = "상품 설명입니다.",
-        price = "${10000 + index * 5000}.00",
-        originalPrice = if (index % 2 == 0) "${15000 + index * 5000}.00" else null,
+        price = 10000L + index * 5000,
+        originalPrice = if (index % 2 == 0) 15000L + index * 5000 else null,
         discountRate = if (index % 2 == 0) 20 else null,
         imageUrls = emptyList(),
         brandName = "브랜드",
         tags = listOf("태그1", "태그2"),
         stock = 100,
-        status = "ACTIVE",
+        status = ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 100,
         likeCount = 10,
         salesCount = 5,
         creator = previewCreator,
-        requiredTier = "FREE",
+        requiredTier = SubscriptionPlanTier.FREE,
         canAccess = true,
     )
 }
@@ -111,12 +113,12 @@ private val previewProductSections = listOf(
 )
 
 private val previewCommentThreads = listOf(
-    CommentThreadData(
+    CommentThread(
         comments = listOf(
-            ThreadCommentData(
+            ThreadComment(
                 id = 101,
                 content = "이 글 정말 유익하네요! 저도 비슷한 경험이 있어서 공감됩니다.",
-                author = UserSummaryData(
+                author = ThreadUser(
                     id = 2,
                     username = "creator_user",
                     displayName = "크리에이터",
@@ -130,11 +132,11 @@ private val previewCommentThreads = listOf(
                 isProfileUser = true
             )
         ),
-        post = PostSummaryData(
+        post = ThreadPost(
             id = 201,
             excerpt = "오늘 처음으로 마라톤 완주했습니다!",
             mediaAttachments = emptyList(),
-            author = UserSummaryData(
+            author = ThreadUser(
                 id = 10,
                 username = "runner_kim",
                 displayName = "러너킴",
@@ -142,12 +144,12 @@ private val previewCommentThreads = listOf(
             )
         )
     ),
-    CommentThreadData(
+    CommentThread(
         comments = listOf(
-            ThreadCommentData(
+            ThreadComment(
                 id = 102,
                 content = "이 영상 정말 재미있게 봤어요!",
-                author = UserSummaryData(
+                author = ThreadUser(
                     id = 11,
                     username = "viewer1",
                     displayName = "시청자1",
@@ -160,16 +162,16 @@ private val previewCommentThreads = listOf(
                 isLiked = false,
                 isProfileUser = false
             ),
-            ThreadCommentData(
+            ThreadComment(
                 id = 103,
                 content = "감사합니다! 다음 영상도 기대해주세요 😊",
-                author = UserSummaryData(
+                author = ThreadUser(
                     id = 2,
                     username = "creator_user",
                     displayName = "크리에이터",
                     avatarUrl = null
                 ),
-                replyTo = UserSummaryData(
+                replyTo = ThreadUser(
                     id = 11,
                     username = "viewer1",
                     displayName = "시청자1",
@@ -182,11 +184,11 @@ private val previewCommentThreads = listOf(
                 isProfileUser = true
             )
         ),
-        post = PostSummaryData(
+        post = ThreadPost(
             id = 202,
             excerpt = "새로운 브이로그가 업로드되었습니다! 오늘은 제주도 여행기예요.",
             mediaAttachments = emptyList(),
-            author = UserSummaryData(
+            author = ThreadUser(
                 id = 2,
                 username = "creator_user",
                 displayName = "크리에이터",
@@ -194,12 +196,12 @@ private val previewCommentThreads = listOf(
             )
         )
     ),
-    CommentThreadData(
+    CommentThread(
         comments = listOf(
-            ThreadCommentData(
+            ThreadComment(
                 id = 104,
                 content = "좋은 정보 공유 감사합니다! 덕분에 많이 배웠어요.",
-                author = UserSummaryData(
+                author = ThreadUser(
                     id = 2,
                     username = "creator_user",
                     displayName = "크리에이터",
@@ -213,11 +215,11 @@ private val previewCommentThreads = listOf(
                 isProfileUser = true
             )
         ),
-        post = PostSummaryData(
+        post = ThreadPost(
             id = 203,
             excerpt = "커뮤니티에서 추천받은 맛집 리스트입니다.",
             mediaAttachments = emptyList(),
-            author = UserSummaryData(
+            author = ThreadUser(
                 id = 20,
                 username = "foodie",
                 displayName = "맛집탐험가",

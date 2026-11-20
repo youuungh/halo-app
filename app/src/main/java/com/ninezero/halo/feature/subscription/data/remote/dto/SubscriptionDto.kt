@@ -3,6 +3,8 @@ package com.ninezero.halo.feature.subscription.data.remote.dto
 import com.ninezero.halo.core.network.PagedDto
 import com.ninezero.halo.core.network.dto.UserSummaryDto
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toAmountLong
+import com.ninezero.halo.core.util.toAmountLongOrNull
 import com.ninezero.halo.feature.subscription.domain.model.Subscription
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionListResult
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
@@ -77,7 +79,7 @@ fun SubscriptionDto.toDomain(): Subscription {
         creatorAvatarUrl = creatorAvatarUrl,
         creatorRole = creatorRole,
         planName = planName,
-        planPrice = planPrice,
+        planPrice = planPrice.toAmountLong(),
         status = try {
             SubscriptionStatus.valueOf(status)
         } catch (e: Exception) {
@@ -112,6 +114,6 @@ fun UserTierResponseDto.toDomain(): UserTierInfo {
         },
         isSubscribed = isSubscribed,
         planName = planName,
-        planPrice = planPrice
+        planPrice = planPrice.toAmountLongOrNull()
     )
 }

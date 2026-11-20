@@ -1,6 +1,6 @@
 package com.ninezero.halo.feature.settings.presentation
 
-import com.ninezero.halo.core.local.ThemeMode
+import com.ninezero.halo.core.datastore.ThemeMode
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 
 data class SettingsState(
@@ -8,7 +8,7 @@ data class SettingsState(
     val showMyAccountSheet: Boolean = false,
     val showLogoutDialog: Boolean = false,
     val showThemeSheet: Boolean = false,
-    val themeMode: Int = ThemeMode.SYSTEM,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val snackbarState: SnackbarState? = null
 )
 
@@ -24,9 +24,8 @@ sealed interface SettingsIntent {
     data object PaymentMethodsClick : SettingsIntent
     data object InfoClick : SettingsIntent
     data object ThemeClick : SettingsIntent
-    data class ChangeTheme(val mode: Int) : SettingsIntent
+    data class ChangeTheme(val mode: ThemeMode) : SettingsIntent
     data object DismissThemeSheet : SettingsIntent
-
     // 로그아웃
     data object LogoutClick : SettingsIntent
     data object ConfirmLogout : SettingsIntent

@@ -12,28 +12,21 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,23 +40,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.picker.WheelPicker
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
-import dev.chrisbanes.haze.HazeProgressive
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import java.time.LocalDate
@@ -88,12 +74,11 @@ fun DatePickerBottomSheet(
     var selectedMinute by remember { mutableIntStateOf(initialDate.minute) }
     val minLocalDate = remember(minDate) { minDate?.toLocalDate() }
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
-        modifier = modifier
+        modifier = modifier,
+        showDragHandle = false  // 헤더 안에 있음
     ) {
         DatePickerBottomSheetContent(
             title = title,
@@ -146,7 +131,7 @@ private fun DatePickerBottomSheetContent(
                 .fillMaxWidth()
                 .hazeSource(hazeState)
                 .padding(top = headerHeight)
-                .navigationBarsPadding()
+                .padding(bottom = 8.dp)
         ) {
             CustomCalendar(
                 selectedDate = selectedDate,
@@ -169,65 +154,13 @@ private fun DatePickerBottomSheetContent(
             }
         }
 
-        // 헤더
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1f,
-                        endIntensity = 0f
-                    )
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { }
-                }
-                .onGloballyPositioned { coordinates ->
-                    headerHeight = with(density) { coordinates.size.height.toDp() }
-                }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                GlassIconButton(
-                    onClick = onDismiss,
-                    icon = painterResource(R.drawable.ic_close),
-                    contentDescription = "닫기",
-                    hazeState = hazeState,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
-                    size = 36.dp,
-                    iconSize = 20.dp
-                )
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
-                )
-
-                GlassIconButton(
-                    onClick = onConfirm,
-                    icon = painterResource(R.drawable.ic_check),
-                    contentDescription = "확인",
-                    hazeState = hazeState,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
-                    size = 36.dp,
-                    iconSize = 20.dp
-                )
-            }
-        }
+        SheetHeader(
+            title = title,
+            onClose = onDismiss,
+            hazeState = hazeState,
+            onHeightChange = { headerHeight = it },
+            onConfirm = onConfirm
+        )
     }
 }
 
@@ -346,7 +279,7 @@ private fun CalendarMonthNavigation(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .bounceClick()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .clickable(onClick = onMonthTextClick)
                 .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
@@ -435,8 +368,8 @@ private fun CalendarGrid(
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                repeat(7) { col ->
-                    val cellIndex = row * 7 + col
+                repeat(7) { column ->
+                    val cellIndex = row * 7 + column
                     if (cellIndex < startDayOfWeek || dayCounter > daysInMonth) {
                         Box(modifier = Modifier.weight(1f).aspectRatio(1f))
                     } else {
@@ -444,8 +377,8 @@ private fun CalendarGrid(
                         val isSelected = date == selectedDate
                         val isToday = date == today
                         val isDisabled = minDate != null && date.isBefore(minDate)
-                        val isSunday = col == 0
-                        val isSaturday = col == 6
+                        val isSunday = column == 0
+                        val isSaturday = column == 6
 
                         CalendarDayCell(
                             day = dayCounter,
@@ -559,7 +492,7 @@ private fun DateWheelPicker(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .bounceClick()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .clickable(onClick = onBackToCalendar)
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {

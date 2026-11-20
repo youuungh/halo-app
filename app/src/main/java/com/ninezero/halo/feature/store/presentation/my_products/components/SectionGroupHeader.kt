@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,17 +25,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import dev.chrisbanes.haze.HazeState
 
 @Composable
 fun SectionGroupHeader(
+    hazeState: HazeState?,
     tagName: String,
     itemCount: Int,
     isCollapsed: Boolean,
@@ -95,7 +96,6 @@ fun SectionGroupHeader(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
-                    .offset(y = 1.dp)
                     .background(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(50)
@@ -110,7 +110,7 @@ fun SectionGroupHeader(
                 contentDescription = if (isCollapsed) "펼치기" else "접기",
                 modifier = Modifier
                     .size(16.dp)
-                    .rotate(rotationAngle),
+                    .graphicsLayer { rotationZ = rotationAngle },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -131,6 +131,7 @@ fun SectionGroupHeader(
 
                 if (showColorPicker) {
                     ColorPickerPopup(
+                        hazeState = hazeState,
                         selectedColor = groupColor,
                         onColorSelected = onColorSelected,
                         onDismiss = onDismissColorPicker
@@ -148,6 +149,7 @@ private fun SectionGroupHeaderPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             Column {
                 SectionGroupHeader(
+                    hazeState = null,
                     tagName = "이어폰",
                     itemCount = 12,
                     isCollapsed = false,
@@ -159,6 +161,7 @@ private fun SectionGroupHeaderPreview() {
                     onDismissColorPicker = {}
                 )
                 SectionGroupHeader(
+                    hazeState = null,
                     tagName = "색상 미지정 그룹",
                     itemCount = 3,
                     isCollapsed = true,

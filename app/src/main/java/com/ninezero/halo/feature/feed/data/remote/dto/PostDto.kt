@@ -4,13 +4,14 @@ import com.ninezero.halo.core.network.CursorDto
 import com.ninezero.halo.core.network.PagedDto
 import com.ninezero.halo.core.network.dto.UserSummaryDto
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.feed.domain.model.BookmarkItem
 import com.ninezero.halo.feature.feed.domain.model.BookmarkTargetType
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
-import com.ninezero.halo.feature.feed.domain.model.NewMediaItem
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -52,14 +53,7 @@ data class VideoUploadPrepareRequest(
 )
 
 /** multipart items 파트 */
-fun List<NewMediaItem>.toItemsPart(): RequestBody = Json.encodeToString(
-    map { item ->
-        when (item) {
-            is NewMediaItem.FilePart -> MediaItemRefDto(fileIndex = item.index)
-            is NewMediaItem.DirectUpload -> MediaItemRefDto(uploadId = item.uploadId)
-        }
-    }
-).toRequestBody("text/plain".toMediaType())
+fun List<MediaItemRefDto>.toItemsPart(): RequestBody = Json.encodeToString(this).toRequestBody("text/plain".toMediaType())
 
 @Serializable
 data class ProductSummaryDto(
@@ -82,11 +76,11 @@ data class PostDto(
 
     val content: String,
 
-    val postType: String = "TEXT",  // TEXT, IMAGE, VIDEO, PRODUCT
+    val postType: String = "TEXT",  // TEXT·IMAGE·VIDEO·PRODUCT
 
-    val contextType: String = "GENERAL",  // GENERAL, CREATOR_FEED, COMMUNITY
+    val contextType: String = "GENERAL",  // GENERAL·CREATOR_FEED·COMMUNITY
 
-    val status: String = "ACTIVE",  // ACTIVE, HIDDEN
+    val status: String = "ACTIVE",  // ACTIVE·HIDDEN
 
     val mediaItems: List<MediaItemDto> = emptyList(),
 
@@ -198,7 +192,7 @@ fun PostDto.toDomain(): Post {
         isLiked = isLiked,
         isBookmarked = isBookmarked,
         isPinned = isPinned,
-        requiredTier = requiredTier,
+        requiredTier = requiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE),
         isSecret = isSecret,
         canAccess = canAccess,
         isBlinded = isBlinded,
@@ -237,5 +231,5 @@ data class FeedResponse(
 
     val hasPrevious: Boolean = false,
 
-    val feedType: String = "EXPLORE",  // EXPLORE, HASHTAG, TRENDING
+    val feedType: String = "EXPLORE",  // EXPLORE·HASHTAG·TRENDING
 )

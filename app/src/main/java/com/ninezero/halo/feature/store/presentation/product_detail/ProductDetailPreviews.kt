@@ -19,6 +19,7 @@ import com.ninezero.halo.feature.coupon.domain.model.Coupon
 import com.ninezero.halo.feature.coupon.domain.model.CouponType
 import com.ninezero.halo.feature.coupon.domain.model.UserCouponStatus
 import com.ninezero.halo.feature.store.domain.model.Product
+import com.ninezero.halo.feature.store.domain.model.ProductStatus
 import com.ninezero.halo.feature.store.domain.model.Review
 import com.ninezero.halo.feature.store.domain.model.ReviewSummary
 import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductDetailSkeleton
@@ -32,27 +33,27 @@ private val previewCreator = previewUserSummary(
 )
 
 // 프리뷰 전용 이미지
-private val testImageUrl = "android.resource://com.ninezero.halo/${R.drawable.ic_img_placeholder}"
+private val testImageUrl = "android.resource://com.ninezero.halo/${R.drawable.ic_image_placeholder}"
 
 private val previewProduct = Product(
     id = 1,
     name = "프리미엄 무선 이어폰 Pro Max",
     description = "최고급 사운드 품질의 무선 이어폰입니다.\n노이즈 캔슬링 기능과 30시간 배터리를 지원합니다.\n인체공학적 설계로 편안한 착용감을 제공합니다.\n최신 블루투스 5.3 기술을 적용하여 안정적인 연결을 제공합니다.\nIPX5 방수 등급으로 운동 시에도 안심하고 사용할 수 있습니다.",
-    price = "89000",
-    originalPrice = "129000",
+    price = 89000L,
+    originalPrice = 129000L,
     discountRate = 31,
     imageUrls = listOf(testImageUrl, testImageUrl, testImageUrl),
     detailContent = emptyList(),
     brandName = "SoundWave",
     tags = listOf("이어폰", "무선", "노이즈캔슬링"),
     stock = 50,
-    status = "ACTIVE",
+    status = ProductStatus.ACTIVE,
     isActive = true,
     viewCount = 1234,
     likeCount = 89,
     salesCount = 567,
     creator = previewCreator,
-    requiredTier = "FREE",
+    requiredTier = SubscriptionPlanTier.FREE,
     canAccess = true,
 )
 
@@ -94,7 +95,7 @@ private val previewCreatorProducts = listOf(
         id = 11,
         name = "블루투스 스피커 미니",
         description = "휴대성과 음질을 모두 잡은 컴팩트 스피커입니다.",
-        price = "45000",
+        price = 45000L,
         originalPrice = null,
         discountRate = null,
         imageUrls = listOf(testImageUrl),
@@ -102,41 +103,41 @@ private val previewCreatorProducts = listOf(
         brandName = "SoundWave",
         tags = listOf("스피커", "휴대용"),
         stock = 30,
-        status = "ACTIVE",
+        status = ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 820,
         likeCount = 41,
         salesCount = 205,
         creator = previewCreator,
-        requiredTier = "FREE",
+        requiredTier = SubscriptionPlanTier.FREE,
         canAccess = true,
     ),
     Product(
         id = 12,
         name = "노이즈캔슬링 헤드폰",
         description = "장시간 착용해도 편안한 오버이어 헤드폰입니다.",
-        price = "159000",
-        originalPrice = "199000",
+        price = 159000L,
+        originalPrice = 199000L,
         discountRate = 20,
         imageUrls = listOf(testImageUrl),
         detailContent = emptyList(),
         brandName = "SoundWave",
         tags = listOf("헤드폰", "노이즈캔슬링"),
         stock = 12,
-        status = "ACTIVE",
+        status = ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 2140,
         likeCount = 132,
         salesCount = 88,
         creator = previewCreator,
-        requiredTier = "FREE",
+        requiredTier = SubscriptionPlanTier.FREE,
         canAccess = true,
     ),
     Product(
         id = 13,
         name = "USB-C 고속 충전기",
         description = "65W 출력으로 노트북까지 충전 가능합니다.",
-        price = "29000",
+        price = 29000L,
         originalPrice = null,
         discountRate = null,
         imageUrls = listOf(testImageUrl),
@@ -144,13 +145,13 @@ private val previewCreatorProducts = listOf(
         brandName = "SoundWave",
         tags = listOf("충전기"),
         stock = 0,
-        status = "ACTIVE",
+        status = ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 640,
         likeCount = 27,
         salesCount = 310,
         creator = previewCreator,
-        requiredTier = "FREE",
+        requiredTier = SubscriptionPlanTier.FREE,
         canAccess = true,
     )
 )
@@ -160,7 +161,7 @@ private val previewRelatedProducts = listOf(
         id = 21,
         name = "이어폰 실리콘 팁 세트",
         description = "3가지 사이즈로 구성된 교체용 팁입니다.",
-        price = "9000",
+        price = 9000L,
         originalPrice = null,
         discountRate = null,
         imageUrls = listOf(testImageUrl),
@@ -168,41 +169,41 @@ private val previewRelatedProducts = listOf(
         brandName = "FitEar",
         tags = listOf("액세서리"),
         stock = 100,
-        status = "ACTIVE",
+        status = ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 310,
         likeCount = 12,
         salesCount = 150,
         creator = previewUserSummary(id = 2, username = "fitear", displayName = "핏이어"),
-        requiredTier = "FREE",
+        requiredTier = SubscriptionPlanTier.FREE,
         canAccess = true,
     ),
     Product(
         id = 22,
         name = "휴대용 이어폰 케이스",
         description = "충격에 강한 하드 케이스입니다.",
-        price = "15000",
-        originalPrice = "19000",
+        price = 15000L,
+        originalPrice = 19000L,
         discountRate = 21,
         imageUrls = listOf(testImageUrl),
         detailContent = emptyList(),
         brandName = "CarryOn",
         tags = listOf("케이스", "휴대용"),
         stock = 45,
-        status = "ACTIVE",
+        status = ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 520,
         likeCount = 33,
         salesCount = 96,
         creator = previewUserSummary(id = 3, username = "carryon", displayName = "캐리온"),
-        requiredTier = "FREE",
+        requiredTier = SubscriptionPlanTier.FREE,
         canAccess = true,
     ),
     Product(
         id = 23,
         name = "멤버십 전용 오디오 케이블",
         description = "구독자만 구매할 수 있는 한정 케이블입니다.",
-        price = "39000",
+        price = 39000L,
         originalPrice = null,
         discountRate = null,
         imageUrls = listOf(testImageUrl),
@@ -210,13 +211,13 @@ private val previewRelatedProducts = listOf(
         brandName = "SoundWave",
         tags = listOf("케이블", "한정"),
         stock = 8,
-        status = "ACTIVE",
+        status = ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 180,
         likeCount = 21,
         salesCount = 14,
         creator = previewCreator,
-        requiredTier = "TIER2",
+        requiredTier = SubscriptionPlanTier.TIER2,
         canAccess = false,
     )
 )
@@ -227,7 +228,7 @@ private val previewCoupon = Coupon(
     code = "SAVE10",
     name = "10% 할인 쿠폰",
     type = CouponType.PERCENTAGE,
-    discountValue = "10",
+    discountValue = 10L,
     minOrderAmount = null,
     maxDiscountAmount = null,
     status = UserCouponStatus.AVAILABLE,
@@ -262,7 +263,7 @@ private fun ProductDetailDefaultPreview() {
 @Composable
 private fun ProductDetailScreenContentPreview() {
     HaloScreenPreview {
-        var showCouponPopup by remember { mutableStateOf(false) }
+        var isCouponExpanded by remember { mutableStateOf(false) }
         ProductDetailScreenContent(
             state = ProductDetailState(
                 product = previewProduct.copy(stock = 3),
@@ -270,10 +271,9 @@ private fun ProductDetailScreenContentPreview() {
                 recentReviews = previewReviews,
                 creatorProducts = previewCreatorProducts,
                 relatedProducts = previewRelatedProducts,
-                selectedDetailTab = 0,
                 isDetailExpanded = false,
                 bestCoupon = previewCoupon,
-                showCouponDetailDialog = showCouponPopup,
+                isCouponDetailExpanded = isCouponExpanded,
                 userTierInfo = UserTierInfo(
                     tier = SubscriptionPlanTier.TIER1,
                     isSubscribed = true
@@ -281,8 +281,7 @@ private fun ProductDetailScreenContentPreview() {
             ),
             onIntent = { intent ->
                 when (intent) {
-                    is ProductDetailIntent.ShowCouponDetailDialog -> showCouponPopup = true
-                    is ProductDetailIntent.DismissCouponDetailDialog -> showCouponPopup = false
+                    is ProductDetailIntent.ToggleCouponDetail -> isCouponExpanded = !isCouponExpanded
                     else -> {}
                 }
             },
@@ -299,7 +298,7 @@ private fun ProductDetailOutOfStockPreview() {
             state = ProductDetailState(
                 product = previewProduct.copy(
                     stock = 0,
-                    status = "SOLD_OUT",
+                    status = ProductStatus.SOLD_OUT,
                     isActive = true
                 ),
                 reviewSummary = previewReviewSummary,
@@ -321,7 +320,7 @@ private fun ProductDetailDiscontinuedPreview() {
             state = ProductDetailState(
                 product = previewProduct.copy(
                     stock = 0,
-                    status = "DISCONTINUED",
+                    status = ProductStatus.DISCONTINUED,
                     isActive = false
                 ),
                 reviewSummary = previewReviewSummary,

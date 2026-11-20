@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.profile.domain.model
 
+
 data class UserProfile(
     val userId: Int,
     val role: String,
@@ -20,14 +21,12 @@ data class UserProfile(
     val isBlockedByOther: Boolean = false,  // 안내 문구 분기
     val createdAt: Long,
     val updatedAt: Long,
-
     // 앱 전용 필드
     val username: String = "",
     val isFollowing: Boolean = false,
     val isSubscribed: Boolean = false,
     val isNotifyEnabled: Boolean = false,
-    val isOwnProfile: Boolean = false,
-    val coverImageUrl: String? = null
+    val isOwnProfile: Boolean = false
 )
 
 data class UpdateProfileRequest(

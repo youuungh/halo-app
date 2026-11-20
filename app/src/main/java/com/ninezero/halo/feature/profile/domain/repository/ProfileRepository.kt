@@ -1,16 +1,16 @@
 package com.ninezero.halo.feature.profile.domain.repository
 
+import android.net.Uri
 import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.core.model.PaginatedResult
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.feature.feed.domain.model.Post
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
 import com.ninezero.halo.feature.profile.domain.model.CreatorProfileSection
 import com.ninezero.halo.feature.profile.domain.model.CreatorStoreSection
 import com.ninezero.halo.feature.profile.domain.model.UpdateProfileRequest
 import com.ninezero.halo.feature.profile.domain.model.UserProfile
 import kotlinx.coroutines.flow.Flow
-import okhttp3.MultipartBody
 
 interface ProfileRepository {
     /** 프로필 조회 */
@@ -32,7 +32,7 @@ interface ProfileRepository {
     suspend fun updateProfile(request: UpdateProfileRequest): Result<UserProfile>
 
     /** 프로필 이미지 업로드 */
-    suspend fun uploadAvatar(avatarPart: MultipartBody.Part): Result<UserProfile>
+    suspend fun uploadAvatar(avatarUri: Uri): Result<UserProfile>
 
     /** 사용자 댓글 스레드 조회 */
     suspend fun getUserCommentThreads(
@@ -41,7 +41,7 @@ interface ProfileRepository {
         limit: Int = 20,
         sort: String? = null,
         contextType: String? = null
-    ): Result<CursorPage<CommentThreadData>>
+    ): Result<CursorPage<CommentThread>>
 
     /** 크리에이터 프로필 섹션 조회 */
     suspend fun getCreatorHomeSections(

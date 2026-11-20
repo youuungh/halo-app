@@ -14,6 +14,7 @@ import com.ninezero.halo.feature.store.domain.model.CreateOrderRequest
 import com.ninezero.halo.feature.store.domain.model.CreatorMonthlySales
 import com.ninezero.halo.feature.store.domain.model.CreatorSalesSummary
 import com.ninezero.halo.feature.store.domain.model.Order
+import com.ninezero.halo.feature.store.domain.model.OrderStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatusResponse
 import com.ninezero.halo.feature.store.domain.repository.OrderRepository
 import javax.inject.Inject
@@ -98,9 +99,9 @@ class OrderRepositoryImpl @Inject constructor(
         return safeApiCall { api.getCreatorMonthlySales(month) }.map { it.toDomain() }
     }
 
-    override suspend fun updateOrderStatus(orderId: Int, status: String): Result<Order> {
+    override suspend fun updateOrderStatus(orderId: Int, status: OrderStatus): Result<Order> {
         return safeApiCall {
-            api.updateOrderStatus(orderId, UpdateOrderStatusRequestDto(status))
+            api.updateOrderStatus(orderId, UpdateOrderStatusRequestDto(status.name))
         }.map { it.toDomain() }
     }
 

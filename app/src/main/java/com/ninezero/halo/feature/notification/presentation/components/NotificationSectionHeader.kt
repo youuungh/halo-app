@@ -16,11 +16,11 @@ fun NotificationSectionHeader(
 ) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp)
     )
 }

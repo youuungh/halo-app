@@ -43,6 +43,8 @@ fun SubscriptionSheetHost(
     if (state.isVisible) {
         MembershipBottomSheet(
             creatorName = state.creatorName,
+            creatorAvatarUrl = state.creatorAvatarUrl,
+            creatorRole = state.creatorRole,
             plans = state.plans,
             currentPlanId = state.currentPlanId,
             currentTier = state.currentTier,

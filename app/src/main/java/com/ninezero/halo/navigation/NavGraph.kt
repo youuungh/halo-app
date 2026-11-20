@@ -1,39 +1,10 @@
 package com.ninezero.halo.navigation
 
-import android.os.Build
-import android.view.RoundedCorner
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.dropUnlessStarted
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
@@ -44,9 +15,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
-import androidx.navigationevent.NavigationEvent.Companion.EDGE_RIGHT
-import androidx.navigationevent.NavigationEventTransitionState
-import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import com.ninezero.halo.core.deeplink.DeepLinks
 import com.ninezero.halo.feature.address.presentation.address_detail.AddressDetailScreen
 import com.ninezero.halo.feature.address.presentation.address_manage.AddressManageScreen
@@ -102,64 +70,11 @@ import com.ninezero.halo.feature.subscription.presentation.membership_manage.Mem
 import com.ninezero.halo.feature.subscription.presentation.my_subscriptions.MySubscriptionsScreen
 import com.ninezero.halo.feature.subscription.presentation.subscription_sheet.SubscriptionSheetHost
 
-private const val TRANSITION_DURATION = 250
-private const val SHARED_AXIS_DURATION = 250
-private const val SHARED_AXIS_SLIDE_DISTANCE = 90  // px, 일반 기기 기준 약 30dp
-
-// Shared Axis 순차 fade, 잔상 제거
-private const val SHARED_AXIS_FADE_OUT_DURATION = 75
-private const val SHARED_AXIS_FADE_IN_DURATION = 175
-private const val SHARED_AXIS_FADE_IN_DELAY = 75
-
-// 모달 뒤 화면 축소 배율
-private const val MODAL_BACKDROP_SCALE = 0.94f
-private const val MODAL_BACKDROP_FADE_OUT_DURATION = 90  // 축소가 보이도록 일반 전환보다 길게
-
-private const val PREDICTIVE_BACK_SCALE = 0.9f
-private const val PREDICTIVE_BACK_SHIFT_FRACTION = 0.03f  // 화면 폭 대비 이동량
-private const val PREDICTIVE_BACK_EXIT_SLIDE_FRACTION = 0.08f  // 사라질 때 더 밀리는 양
-private const val PREDICTIVE_BACK_SHRINK_DURATION = 200
-private const val PREDICTIVE_BACK_FADE_OUT_DURATION = 100
-private val PREDICTIVE_BACK_CORNER_RADIUS = 28.dp  // 기기 모서리 반경을 못 읽을 때
-
-private val EmphasizedEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)  // 빠른 가속, 완만한 감속
-
-// 예측형 뒤로 가기 이동
-private val PredictiveBackSlideEasing = Easing { fraction ->
-    val total = PREDICTIVE_BACK_SHRINK_DURATION + PREDICTIVE_BACK_FADE_OUT_DURATION
-    val shrinkEnd = PREDICTIVE_BACK_SHRINK_DURATION.toFloat() / total
-    val shiftPortion = PREDICTIVE_BACK_SHIFT_FRACTION /
-        (PREDICTIVE_BACK_SHIFT_FRACTION + PREDICTIVE_BACK_EXIT_SLIDE_FRACTION)
-    if (fraction < shrinkEnd) {
-        shiftPortion * LinearOutSlowInEasing.transform(fraction / shrinkEnd)
-    } else {
-        shiftPortion + (1f - shiftPortion) *
-            EmphasizedEasing.transform((fraction - shrinkEnd) / (1f - shrinkEnd))
-    }
-}
-
-private fun NavBackStackEntry.isModalDestination(): Boolean =
-    destination.hasRoute<Screen.CreatePost>() ||
-            destination.hasRoute<Screen.EditPost>() ||
-            destination.hasRoute<Screen.CreateCommunityPost>() ||
-            destination.hasRoute<Screen.Reply>() ||
-            destination.hasRoute<Screen.CreateReview>() ||
-            destination.hasRoute<Screen.CreateProduct>()
-
 // 콘텐츠 딥링크 패턴, 필수 인자는 path로 매핑
 private inline fun <reified T : Screen> contentDeepLinks(path: String) = listOf(
     navDeepLink<T>(basePath = "${DeepLinks.SCHEME}://$path"),
     navDeepLink<T>(basePath = "${DeepLinks.WEB_BASE}/$path")
 )
-
-private val pushExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-    if (targetState.isModalDestination()) scaleBackOut() else slideOutLeft()
-}
-
-private val pushPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition =
-    {
-        if (initialState.isModalDestination()) scaleBackIn() else slideInRight()
-    }
 
 @Composable
 fun HaloNavGraph(
@@ -177,8 +92,8 @@ fun HaloNavGraph(
             predictivePopEnterTransition = {
                 if (initialState.isModalDestination()) pushPopEnter() else EnterTransition.None
             },
-            predictivePopExitTransition = { swipeEdge ->
-                if (initialState.isModalDestination()) slideOutRight() else predictiveShrinkOut(swipeEdge)
+            predictivePopExitTransition = {
+                if (initialState.isModalDestination()) slideOutRight() else predictiveBackHold()
             }
         ) {
             // 인증
@@ -1136,7 +1051,10 @@ fun HaloNavGraph(
                 popExitTransition = { slideOutRight() }
             ) {
                 SalesStatsScreen(
-                    onNavigateBack = dropUnlessStarted { navController.popBackStack() }
+                    onNavigateBack = dropUnlessStarted { navController.popBackStack() },
+                    onNavigateToProductDetail = { productId ->
+                        navController.navigateUnlessOnTop(Screen.ProductDetail(productId))
+                    }
                 )
             }
 
@@ -1320,115 +1238,7 @@ fun HaloNavGraph(
     }
 }
 
-// 화면 전환 헬퍼
-private fun slideInLeft() = slideInHorizontally(
-    animationSpec = tween(SHARED_AXIS_DURATION, easing = EmphasizedEasing),
-    initialOffsetX = { SHARED_AXIS_SLIDE_DISTANCE }
-) + fadeIn(
-    animationSpec = tween(
-        durationMillis = SHARED_AXIS_FADE_IN_DURATION,
-        delayMillis = SHARED_AXIS_FADE_IN_DELAY,
-        easing = LinearEasing
-    )
-)
-
-private fun slideOutLeft() = slideOutHorizontally(
-    animationSpec = tween(SHARED_AXIS_DURATION, easing = EmphasizedEasing),
-    targetOffsetX = { -SHARED_AXIS_SLIDE_DISTANCE }
-) + fadeOut(animationSpec = tween(SHARED_AXIS_FADE_OUT_DURATION, easing = LinearEasing))
-
-private fun slideInRight() = slideInHorizontally(
-    animationSpec = tween(SHARED_AXIS_DURATION, easing = EmphasizedEasing),
-    initialOffsetX = { -SHARED_AXIS_SLIDE_DISTANCE }
-) + fadeIn(
-    animationSpec = tween(
-        durationMillis = SHARED_AXIS_FADE_IN_DURATION,
-        delayMillis = SHARED_AXIS_FADE_IN_DELAY,
-        easing = LinearEasing
-    )
-)
-
-private fun slideOutRight() = slideOutHorizontally(
-    animationSpec = tween(SHARED_AXIS_DURATION, easing = EmphasizedEasing),
-    targetOffsetX = { SHARED_AXIS_SLIDE_DISTANCE }
-) + fadeOut(animationSpec = tween(SHARED_AXIS_FADE_OUT_DURATION, easing = LinearEasing))
-
-private fun AnimatedContentTransitionScope<*>.slideInUp() =
-    slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Up,
-        animationSpec = tween(TRANSITION_DURATION, easing = FastOutSlowInEasing)
-    ) + fadeIn(
-        animationSpec = tween(
-            durationMillis = SHARED_AXIS_FADE_IN_DURATION,
-            delayMillis = SHARED_AXIS_FADE_IN_DELAY,
-            easing = LinearEasing
-        )
-    )
-
-private fun AnimatedContentTransitionScope<*>.slideOutUp() =
-    slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Up,
-        animationSpec = tween(TRANSITION_DURATION, easing = FastOutSlowInEasing)
-    ) + fadeOut(animationSpec = tween(SHARED_AXIS_FADE_OUT_DURATION, easing = LinearEasing))
-
-private fun AnimatedContentTransitionScope<*>.slideInDown() =
-    slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Down,
-        animationSpec = tween(TRANSITION_DURATION, easing = FastOutSlowInEasing)
-    ) + fadeIn(
-        animationSpec = tween(
-            durationMillis = SHARED_AXIS_FADE_IN_DURATION,
-            delayMillis = SHARED_AXIS_FADE_IN_DELAY,
-            easing = LinearEasing
-        )
-    )
-
-private fun AnimatedContentTransitionScope<*>.slideOutDown() =
-    slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Down,
-        animationSpec = tween(TRANSITION_DURATION, easing = FastOutSlowInEasing)
-    ) + fadeOut(animationSpec = tween(SHARED_AXIS_FADE_OUT_DURATION, easing = LinearEasing))
-
-// 손가락 따라 줄어들고 끝에서 밀리며 사라짐
-private fun predictiveShrinkOut(swipeEdge: Int): ExitTransition = scaleOut(
-    targetScale = PREDICTIVE_BACK_SCALE,
-    animationSpec = tween(PREDICTIVE_BACK_SHRINK_DURATION, easing = LinearOutSlowInEasing)
-) + slideOutHorizontally(
-    animationSpec = tween(
-        durationMillis = PREDICTIVE_BACK_SHRINK_DURATION + PREDICTIVE_BACK_FADE_OUT_DURATION,
-        easing = PredictiveBackSlideEasing
-    ),
-    targetOffsetX = { fullWidth ->
-        val distance =
-            (fullWidth * (PREDICTIVE_BACK_SHIFT_FRACTION + PREDICTIVE_BACK_EXIT_SLIDE_FRACTION)).toInt()
-        if (swipeEdge == EDGE_RIGHT) -distance else distance
-    }
-) + fadeOut(
-    animationSpec = tween(
-        durationMillis = PREDICTIVE_BACK_FADE_OUT_DURATION,
-        delayMillis = PREDICTIVE_BACK_SHRINK_DURATION,
-        easing = LinearEasing
-    )
-)
-
-// 모달 뒤 화면 축소, 순차 fade로 가장자리 틈을 가림
-private fun scaleBackOut(): ExitTransition = scaleOut(
-    targetScale = MODAL_BACKDROP_SCALE,
-    animationSpec = tween(SHARED_AXIS_DURATION, easing = EmphasizedEasing)
-) + fadeOut(animationSpec = tween(MODAL_BACKDROP_FADE_OUT_DURATION, easing = LinearEasing))
-
-private fun scaleBackIn(): EnterTransition = scaleIn(
-    initialScale = MODAL_BACKDROP_SCALE,
-    animationSpec = tween(SHARED_AXIS_DURATION, easing = EmphasizedEasing)
-) + fadeIn(
-    animationSpec = tween(
-        durationMillis = SHARED_AXIS_FADE_IN_DURATION,
-        delayMillis = SHARED_AXIS_FADE_IN_DELAY,
-        easing = LinearEasing
-    )
-)
-
-/** 예측형 뒤로 가기 둥근 모서리를 얹는 composable 래퍼 */
+/** 예측형 뒤로 가기 미리 보기를 얹는 composable 래퍼 */
 private inline fun <reified T : Any> NavGraphBuilder.screen(
     deepLinks: List<NavDeepLink> = emptyList(),
     noinline enterTransition: (AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition?)? = null,
@@ -1445,74 +1255,7 @@ private inline fun <reified T : Any> NavGraphBuilder.screen(
     popEnterTransition = popEnterTransition,
     popExitTransition = popExitTransition
 ) { entry ->
-    PredictiveBackCorners(entry) { content(entry) }
-}
-
-/** 전환 API에 없는 예측형 뒤로 가기 둥근 모서리 */
-@Composable
-private fun AnimatedContentScope.PredictiveBackCorners(
-    entry: NavBackStackEntry,
-    content: @Composable () -> Unit
-) {
-    val dispatcherOwner = LocalNavigationEventDispatcherOwner.current
-    // 모달 화면은 예측형 축소 대상이 아님
-    if (dispatcherOwner == null || entry.isModalDestination()) {
-        content()
-        return
-    }
-
-    val gestureState by dispatcherOwner.navigationEventDispatcher.transitionState.collectAsState()
-    val gestureInProgress = gestureState is NavigationEventTransitionState.InProgress
-    val exiting = transition.targetState == EnterExitState.PostExit
-
-    // 제스처로 시작된 퇴장만, 손을 뗀 뒤 남은 전환까지 유지
-    var predictiveExit by remember { mutableStateOf(false) }
-    SideEffect { predictiveExit = exiting && (gestureInProgress || predictiveExit) }
-
-    val cornerFraction = transition.animateFloat(
-        transitionSpec = { tween(PREDICTIVE_BACK_SHRINK_DURATION, easing = LinearOutSlowInEasing) },
-        label = "predictiveBackCorner"
-    ) { state ->
-        if (state == EnterExitState.PostExit && predictiveExit) 1f else 0f
-    }
-
-    // 기기 모서리 반경, 못 읽으면 기본값
-    val view = LocalView.current
-    val deviceCorners = remember(view, predictiveExit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val insets = view.rootWindowInsets
-            val top = insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)?.radius ?: 0
-            val bottom = insets?.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT)?.radius ?: 0
-            if (top > 0 || bottom > 0) top.toFloat() to bottom.toFloat() else null
-        } else {
-            null
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(
-                if (predictiveExit) {
-                    Modifier.graphicsLayer {
-                        val fallback = PREDICTIVE_BACK_CORNER_RADIUS.toPx()
-                        val top = (deviceCorners?.first ?: fallback) * cornerFraction.value
-                        val bottom = (deviceCorners?.second ?: fallback) * cornerFraction.value
-                        clip = true
-                        shape = RoundedCornerShape(
-                            topStart = top,
-                            topEnd = top,
-                            bottomEnd = bottom,
-                            bottomStart = bottom
-                        )
-                    }
-                } else {
-                    Modifier
-                }
-            )
-    ) {
-        content()
-    }
+    PredictiveBackLayer(entry) { content(entry) }
 }
 
 /** 맨 위가 같은 화면·같은 인자면 스킵 */

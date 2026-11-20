@@ -3,9 +3,7 @@ package com.ninezero.halo.core.ui.components.bottomsheet
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -40,15 +38,12 @@ fun PostOptionBottomSheet(
     val context = LocalContext.current
     val errorColor = MaterialTheme.colorScheme.error
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
         modifier = modifier
     ) {
-        BottomSheetDragHandle()
-        Column(modifier = Modifier.navigationBarsPadding()) {
+        Column {
             if (copyLink != null) {
                 BottomSheetMenuItem(
                     text = "링크 복사",

@@ -7,6 +7,7 @@ import com.ninezero.halo.feature.store.domain.model.Order
 import com.ninezero.halo.feature.store.domain.model.OrderCreatorGroup
 import com.ninezero.halo.feature.store.domain.model.OrderItem
 import com.ninezero.halo.feature.store.domain.model.OrderStatus
+import com.ninezero.halo.feature.store.domain.model.PaymentStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatusResponse
 import java.util.concurrent.TimeUnit
@@ -14,18 +15,18 @@ import java.util.concurrent.TimeUnit
 private val previewOrderConfirmed = Order(
     id = 101, orderNumber = "2026082710000137",
     items = listOf(
-        OrderItem(1, 1, "프리미엄 블루투스 이어폰 Pro Max", null, "89000",
-            originalPrice = "110000", quantity = 1, subtotal = "89000",
+        OrderItem(1, 1, "프리미엄 블루투스 이어폰 Pro Max", null, 89000L,
+            originalPrice = 110000L, quantity = 1, subtotal = 89000L,
             creatorId = 10, creatorName = "TechStore", creatorAvatarUrl = null),
-        OrderItem(2, 2, "기계식 키보드 청축", null, "65000",
-            originalPrice = "78000", quantity = 2, subtotal = "130000",
+        OrderItem(2, 2, "기계식 키보드 청축", null, 65000L,
+            originalPrice = 78000L, quantity = 2, subtotal = 130000L,
             creatorId = 10, creatorName = "TechStore", creatorAvatarUrl = null)
     ),
-    totalPrice = "216000", status = OrderStatus.CONFIRMED,
+    totalPrice = 216000L, status = OrderStatus.CONFIRMED,
     shippingAddress = "서울시 강남구 테헤란로 123", shippingPhone = "010-1234-5678",
-    shippingName = "홍길동", paymentProvider = "MOCK", paymentStatus = "COMPLETED",
-    memo = "부재시 문앞에 놓아주세요", pointsUsed = "1000", couponDiscount = "5000",
-    trackingNumber = null, carrier = null, shippingFee = "0",
+    shippingName = "홍길동", paymentProvider = "MOCK", paymentStatus = PaymentStatus.COMPLETED,
+    memo = "부재시 문앞에 놓아주세요", pointsUsed = 1000L, couponDiscount = 5000L,
+    trackingNumber = null, carrier = null, shippingFee = 0L,
     shippingStatus = ShippingStatus.PREPARING,
     createdAt = System.currentTimeMillis() - 86400000,
     updatedAt = System.currentTimeMillis() - 86400000
@@ -34,21 +35,21 @@ private val previewOrderConfirmed = Order(
 private val previewOrderDelivered = Order(
     id = 102, orderNumber = "2026082710000274",
     items = listOf(
-        OrderItem(3, 3, "오가닉 코튼 티셔츠", null, "39000",
-            originalPrice = "49000", quantity = 1, subtotal = "39000",
+        OrderItem(3, 3, "오가닉 코튼 티셔츠", null, 39000L,
+            originalPrice = 49000L, quantity = 1, subtotal = 39000L,
             creatorId = 20, creatorName = "FashionLab", creatorAvatarUrl = null),
-        OrderItem(4, 4, "린넨 와이드 팬츠", null, "59000",
-            originalPrice = null, quantity = 1, subtotal = "59000",
+        OrderItem(4, 4, "린넨 와이드 팬츠", null, 59000L,
+            originalPrice = null, quantity = 1, subtotal = 59000L,
             creatorId = 20, creatorName = "FashionLab", creatorAvatarUrl = null),
-        OrderItem(5, 5, "핸드메이드 가죽 지갑", null, "85000",
-            originalPrice = "95000", quantity = 1, subtotal = "85000",
+        OrderItem(5, 5, "핸드메이드 가죽 지갑", null, 85000L,
+            originalPrice = 95000L, quantity = 1, subtotal = 85000L,
             creatorId = 30, creatorName = "LeatherCraft", creatorAvatarUrl = null)
     ),
-    totalPrice = "183000", status = OrderStatus.DELIVERED,
+    totalPrice = 183000L, status = OrderStatus.DELIVERED,
     shippingAddress = "서울시 마포구 연남로 45", shippingPhone = "010-9876-5432",
-    shippingName = "김철수", paymentProvider = "MOCK", paymentStatus = "COMPLETED",
-    memo = null, pointsUsed = "0", couponDiscount = "0",
-    trackingNumber = "1234567890", carrier = "CJ대한통운", shippingFee = "0",
+    shippingName = "김철수", paymentProvider = "MOCK", paymentStatus = PaymentStatus.COMPLETED,
+    memo = null, pointsUsed = 0L, couponDiscount = 0L,
+    trackingNumber = "1234567890", carrier = "CJ대한통운", shippingFee = 0L,
     shippingStatus = ShippingStatus.DELIVERED,
     actualDeliveryDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(5),
     createdAt = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(10),
@@ -58,15 +59,15 @@ private val previewOrderDelivered = Order(
 private val previewOrderShipping = Order(
     id = 103, orderNumber = "2026082710000411",
     items = listOf(
-        OrderItem(6, 6, "아로마 디퓨저 세트", null, "45000",
-            originalPrice = null, quantity = 1, subtotal = "45000",
+        OrderItem(6, 6, "아로마 디퓨저 세트", null, 45000L,
+            originalPrice = null, quantity = 1, subtotal = 45000L,
             creatorId = 40, creatorName = "HomeDecor", creatorAvatarUrl = null)
     ),
-    totalPrice = "48000", status = OrderStatus.CONFIRMED,
+    totalPrice = 48000L, status = OrderStatus.CONFIRMED,
     shippingAddress = "서울시 서초구 반포대로 200", shippingPhone = "010-5555-6666",
-    shippingName = "이영희", paymentProvider = "MOCK", paymentStatus = "COMPLETED",
-    memo = "경비실에 맡겨주세요", pointsUsed = "0", couponDiscount = "0",
-    trackingNumber = "9876543210", carrier = "한진택배", shippingFee = "3000",
+    shippingName = "이영희", paymentProvider = "MOCK", paymentStatus = PaymentStatus.COMPLETED,
+    memo = "경비실에 맡겨주세요", pointsUsed = 0L, couponDiscount = 0L,
+    trackingNumber = "9876543210", carrier = "한진택배", shippingFee = 3000L,
     shippingStatus = ShippingStatus.IN_TRANSIT,
     createdAt = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(3),
     updatedAt = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)
@@ -75,28 +76,28 @@ private val previewOrderShipping = Order(
 private val previewOrderCancelled = Order(
     id = 104, orderNumber = "2026082710000548",
     items = listOf(
-        OrderItem(7, 7, "미니 세라믹 화병", null, "28000",
-            originalPrice = "32000", quantity = 1, subtotal = "28000",
+        OrderItem(7, 7, "미니 세라믹 화병", null, 28000L,
+            originalPrice = 32000L, quantity = 1, subtotal = 28000L,
             creatorId = 50, creatorName = "LivingMood", creatorAvatarUrl = null)
     ),
-    totalPrice = "31000", status = OrderStatus.CANCELLED,
+    totalPrice = 31000L, status = OrderStatus.CANCELLED,
     shippingAddress = "서울시 송파구 올림픽로 300", shippingPhone = "010-2222-3333",
-    shippingName = "박민지", paymentProvider = "MOCK", paymentStatus = "CANCELLED",
-    memo = "배송 전 연락 부탁드려요", pointsUsed = "1000", couponDiscount = "2000",
-    trackingNumber = null, carrier = null, shippingFee = "3000",
+    shippingName = "박민지", paymentProvider = "MOCK", paymentStatus = PaymentStatus.CANCELLED,
+    memo = "배송 전 연락 부탁드려요", pointsUsed = 1000L, couponDiscount = 2000L,
+    trackingNumber = null, carrier = null, shippingFee = 3000L,
     shippingStatus = ShippingStatus.PREPARING,
     createdAt = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(6),
     updatedAt = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(5)
 )
 
 private val previewRefundTechItem = OrderItem(
-    10, 10, "프리미엄 블루투스 이어폰 Pro Max", null, "89000",
-    originalPrice = "110000", quantity = 1, subtotal = "89000",
+    10, 10, "프리미엄 블루투스 이어폰 Pro Max", null, 89000L,
+    originalPrice = 110000L, quantity = 1, subtotal = 89000L,
     creatorId = 10, creatorName = "TechStore", creatorAvatarUrl = null
 )
 private val previewRefundFashionItem = OrderItem(
-    11, 11, "오가닉 코튼 티셔츠", null, "39000",
-    originalPrice = "49000", quantity = 1, subtotal = "39000",
+    11, 11, "오가닉 코튼 티셔츠", null, 39000L,
+    originalPrice = 49000L, quantity = 1, subtotal = 39000L,
     creatorId = 20, creatorName = "FashionLab", creatorAvatarUrl = null
 )
 
@@ -104,11 +105,11 @@ private val previewRefundFashionItem = OrderItem(
 private val previewOrderPartialRefund = Order(
     id = 105, orderNumber = "2026082710000685",
     items = listOf(previewRefundTechItem, previewRefundFashionItem),
-    totalPrice = "89000", status = OrderStatus.CONFIRMED,
+    totalPrice = 89000L, status = OrderStatus.CONFIRMED,
     shippingAddress = "서울시 강남구 테헤란로 123", shippingPhone = "010-1234-5678",
-    shippingName = "홍길동", paymentProvider = "TOSS_PAYMENTS", paymentStatus = "COMPLETED",
-    memo = null, pointsUsed = "0", couponDiscount = "0",
-    trackingNumber = null, carrier = null, shippingFee = "0",
+    shippingName = "홍길동", paymentProvider = "TOSS_PAYMENTS", paymentStatus = PaymentStatus.COMPLETED,
+    memo = null, pointsUsed = 0L, couponDiscount = 0L,
+    trackingNumber = null, carrier = null, shippingFee = 0L,
     shippingStatus = ShippingStatus.PREPARING,
     createdAt = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1),
     updatedAt = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2),
@@ -117,16 +118,16 @@ private val previewOrderPartialRefund = Order(
             creatorId = 10, creatorName = "TechStore", creatorAvatarUrl = null,
             status = OrderStatus.CONFIRMED,
             items = listOf(previewRefundTechItem),
-            subtotal = "89000", shippingFee = "0",
+            subtotal = 89000L, shippingFee = 0L,
             shippingStatus = ShippingStatus.PREPARING
         ),
         OrderCreatorGroup(
             creatorId = 20, creatorName = "FashionLab", creatorAvatarUrl = null,
             status = OrderStatus.CANCELLED,
             items = listOf(previewRefundFashionItem),
-            subtotal = "39000", shippingFee = "0",
+            subtotal = 39000L, shippingFee = 0L,
             shippingStatus = ShippingStatus.PREPARING,
-            refundAmount = "39000", refundReason = "단순 변심",
+            refundAmount = 39000L, refundReason = "단순 변심",
             refundedAt = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(2)
         )
     )

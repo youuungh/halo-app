@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.feature.store.domain.model.Cart
 import com.ninezero.halo.feature.store.domain.model.CartItem
-import com.ninezero.halo.feature.store.domain.model.isPurchasable
+import com.ninezero.halo.feature.store.domain.model.canBuy
 import com.ninezero.halo.feature.store.domain.repository.CartRepository
 import com.ninezero.halo.feature.store.domain.repository.CartSelectionStore
 import com.ninezero.halo.feature.subscription.domain.model.UserTierInfo
@@ -55,6 +55,7 @@ class CartViewModel @Inject constructor(
             is CartIntent.NavigateToProductDetail -> navigateToProductDetail(intent.productId)
             is CartIntent.NavigateToUserProfile -> navigateToUserProfile(intent.userId)
             is CartIntent.ShowRestrictedContentSnackbar -> showRestrictedSnackbar(intent.message)
+            is CartIntent.ShowQuantityLimitSnackbar -> showRestrictedSnackbar("최대 ${intent.maxQuantity}개까지 구매 가능합니다")
             is CartIntent.SnackbarDismissed -> dismissSnackbar()
         }
     }
@@ -64,8 +65,8 @@ class CartViewModel @Inject constructor(
 
         loadCartWithTierInfo()
             .onSuccess { cart ->
-                val availableIds = cart.cart.items.filter(::isPurchasable).map { it.id }.toSet()
-                val resolvedSelection = cartSelectionStore.reconcile(availableIds)
+                val availableIds = cart.cart.items.filter(::canBuy).map { it.id }.toSet()
+                val resolvedSelection = cartSelectionStore.sync(availableIds)
                 reduce {
                     state.copy(
                         isLoading = false,
@@ -93,8 +94,8 @@ class CartViewModel @Inject constructor(
 
         loadCartWithTierInfo()
             .onSuccess { cart ->
-                val availableIds = cart.cart.items.filter(::isPurchasable).map { it.id }.toSet()
-                val resolvedSelection = cartSelectionStore.reconcile(availableIds)
+                val availableIds = cart.cart.items.filter(::canBuy).map { it.id }.toSet()
+                val resolvedSelection = cartSelectionStore.sync(availableIds)
                 reduce {
                     state.copy(
                         isRefreshing = false,
@@ -139,8 +140,8 @@ class CartViewModel @Inject constructor(
                     creatorId to tierInfo?.takeIf { it.isSubscribed }
                 }
             }.awaitAll()
-                .filter { it.second != null }
-                .associate { it.first to it.second!! }
+                .mapNotNull { (creatorId, tierInfo) -> tierInfo?.let { creatorId to it } }
+                .toMap()
         }
     }
 
@@ -229,7 +230,7 @@ class CartViewModel @Inject constructor(
     private fun toggleCreatorSelection(creatorId: Int) = intent {
         val cart = state.cart ?: return@intent
         val creatorItemIds = cart.items
-            .filter { it.product.creator.id == creatorId && isPurchasable(it) }
+            .filter { it.product.creator.id == creatorId && canBuy(it) }
             .map { it.id }
             .toSet()
 
@@ -245,7 +246,7 @@ class CartViewModel @Inject constructor(
 
     private fun toggleSelectAll() = intent {
         val cart = state.cart ?: return@intent
-        val allIds = cart.items.filter(::isPurchasable).map { it.id }.toSet()
+        val allIds = cart.items.filter(::canBuy).map { it.id }.toSet()
 
         val allSelected = allIds == state.selectedItemIds
         val newSelection = if (allSelected) emptySet() else allIds
@@ -323,7 +324,7 @@ class CartViewModel @Inject constructor(
         val availableSelectedIds = cart.items
             .filter { item ->
                 item.id in state.selectedItemIds &&
-                isPurchasable(item)
+                canBuy(item)
             }
             .map { it.id }
         if (availableSelectedIds.isEmpty()) {
@@ -350,5 +351,5 @@ class CartViewModel @Inject constructor(
     }
 
     // 도메인 단일 정본 사용
-    private fun isPurchasable(item: CartItem): Boolean = item.product.isPurchasable()
+    private fun canBuy(item: CartItem): Boolean = item.product.canBuy()
 }

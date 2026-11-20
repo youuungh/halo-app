@@ -16,11 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.comment.CommentItemSkeleton
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.feature.profile.domain.model.UserSummaryData
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.feature.profile.domain.model.ThreadUser
 import com.ninezero.halo.feature.profile.presentation.components.CommentThreadItem
 import com.ninezero.halo.feature.profile.presentation.components.ProfileFilterChipsRow
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTabRowHeight
@@ -31,9 +32,10 @@ import com.ninezero.halo.feature.profile.presentation.user_profile.UserProfileSt
 @Composable
 fun UserRepliesTabContent(
     state: UserProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onShowMediaViewer: (List<ViewerMediaItem>, Int, String?) -> Unit,
-    onProfileClick: (UserSummaryData, IntOffset) -> Unit,
+    onProfileClick: (ThreadUser, IntOffset) -> Unit,
     onIntent: (UserProfileIntent) -> Unit
 ) {
     val isBlocked = state.profile?.isBlocked == true
@@ -42,7 +44,7 @@ fun UserRepliesTabContent(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+        contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
     ) {
         if (isBlocked) {
             item(key = "blocked_message") { BlockedUserPlaceholder() }
@@ -63,8 +65,8 @@ fun UserRepliesTabContent(
             state.isRepliesLoading && state.userCommentThreads.isEmpty() -> {
                 items(3) {
                     Column(modifier = Modifier.padding(top = 12.dp)) {
-                        CommentItemSkeleton(showLine = true)
-                        CommentItemSkeleton(showLine = false)
+                        CommentItemSkeleton(showLine = true, avatarSize = 40.dp)
+                        CommentItemSkeleton(showLine = false, avatarSize = 40.dp)
                     }
                 }
             }
@@ -138,8 +140,8 @@ fun UserRepliesTabContent(
                 if (state.isRepliesLoading && state.userCommentThreads.isNotEmpty()) {
                     items(2) {
                         Column(modifier = Modifier.padding(top = 12.dp)) {
-                            CommentItemSkeleton(showLine = true)
-                            CommentItemSkeleton(showLine = false)
+                            CommentItemSkeleton(showLine = true, avatarSize = 40.dp)
+                            CommentItemSkeleton(showLine = false, avatarSize = 40.dp)
                         }
                     }
                 }

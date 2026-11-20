@@ -243,7 +243,7 @@ class MembershipManageViewModel @Inject constructor(
             planId = plan.id,
             name = plan.name,
             description = plan.description,
-            price = plan.price,
+            price = plan.price.toString(),
             benefits = plan.benefits,
             isActive = newActive
         ).onSuccess { updatedPlan ->

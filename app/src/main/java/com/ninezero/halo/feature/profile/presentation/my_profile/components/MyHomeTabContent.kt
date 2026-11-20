@@ -14,12 +14,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.components.section.PostThumbnailRow
 import com.ninezero.halo.core.ui.components.section.PostThumbnailRowSkeleton
 import com.ninezero.halo.core.ui.components.section.ProductThumbnailRow
-import com.ninezero.halo.core.ui.components.section.SectionHeader
+import com.ninezero.halo.core.ui.components.section.ProfileSectionHeader
 import com.ninezero.halo.feature.feed.domain.model.Post
 import com.ninezero.halo.feature.profile.domain.model.PostTagSection
 import com.ninezero.halo.feature.profile.domain.model.ProductTagSection
@@ -30,6 +31,7 @@ import com.ninezero.halo.feature.store.domain.model.Product
 @Composable
 fun MyHomeTabContent(
     state: MyProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onPostClick: (Post) -> Unit,
     onProductClick: (Product) -> Unit,
@@ -43,7 +45,7 @@ fun MyHomeTabContent(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
+        contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
     ) {
         // 로딩 상태
         if (state.isHomeSectionsLoading && isEmpty) {
@@ -77,7 +79,7 @@ fun MyHomeTabContent(
             // 고정 포스트 섹션
             if (state.pinnedPosts.isNotEmpty()) {
                 item(key = "pinned_header") {
-                    SectionHeader(
+                    ProfileSectionHeader(
                         title = "고정 포스트",
                         showViewAll = false
                     )
@@ -93,7 +95,7 @@ fun MyHomeTabContent(
             // 포스트 태그 섹션
             state.postSections.forEach { section ->
                 item(key = "post_section_header_${section.tag.id}") {
-                    SectionHeader(
+                    ProfileSectionHeader(
                         title = section.tag.name,
                         showViewAll = section.hasMore,
                         onViewAllClick = { onViewAllPostSectionClick(section) }
@@ -108,9 +110,11 @@ fun MyHomeTabContent(
             }
 
             // 상품 태그 섹션
-            state.productSections.forEach { section ->
+            state.productSections.forEachIndexed { index, section ->
                 item(key = "product_section_header_${section.tag.id}") {
-                    SectionHeader(
+                    ProfileSectionHeader(
+                        // 포스트에서 상품으로 넘어가는 경계
+                        groupStart = index == 0 && (state.pinnedPosts.isNotEmpty() || state.postSections.isNotEmpty()),
                         title = section.tag.name,
                         showViewAll = section.hasMore,
                         onViewAllClick = { onViewAllProductSectionClick(section) }

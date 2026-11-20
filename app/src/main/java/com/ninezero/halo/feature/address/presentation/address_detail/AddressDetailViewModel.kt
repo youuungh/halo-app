@@ -50,6 +50,7 @@ class AddressDetailViewModel @Inject constructor(
             is AddressDetailIntent.ShowMemoSheet -> showMemoSheet()
             is AddressDetailIntent.DismissMemoSheet -> dismissMemoSheet()
             is AddressDetailIntent.UpdateAddress -> updateAddress(intent.zipCode, intent.address)
+            is AddressDetailIntent.UpdateDefault -> updateDefault(intent.isDefault)
             is AddressDetailIntent.NavigateBack -> navigateBack()
             is AddressDetailIntent.SnackbarDismissed -> dismissSnackbar()
         }
@@ -57,18 +58,18 @@ class AddressDetailViewModel @Inject constructor(
 
     private fun loadAddress(id: Int) = intent {
         addressRepository.getAddress(id)
-            .onSuccess { addr ->
+            .onSuccess { savedAddress ->
                 reduce {
                     state.copy(
                         isLoading = false,
-                        zipCode = addr.zipCode,
-                        address = addr.address,
-                        addressDetail = addr.addressDetail ?: "",
-                        recipientName = addr.recipientName,
+                        zipCode = savedAddress.zipCode,
+                        address = savedAddress.address,
+                        addressDetail = savedAddress.addressDetail ?: "",
+                        recipientName = savedAddress.recipientName,
                         // 서버는 하이픈 포함, 입력창엔 숫자만
-                        recipientPhone = addr.recipientPhone.filter { it.isDigit() },
-                        memo = addr.memo ?: "",
-                        isDefault = addr.isDefault
+                        recipientPhone = savedAddress.recipientPhone.filter { it.isDigit() },
+                        memo = savedAddress.memo ?: "",
+                        isDefault = savedAddress.isDefault
                     )
                 }
             }
@@ -97,6 +98,10 @@ class AddressDetailViewModel @Inject constructor(
 
     private fun updateMemo(memo: String) = blockingIntent {
         reduce { state.copy(memo = memo) }
+    }
+
+    private fun updateDefault(isDefault: Boolean) = intent {
+        reduce { state.copy(isDefault = isDefault) }
     }
 
     private fun save() = intent {
@@ -150,7 +155,8 @@ class AddressDetailViewModel @Inject constructor(
                 zipCode = state.zipCode,
                 address = state.address,
                 addressDetail = state.addressDetail.ifBlank { null },
-                memo = state.memo.ifBlank { null }
+                memo = state.memo.ifBlank { null },
+                isDefault = state.isDefault
             )
         }
 
@@ -202,25 +208,6 @@ class AddressDetailViewModel @Inject constructor(
 }
 
 private fun String.isValidPhoneLength(): Boolean {  // 서버 전화번호 형식과 같은 기준
-    val d = filter { it.isDigit() }
-    return if (d.startsWith("02")) d.length in 9..10 else d.length in 10..11
-}
-
-private fun formatPhoneWithHyphen(digits: String): String {  // 02는 2자리 지역번호
-    val d = digits.filter { it.isDigit() }
-    return if (d.startsWith("02")) {
-        when (d.length) {
-            in 0..2 -> d
-            in 3..5 -> "${d.take(2)}-${d.drop(2)}"
-            in 6..9 -> "${d.take(2)}-${d.substring(2, d.length - 4)}-${d.takeLast(4)}"
-            else -> "${d.take(2)}-${d.substring(2, 6)}-${d.takeLast(4)}"
-        }
-    } else {
-        when (d.length) {
-            in 0..3 -> d
-            in 4..7 -> "${d.take(3)}-${d.drop(3)}"
-            in 8..10 -> "${d.take(3)}-${d.substring(3, d.length - 4)}-${d.takeLast(4)}"
-            else -> "${d.take(3)}-${d.substring(3, 7)}-${d.takeLast(4)}"
-        }
-    }
+    val onlyDigits = filter { it.isDigit() }
+    return if (onlyDigits.startsWith("02")) onlyDigits.length in 9..10 else onlyDigits.length in 10..11
 }

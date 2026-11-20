@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.theme.SocialIconDark
 
 @Composable
 fun SocialIconButton(
@@ -27,7 +28,7 @@ fun SocialIconButton(
     border: BorderStroke? = null,
     isLoading: Boolean = false,
     enabled: Boolean = true,
-    loadingColor: Color = Color(0xFF191919)
+    loadingColor: Color = SocialIconDark
 ) {
     val isEnabled = enabled && !isLoading
 

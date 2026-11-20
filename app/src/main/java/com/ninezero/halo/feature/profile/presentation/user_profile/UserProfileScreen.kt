@@ -2,33 +2,23 @@ package com.ninezero.halo.feature.profile.presentation.user_profile
 
 import android.widget.Toast
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -42,18 +32,18 @@ import com.ninezero.halo.core.model.ReportTargetType
 import com.ninezero.halo.core.ui.components.bottomsheet.CommentOptionBottomSheet
 import com.ninezero.halo.core.ui.components.bottomsheet.PostOptionBottomSheet
 import com.ninezero.halo.core.ui.components.bottomsheet.ProfileOptionBottomSheet
+import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.AlertDialog
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupData
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupHost
 import com.ninezero.halo.core.ui.components.popup.rememberProfilePopupHostState
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
 import com.ninezero.halo.core.ui.components.post.PostCardSkeleton
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
 import com.ninezero.halo.core.util.showToast
 import com.ninezero.halo.feature.profile.domain.model.SectionType
 import com.ninezero.halo.feature.profile.presentation.components.ProfileScreenShell
@@ -62,7 +52,7 @@ import com.ninezero.halo.feature.profile.presentation.components.UserProfileHead
 import com.ninezero.halo.feature.profile.presentation.user_profile.components.CollapsingToolbarLayout
 import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
-import me.onebone.toolbar.rememberCollapsingToolbarScaffoldState
+import dev.chrisbanes.haze.HazeState
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -194,7 +184,7 @@ fun UserProfileScreen(
 
     ShareSheetHost(
         visible = state.showShareSheet && state.sharePostId != null,
-        shareAction = { vm -> vm.onIntent(ShareIntent.SharePost(state.sharePostId!!)) },
+        shareAction = { shareViewModel -> state.sharePostId?.let { shareViewModel.onIntent(ShareIntent.SharePost(it)) } },
         onDismiss = { viewModel.onIntent(UserProfileIntent.DismissShareSheet) },
         onShareSuccess = { roomIds, count ->
             viewModel.onIntent(
@@ -238,9 +228,9 @@ internal fun UserProfileScreenContent(
     onEditProfileClick: () -> Unit = {},
     onIntent: (UserProfileIntent) -> Unit
 ) {
-    val collapsingState = rememberCollapsingToolbarScaffoldState()
-
     val profilePopupState = rememberProfilePopupHostState()
+    // 탭 내용 위에 뜨는 팝업도 같은 블러를 씀
+    val tabHazeState = remember { HazeState() }
 
     val isCreator = state.profile?.isCreator == true
     val tabs = if (isCreator) {
@@ -281,7 +271,7 @@ internal fun UserProfileScreenContent(
     InfiniteScrollTrigger(
         listState = postsListState,
         isLoading = state.isPostsLoading,
-        hasMore = state.postsHasMore && state.selectedTab == ProfileTab.POSTS
+        hasMore = state.hasMorePosts && state.selectedTab == ProfileTab.POSTS
     ) {
         onIntent(UserProfileIntent.LoadMorePosts)
     }
@@ -290,7 +280,7 @@ internal fun UserProfileScreenContent(
     InfiniteScrollTrigger(
         listState = repliesListState,
         isLoading = state.isRepliesLoading,
-        hasMore = state.repliesHasMore && state.selectedTab == ProfileTab.REPLIES
+        hasMore = state.hasMoreReplies && state.selectedTab == ProfileTab.REPLIES
     ) {
         onIntent(UserProfileIntent.LoadMoreCommentThreads)
     }
@@ -317,37 +307,22 @@ internal fun UserProfileScreenContent(
                         }
                     }
 
-                    Surface(
+                    GlassIconButton(
+                        onClick = { onIntent(UserProfileIntent.NavigateBack) },
+                        icon = painterResource(R.drawable.ic_chevron_left),
+                        contentDescription = "뒤로가기",
                         modifier = Modifier
                             .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 8.dp)
-                            .size(40.dp)
-                            .bounceClick()
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = true)
-                            ) { onIntent(UserProfileIntent.NavigateBack) },
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.3f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_chevron_left),
-                                contentDescription = "뒤로가기",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
+                            .padding(start = 12.dp, top = 12.dp)
+                    )
                 }
             }
 
             else -> {
                 CollapsingToolbarLayout(
                     state = state,
-                    collapsingState = collapsingState,
                     pagerState = pagerState,
+                    hazeState = tabHazeState,
                     homeListState = homeListState,
                     postsListState = postsListState,
                     repliesListState = repliesListState,
@@ -489,6 +464,7 @@ internal fun UserProfileScreenContent(
 
     ProfilePopupHost(
         state = profilePopupState,
+        hazeState = tabHazeState,
         resolveAuthor = { authorId ->
             state.userPosts.firstOrNull { it.author.id == authorId }?.author?.let {
                 ProfilePopupData(

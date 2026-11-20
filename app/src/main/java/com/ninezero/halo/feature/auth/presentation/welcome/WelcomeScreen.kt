@@ -33,6 +33,10 @@ import com.ninezero.halo.core.ui.components.button.ActionButton
 import com.ninezero.halo.core.ui.components.button.ActionButtonStyle
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.core.ui.theme.GodoRounded
+import com.ninezero.halo.core.ui.theme.KakaoYellow
+import com.ninezero.halo.core.ui.theme.NaverGreen
+import com.ninezero.halo.core.ui.theme.SocialIconDark
 import com.ninezero.halo.feature.auth.presentation.social.GoogleIdTokenResult
 import com.ninezero.halo.feature.auth.presentation.social.KakaoTokenResult
 import com.ninezero.halo.feature.auth.presentation.social.NaverTokenResult
@@ -40,9 +44,6 @@ import com.ninezero.halo.feature.auth.presentation.social.SocialIconButton
 import com.ninezero.halo.feature.auth.presentation.social.requestGoogleIdToken
 import com.ninezero.halo.feature.auth.presentation.social.requestKakaoAccessToken
 import com.ninezero.halo.feature.auth.presentation.social.requestNaverAccessToken
-import com.ninezero.halo.ui.theme.GodoRounded
-import com.ninezero.halo.ui.theme.KakaoYellow
-import com.ninezero.halo.ui.theme.NaverGreen
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -236,5 +237,3 @@ internal fun WelcomeScreenContent(
         )
     }
 }
-
-private val SocialIconDark = Color(0xFF191919)

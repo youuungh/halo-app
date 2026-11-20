@@ -1,10 +1,15 @@
 package com.ninezero.halo.feature.notification.presentation.components
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,15 +35,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -54,10 +59,11 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Like
 import com.ninezero.halo.feature.notification.domain.model.Notification
 import com.ninezero.halo.feature.notification.domain.model.NotificationType
-import com.ninezero.halo.ui.theme.HaloTheme
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.drop
 import kotlin.math.roundToInt
 
 @Composable
@@ -68,17 +74,42 @@ fun NotificationItem(
     modifier: Modifier = Modifier,
     onProfileClick: () -> Unit = {},
     isSwipeOpen: Boolean = false,
-    onSwipeOpen: () -> Unit = {}
+    onSwipeStart: () -> Unit = {},
+    onSwipeOpen: () -> Unit = {},
+    onSwipeClose: () -> Unit = {}
 ) {
-    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val actionWidthPx = with(density) { 80.dp.toPx() }
-    val offsetX = remember { Animatable(0f) }
+    // 닫힘 0 · 열림 -80, 놓으면 가까운 자리로
+    val swipeState = remember(actionWidthPx) {
+        AnchoredDraggableState(
+            initialValue = SwipeValue.Closed,
+            anchors = DraggableAnchors {
+                SwipeValue.Closed at 0f
+                SwipeValue.Open at -actionWidthPx
+            }
+        )
+    }
+    val dragInteraction = remember { MutableInteractionSource() }
+    val currentOnSwipeStart by rememberUpdatedState(onSwipeStart)
+    val currentOnSwipeOpen by rememberUpdatedState(onSwipeOpen)
+    val currentOnSwipeClose by rememberUpdatedState(onSwipeClose)
 
+    // 열림 여부는 화면이 정함
     LaunchedEffect(isSwipeOpen) {
-        if (!isSwipeOpen && offsetX.value != 0f) {
-            offsetX.animateTo(0f, tween(200))
+        if (!isSwipeOpen && swipeState.targetValue != SwipeValue.Closed) {
+            swipeState.animateTo(SwipeValue.Closed, tween(200))
         }
+    }
+    // 밀기 시작하면 다른 열린 칸부터 닫음
+    LaunchedEffect(dragInteraction) {
+        dragInteraction.interactions.collect { if (it is DragInteraction.Start) currentOnSwipeStart() }
+    }
+    // 손으로 열고 닫은 결과를 화면에 알림
+    LaunchedEffect(swipeState) {
+        snapshotFlow { swipeState.settledValue }
+            .drop(1)
+            .collect { if (it == SwipeValue.Open) currentOnSwipeOpen() else currentOnSwipeClose() }
     }
 
     BoxWithConstraints(
@@ -93,7 +124,7 @@ fun NotificationItem(
             modifier = Modifier
                 .wrapContentWidth(unbounded = true, align = Alignment.Start)
                 .height(IntrinsicSize.Max)
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .offset { IntOffset(swipeState.requireOffset().roundToInt(), 0) }
         ) {
             // 콘텐츠 영역
             Row(
@@ -106,31 +137,18 @@ fun NotificationItem(
                         else
                             Color.Transparent
                     )
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                scope.launch {
-                                    val target = if (offsetX.value < -actionWidthPx / 2) -actionWidthPx else 0f
-                                    offsetX.animateTo(target, tween(200))
-                                    if (target != 0f) onSwipeOpen()
-                                }
-                            },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                scope.launch {
-                                    val newValue = (offsetX.value + dragAmount).coerceIn(-actionWidthPx, 0f)
-                                    offsetX.snapTo(newValue)
-                                }
-                            }
-                        )
-                    }
+                    .anchoredDraggable(
+                        state = swipeState,
+                        reverseDirection = false,
+                        orientation = Orientation.Horizontal,
+                        interactionSource = dragInteraction,
+                        flingBehavior = AnchoredDraggableDefaults.flingBehavior(swipeState)
+                    )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = ripple()
-                    ) {
-                        scope.launch { offsetX.animateTo(0f, tween(200)) }
-                        onClick()
-                    }
+                        indication = ripple(),
+                        onClick = onClick
+                    )
                     .padding(start = 6.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -151,28 +169,37 @@ fun NotificationItem(
 
                 // 프로필 이미지 또는 카테고리 아이콘
                 if (notification.senderId != null) {
-                    AsyncImage(
-                        model = notification.senderAvatarUrl,
-                        contentDescription = "프로필 이미지",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onProfileClick() },
-                        contentScale = ContentScale.Crop,
-                        placeholder = painterResource(R.drawable.ic_profile_placeholder),
-                        error = painterResource(R.drawable.ic_profile_placeholder),
-                        fallback = painterResource(R.drawable.ic_profile_placeholder)
-                    )
+                    Box {
+                        AsyncImage(
+                            model = notification.senderAvatarUrl,
+                            contentDescription = "프로필 이미지",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onProfileClick() },
+                            contentScale = ContentScale.Crop,
+                            placeholder = painterResource(R.drawable.ic_profile_placeholder),
+                            error = painterResource(R.drawable.ic_profile_placeholder),
+                            fallback = painterResource(R.drawable.ic_profile_placeholder)
+                        )
+                        NotificationTypeBadge(
+                            type = notification.type,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .offset(x = 3.dp, y = 3.dp)
+                        )
+                    }
                 } else {
                     NotificationIcon(type = notification.type)
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
+                // 글은 두 줄에서 줄이고 시간은 아래 고정
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -182,7 +209,7 @@ fun NotificationItem(
                             message = notification.message,
                             senderUsername = notification.senderUsername
                         ),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -190,7 +217,7 @@ fun NotificationItem(
 
                     Text(
                         text = formatRelativeTime(notification.createdAt),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
@@ -201,7 +228,7 @@ fun NotificationItem(
                     Box(
                         modifier = Modifier
                             .size(46.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
@@ -223,12 +250,7 @@ fun NotificationItem(
                     .width(80.dp)
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.error)
-                    .clickable {
-                        scope.launch {
-                            offsetX.animateTo(0f, tween(200))
-                        }
-                        onDelete()
-                    },
+                    .clickable(onClick = onDelete),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -239,6 +261,30 @@ fun NotificationItem(
                 )
             }
         }
+    }
+}
+
+private enum class SwipeValue { Closed, Open }
+
+/** 프로필 사진 오른쪽 아래 종류 배지 */
+@Composable
+private fun NotificationTypeBadge(type: String, modifier: Modifier = Modifier) {
+    val (iconRes, tintColor) = getNotificationIconAndColor(type)
+    val isLike = type == NotificationType.LIKE_POST || type == NotificationType.LIKE_COMMENT
+    Box(
+        modifier = modifier
+            .size(18.dp)
+            .background(MaterialTheme.colorScheme.background, CircleShape)
+            .padding(1.5.dp)
+            .background(tintColor, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(if (isLike) R.drawable.ic_heart_filled else iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(10.dp),
+            tint = Color.White
+        )
     }
 }
 
@@ -266,40 +312,35 @@ private fun NotificationIcon(type: String) {
 private fun getNotificationIconAndColor(type: String): Pair<Int, Color> {
     val primary = MaterialTheme.colorScheme.primary
     val systemColor = MaterialTheme.colorScheme.onSurfaceVariant
-    // 알림 종류 구분용 고정 팔레트
-    val indigo = Color(0xFF6366F1)
-    val orange = Color(0xFFE67E22)
-    val emerald = Color(0xFF10B981)
-    val red = Color(0xFFEF4444)
-    val amber = Color(0xFFF59E0B)
+    val like = Like
 
     return when (type) {
         // 소셜
-        NotificationType.FOLLOW -> R.drawable.ic_profile to indigo
+        NotificationType.FOLLOW -> R.drawable.ic_profile to primary
         NotificationType.LIKE_POST,
-        NotificationType.LIKE_COMMENT -> R.drawable.ic_heart to red
+        NotificationType.LIKE_COMMENT -> R.drawable.ic_heart to like
         NotificationType.COMMENT,
-        NotificationType.REPLY -> R.drawable.ic_comment to indigo
+        NotificationType.REPLY -> R.drawable.ic_comment to primary
         NotificationType.MENTION -> R.drawable.ic_comment to primary
-        NotificationType.NEW_POST -> R.drawable.ic_edit to indigo
+        NotificationType.NEW_POST -> R.drawable.ic_edit to primary
         // 커머스
         NotificationType.ORDER_CREATED,
         NotificationType.ORDER_RECEIVED,
         NotificationType.ORDER_CONFIRMED,
-        NotificationType.ORDER_CANCELLED -> R.drawable.ic_order to orange
+        NotificationType.ORDER_CANCELLED -> R.drawable.ic_order to primary
         NotificationType.SHIPPING_STARTED,
         NotificationType.SHIPPING_IN_TRANSIT,
         NotificationType.SHIPPING_OUT_FOR_DELIVERY,
-        NotificationType.SHIPPING_DELIVERED -> R.drawable.ic_shipping to orange
-        NotificationType.PRODUCT_REVIEWED -> R.drawable.ic_review to orange
-        NotificationType.NEW_PRODUCT -> R.drawable.ic_store to orange
+        NotificationType.SHIPPING_DELIVERED -> R.drawable.ic_shipping to primary
+        NotificationType.PRODUCT_REVIEWED -> R.drawable.ic_review to primary
+        NotificationType.NEW_PRODUCT -> R.drawable.ic_store to primary
         // 포인트
         NotificationType.POINT_EARNED,
-        NotificationType.POINT_EXPIRED -> R.drawable.ic_point to amber
+        NotificationType.POINT_EXPIRED -> R.drawable.ic_point to primary
         // 크리에이터
-        NotificationType.CREATOR_APPROVED -> R.drawable.ic_check to emerald
-        NotificationType.CREATOR_REJECTED -> R.drawable.ic_close to red
-        NotificationType.CREATOR_DEMOTED -> R.drawable.ic_warning to red
+        NotificationType.CREATOR_APPROVED -> R.drawable.ic_check to primary
+        NotificationType.CREATOR_REJECTED -> R.drawable.ic_close to primary
+        NotificationType.CREATOR_DEMOTED -> R.drawable.ic_warning to primary
         // 시스템 기본
         else -> R.drawable.ic_notification to systemColor
     }

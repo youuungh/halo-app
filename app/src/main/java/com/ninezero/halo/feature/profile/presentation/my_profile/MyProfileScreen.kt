@@ -1,30 +1,16 @@
 package com.ninezero.halo.feature.profile.presentation.my_profile
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,46 +19,39 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.R
 import com.ninezero.halo.core.deeplink.DeepLinks
 import com.ninezero.halo.core.model.ReportTargetType
 import com.ninezero.halo.core.ui.components.bottomsheet.CommentOptionBottomSheet
 import com.ninezero.halo.core.ui.components.bottomsheet.PostOptionBottomSheet
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import com.ninezero.halo.core.ui.components.navigation.BottomBarAccessory
+import com.ninezero.halo.core.ui.components.layout.collapsingGlassTopBarHeight
+import com.ninezero.halo.core.ui.components.layout.jumpOrAnimateToTop
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
-import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarAccessory
+import com.ninezero.halo.core.ui.components.navigation.BottomBarSideButton
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
+import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarSideButton
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupData
 import com.ninezero.halo.core.ui.components.popup.ProfilePopupHost
 import com.ninezero.halo.core.ui.components.popup.rememberProfilePopupHostState
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
 import com.ninezero.halo.core.ui.components.post.PostCardSkeleton
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
 import com.ninezero.halo.feature.profile.domain.model.SectionType
 import com.ninezero.halo.feature.profile.presentation.components.ProfileHeaderSkeleton
 import com.ninezero.halo.feature.profile.presentation.components.ProfileScreenShell
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTab
+import com.ninezero.halo.feature.profile.presentation.components.rememberCollapsibleHeaderState
 import com.ninezero.halo.feature.profile.presentation.my_profile.components.CollapsibleHeaderLayout
-import com.ninezero.halo.feature.profile.presentation.my_profile.components.rememberCollapsibleHeaderState
+import com.ninezero.halo.feature.profile.presentation.my_profile.components.MyProfileTopBar
 import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -198,7 +177,7 @@ fun MyProfileScreen(
 
     ShareSheetHost(
         visible = state.showShareSheet && state.sharePostId != null,
-        shareAction = { vm -> vm.onIntent(ShareIntent.SharePost(state.sharePostId!!)) },
+        shareAction = { shareViewModel -> state.sharePostId?.let { shareViewModel.onIntent(ShareIntent.SharePost(it)) } },
         onDismiss = { viewModel.onIntent(MyProfileIntent.DismissShareSheet) },
         onShareSuccess = { roomIds, count -> viewModel.onIntent(MyProfileIntent.ShareCompleted(roomIds, count)) },
         externalLink = state.sharePostId?.let(DeepLinks::postLink)
@@ -235,17 +214,17 @@ internal fun MyProfileScreenContent(
 
     // 커뮤니티 글 작성 버튼은 하단 바 옆에 붙음
     val canWriteCommunityPost = state.selectedTab == ProfileTab.COMMUNITY && state.profile?.isCreator == true
-    val bottomBarAccessory = LocalBottomBarAccessory.current
+    val bottomBarSideButton = LocalBottomBarSideButton.current
     val latestOnIntent by rememberUpdatedState(onIntent)
-    DisposableEffect(bottomBarAccessory, canWriteCommunityPost) {
+    DisposableEffect(bottomBarSideButton, canWriteCommunityPost) {
         if (canWriteCommunityPost) {
-            bottomBarAccessory?.show(
-                BottomBarAccessory(R.drawable.ic_chat_bubbles, "커뮤니티 글 작성") {
+            bottomBarSideButton?.show(
+                BottomBarSideButton(R.drawable.ic_chat_bubbles, "커뮤니티 글 작성") {
                     latestOnIntent(MyProfileIntent.CreateCommunityPost)
                 }
             )
         }
-        onDispose { bottomBarAccessory?.hide() }
+        onDispose { bottomBarSideButton?.hide() }
     }
 
     val isCreator = state.profile?.isCreator == true
@@ -263,8 +242,7 @@ internal fun MyProfileScreenContent(
     val storeListState = rememberLazyListState()
     val headerState = rememberCollapsibleHeaderState()
 
-    // 같은 탭 재선택은 header 펼치기 + list top
-    // 완전 top·펼침에서 한 번 더면 PullToRefresh
+    // 같은 탭 재선택은 header 펼치기 + list top, 완전 top·펼침에서 한 번 더면 PullToRefresh
     LaunchedEffect(tabReselectFlow, state.selectedTab) {
         tabReselectFlow?.collect {
             val activeListState = when (state.selectedTab) {
@@ -281,9 +259,10 @@ internal fun MyProfileScreenContent(
             if (listAtTop && headerExpanded) {
                 onIntent(MyProfileIntent.RefreshProfile)
             } else {
-                // list scroll과 header expand 병행
-                launch { activeListState.animateScrollToItem(0) }
-                launch { headerState.expand() }
+                launch {
+                    activeListState.jumpOrAnimateToTop()
+                    headerState.expand()
+                }
             }
         }
     }
@@ -310,7 +289,7 @@ internal fun MyProfileScreenContent(
     InfiniteScrollTrigger(
         listState = postsListState,
         isLoading = state.isPostsLoading,
-        hasMore = state.postsHasMore && state.selectedTab == ProfileTab.POSTS
+        hasMore = state.hasMorePosts && state.selectedTab == ProfileTab.POSTS
     ) {
         onIntent(MyProfileIntent.LoadMorePosts)
     }
@@ -319,74 +298,29 @@ internal fun MyProfileScreenContent(
     InfiniteScrollTrigger(
         listState = repliesListState,
         isLoading = state.isRepliesLoading,
-        hasMore = state.repliesHasMore && state.selectedTab == ProfileTab.REPLIES
+        hasMore = state.hasMoreReplies && state.selectedTab == ProfileTab.REPLIES
     ) {
         onIntent(MyProfileIntent.LoadMoreCommentThreads)
     }
 
+    val topBarHeight = collapsingGlassTopBarHeight()
+    val topBar: @Composable (collapseReveal: () -> Float, blurAlpha: () -> Float) -> Unit = { collapseReveal, blurAlpha ->
+        MyProfileTopBar(
+            title = state.profile?.username?.takeIf { it.isNotBlank() } ?: "프로필",
+            hazeState = hazeState,
+            backgroundColor = topBarBlurColor,
+            collapseReveal = collapseReveal,
+            blurAlpha = blurAlpha,
+            onSettingsClick = { onIntent(MyProfileIntent.NavigateToSettings) }
+        )
+    }
+
     Scaffold(
         snackbarHost = {
-            // PillFootprint만 더해 이중 계산 방지
+            // PillSpace만 더해 이중 계산 방지
             DefaultSnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = BottomBarDefaults.PillFootprint)
-            )
-        },
-        topBar = {
-            TopAppBar(
-                title = {
-                    val username = state.profile?.username
-                    Text(
-                        text = if (!username.isNullOrBlank()) username else "프로필",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                actions = {
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .bounceClick()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = true)
-                            ) { onIntent(MyProfileIntent.NavigateToSettings) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_settings),
-                            contentDescription = "설정"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                ),
-                modifier = Modifier
-                    .pointerInput(Unit) {
-                        detectTapGestures { /* 터치 이벤트 소비 */ }
-                    }
-                    .haloBlur(state = hazeState) {
-                        // 헤더 접힐수록 블러 강화
-                        val h = headerState.headerHeight
-                        val collapse = if (h > 0f) {
-                            (-headerState.scrollOffset / h).coerceIn(0f, 1f)
-                        } else {
-                            0f
-                        }
-                        style = HaloBlurStyle(
-                            backgroundColor = topBarBlurColor,
-                            tint = HaloBlurTint(topBarBlurColor),
-                            blurRadius = (30f + 50f * collapse).dp,
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0.85f + 0.15f * collapse,
-                            endIntensity = 0.6f * collapse
-                        )
-                    }
+                modifier = Modifier.padding(bottom = BottomBarDefaults.PillSpace)
             )
         },
         contentWindowInsets = WindowInsets(0)
@@ -396,14 +330,15 @@ internal fun MyProfileScreenContent(
             onRefresh = { onIntent(MyProfileIntent.RefreshProfile) },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            indicatorPadding = PaddingValues(top = topBarHeight)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     state.isLoading && state.profile == null -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = LocalBottomBarPadding.current)
+                        contentPadding = PaddingValues(top = topBarHeight, bottom = LocalBottomBarPadding.current)
                     ) {
                         item(key = "profile_header_skeleton") {
                             ProfileHeaderSkeleton()
@@ -419,21 +354,11 @@ internal fun MyProfileScreenContent(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(MyProfileIntent.LoadProfile) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "프로필을 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = { onIntent(MyProfileIntent.LoadProfile) }
+                        )
                     }
                 }
 
@@ -448,6 +373,8 @@ internal fun MyProfileScreenContent(
                         storeListState = storeListState,
                         tabs = tabs,
                         hazeState = hazeState,
+                        topBarHeight = topBarHeight,
+                        topBar = topBar,
                         onShowMediaViewer = onShowMediaViewer,
                         onShowProfileImageViewer = onShowProfileImageViewer,
                         onProfileClick = { authorId, offset ->
@@ -475,6 +402,8 @@ internal fun MyProfileScreenContent(
                     )
                 }
             }
+
+            if (state.profile == null) topBar({ 0f }, { 1f })
             }
         }
     }
@@ -541,6 +470,7 @@ internal fun MyProfileScreenContent(
 
     ProfilePopupHost(
         state = profilePopupState,
+        hazeState = hazeState,
         resolveAuthor = { authorId ->
             state.myPosts.firstOrNull { it.author.id == authorId }?.author?.let { ProfilePopupData(it.id, it.isFollowing) }
                 ?: (state.communityPosts + state.communityPinnedPosts).firstOrNull { it.author.id == authorId }?.author?.let { ProfilePopupData(it.id, it.isFollowing) }

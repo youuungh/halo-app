@@ -2,7 +2,7 @@ package com.ninezero.halo.feature.auth.presentation.verify_email
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.ninezero.halo.core.fcm.FcmRegistrationManager
+import com.ninezero.halo.core.fcm.FcmIdStore
 import com.ninezero.halo.core.util.Constants
 import com.ninezero.halo.feature.auth.domain.usecase.ResendVerificationUseCase
 import com.ninezero.halo.feature.auth.domain.usecase.VerifyEmailCodeUseCase
@@ -20,7 +20,7 @@ class VerifyEmailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val verifyEmailCodeUseCase: VerifyEmailCodeUseCase,
     private val resendVerificationUseCase: ResendVerificationUseCase,
-    private val fcmRegistrationManager: FcmRegistrationManager
+    private val fcmIdStore: FcmIdStore
 ) : ViewModel(), OrbitContainerHost<VerifyEmailState, VerifyEmailState, VerifyEmailSideEffect> {
 
     private val email: String = savedStateHandle.get<String>("email").orEmpty()
@@ -28,13 +28,13 @@ class VerifyEmailViewModel @Inject constructor(
     override val container: OrbitContainer<VerifyEmailState, VerifyEmailState, VerifyEmailSideEffect> =
         orbitContainer(VerifyEmailState(email = email))
 
-    private var validityTimerJob: Job? = null
-    private var resendCooldownJob: Job? = null
+    private var expireTimerJob: Job? = null
+    private var resendWaitJob: Job? = null
 
     init {
         // 가입 폼 제출로 코드가 막 발송된 상태로 진입
-        startValidityTimer()
-        startResendCooldown()
+        startExpireTimer()
+        startResendWait()
     }
 
     fun onIntent(intent: VerifyEmailIntent) {
@@ -65,7 +65,7 @@ class VerifyEmailViewModel @Inject constructor(
         postSideEffect(VerifyEmailSideEffect.ClearFocus)
         reduce { state.copy(isLoading = true, codeError = null) }
 
-        val fid = fcmRegistrationManager.getFid()
+        val fid = fcmIdStore.getFid()
 
         verifyEmailCodeUseCase(state.email, state.code, fid)
             .onSuccess {
@@ -84,7 +84,7 @@ class VerifyEmailViewModel @Inject constructor(
     }
 
     private fun resendCode() = intent {
-        if (state.resendCooldownSeconds > 0 || state.isLoading) return@intent
+        if (state.resendWaitSeconds > 0 || state.isLoading) return@intent
 
         reduce { state.copy(isLoading = true, codeError = null) }
 
@@ -94,12 +94,12 @@ class VerifyEmailViewModel @Inject constructor(
                     state.copy(
                         isLoading = false,
                         code = "",
-                        remainingSeconds = VerifyEmailState.CODE_VALIDITY_SECONDS,
-                        resendCooldownSeconds = VerifyEmailState.RESEND_COOLDOWN_SECONDS
+                        remainingSeconds = VerifyEmailState.CODE_EXPIRE_SECONDS,
+                        resendWaitSeconds = VerifyEmailState.RESEND_WAIT_SECONDS
                     )
                 }
-                startValidityTimer()
-                startResendCooldown()
+                startExpireTimer()
+                startResendWait()
                 postSideEffect(VerifyEmailSideEffect.ShowToast("인증 코드가 재전송되었습니다"))
             }
             .onFailure { error ->
@@ -107,9 +107,9 @@ class VerifyEmailViewModel @Inject constructor(
             }
     }
 
-    private fun startValidityTimer() {
-        validityTimerJob?.cancel()
-        validityTimerJob = intent {
+    private fun startExpireTimer() {
+        expireTimerJob?.cancel()
+        expireTimerJob = intent {
             while (state.remainingSeconds > 0) {
                 delay(1_000)
                 reduce { state.copy(remainingSeconds = state.remainingSeconds - 1) }
@@ -117,12 +117,12 @@ class VerifyEmailViewModel @Inject constructor(
         }
     }
 
-    private fun startResendCooldown() {
-        resendCooldownJob?.cancel()
-        resendCooldownJob = intent {
-            while (state.resendCooldownSeconds > 0) {
+    private fun startResendWait() {
+        resendWaitJob?.cancel()
+        resendWaitJob = intent {
+            while (state.resendWaitSeconds > 0) {
                 delay(1_000)
-                reduce { state.copy(resendCooldownSeconds = state.resendCooldownSeconds - 1) }
+                reduce { state.copy(resendWaitSeconds = state.resendWaitSeconds - 1) }
             }
         }
     }

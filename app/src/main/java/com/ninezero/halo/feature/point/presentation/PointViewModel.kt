@@ -142,7 +142,7 @@ class PointViewModel @Inject constructor(
             reduce { state.copy(balance = balance) }
         }
 
-        if (state.selectedMonth != month || state.selectedType != type) {  // 그사이 달·유형이 바뀜, 스피너만 해제
+        if (state.selectedMonth != month || state.selectedType != type) {  // 그사이 달·유형이 바뀌면 스피너만 해제
             reduce { state.copy(isRefreshing = false) }
             return@intent
         }

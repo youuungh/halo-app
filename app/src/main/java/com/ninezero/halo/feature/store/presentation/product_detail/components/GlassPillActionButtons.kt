@@ -1,7 +1,6 @@
 package com.ninezero.halo.feature.store.presentation.product_detail.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -27,11 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.modifiers.haloGlass
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 
 @Composable
@@ -46,20 +43,7 @@ fun GlassPillActionButtons(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .haloBlur(state = hazeState) {
-                style = HaloBlurStyle(
-                    backgroundColor = backgroundColor.copy(alpha = 0.7f),
-                    tint = HaloBlurTint(backgroundColor.copy(alpha = 0.4f)),
-                    blurRadius = 20.dp,
-                    noiseFactor = 0f
-                )
-            }
-            .border(
-                width = 0.5.dp,
-                color = iconTint.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(20.dp)
-            ),
+            .haloGlass(hazeState, backgroundColor.copy(alpha = 0.4f), RoundedCornerShape(20.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 장바구니 버튼

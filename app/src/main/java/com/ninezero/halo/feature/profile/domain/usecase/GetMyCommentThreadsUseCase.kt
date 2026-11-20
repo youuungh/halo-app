@@ -1,7 +1,7 @@
 package com.ninezero.halo.feature.profile.domain.usecase
 
 import com.ninezero.halo.core.model.CursorPage
-import com.ninezero.halo.feature.profile.domain.model.CommentThreadData
+import com.ninezero.halo.feature.profile.domain.model.CommentThread
 import com.ninezero.halo.feature.profile.domain.repository.ProfileRepository
 import javax.inject.Inject
 
@@ -15,7 +15,7 @@ class GetMyCommentThreadsUseCase @Inject constructor(
         limit: Int = 20,
         sort: String? = null,
         contextType: String? = null
-    ): Result<CursorPage<CommentThreadData>> {
+    ): Result<CursorPage<CommentThread>> {
         // 내 id는 캐시 우선, 없을 때만 조회
         val userId = getCachedMyProfileUseCase()?.userId
             ?: getMyProfileUseCase().getOrElse { return Result.failure(it) }.userId

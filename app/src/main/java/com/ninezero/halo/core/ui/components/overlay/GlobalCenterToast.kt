@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
+/** 화면 가운데 토스트를 띄우는 전역 상태 */
 object GlobalCenterToast {
     var message by mutableStateOf<String?>(null)
         private set

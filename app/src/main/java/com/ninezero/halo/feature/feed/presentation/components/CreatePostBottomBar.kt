@@ -17,12 +17,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
-import dev.chrisbanes.haze.HazeProgressive
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import dev.chrisbanes.haze.HazeState
 
 @Composable
@@ -37,17 +35,7 @@ fun CreatePostBottomBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .haloBlur(state = hazeState) {
-                style = HaloBlurStyle(
-                    backgroundColor = backgroundColor,
-                    tint = HaloBlurTint(backgroundColor),
-                    noiseFactor = 0f
-                )
-                progressive = HazeProgressive.verticalGradient(
-                    startIntensity = 0.5f,
-                    endIntensity = 0f
-                )
-            }
+            .haloBlur(hazeState, HaloBlurs.fadeUp(backgroundColor))
             .pointerInput(Unit) {
                 detectTapGestures { /* 터치 이벤트 소비 */ }
             }
@@ -58,7 +46,7 @@ fun CreatePostBottomBar(
         if (showSettingsButton) {
             GlassIconButton(
                 onClick = onSettingsClick,
-                icon = painterResource(R.drawable.ic_adjustments_horizontal),
+                icon = painterResource(R.drawable.ic_sliders),
                 contentDescription = "설정",
                 hazeState = hazeState,
                 backgroundColor = backgroundColor,

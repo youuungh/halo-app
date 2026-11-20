@@ -1,7 +1,7 @@
 package com.ninezero.halo.feature.auth.presentation.login
 
 import androidx.lifecycle.ViewModel
-import com.ninezero.halo.core.fcm.FcmRegistrationManager
+import com.ninezero.halo.core.fcm.FcmIdStore
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.stripPasswordWhitespace
 import com.ninezero.halo.feature.auth.domain.model.AuthValidationMessages
@@ -16,7 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
-    private val fcmRegistrationManager: FcmRegistrationManager
+    private val fcmIdStore: FcmIdStore
 ) : ViewModel(), OrbitContainerHost<LoginState, LoginState, LoginSideEffect> {
 
     override val container: OrbitContainer<LoginState, LoginState, LoginSideEffect> =
@@ -61,7 +61,7 @@ class LoginViewModel @Inject constructor(
         postSideEffect(LoginSideEffect.ClearFocus)
         reduce { state.copy(isLoading = true, emailError = null, passwordError = null) }
 
-        val fid = fcmRegistrationManager.getFid()
+        val fid = fcmIdStore.getFid()
 
         loginUseCase(
             email = state.email,

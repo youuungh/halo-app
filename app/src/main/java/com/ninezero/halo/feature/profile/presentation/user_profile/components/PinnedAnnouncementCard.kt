@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,20 +29,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
+import com.ninezero.halo.core.ui.components.media.Avatar
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.Like
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.Post
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 fun PinnedAnnouncementCard(
@@ -62,7 +60,7 @@ fun PinnedAnnouncementCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -127,15 +125,9 @@ private fun AnnouncementContent(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
+            Avatar(
                 model = post.author.avatarThumbUrl ?: post.author.avatarUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(R.drawable.ic_profile_placeholder),
-                error = painterResource(R.drawable.ic_profile_placeholder)
+                size = 28.dp
             )
             Spacer(modifier = Modifier.width(8.dp))
             Row(
@@ -164,6 +156,8 @@ private fun AnnouncementContent(
         Text(
             text = post.content,
             style = MaterialTheme.typography.bodySmall,
+            // 넘길 때 카드 높이가 바뀌지 않게 항상 3줄 자리 확보
+            minLines = 3,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
@@ -178,11 +172,11 @@ private fun AnnouncementContent(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(
-                        if (post.isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart
+                        if (post.isLiked) R.drawable.ic_post_heart_filled else R.drawable.ic_post_heart
                     ),
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
-                    tint = if (post.isLiked) Color(0xFFE91E63) else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (post.isLiked) Like else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
@@ -193,7 +187,7 @@ private fun AnnouncementContent(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_comment),
+                    painter = painterResource(R.drawable.ic_post_comment),
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant

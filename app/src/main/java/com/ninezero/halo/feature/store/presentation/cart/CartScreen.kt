@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,17 +12,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,33 +39,42 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.checkbox.HaloCheckbox
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.ListEmptyState
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.cardBorder
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.toggle.HaloCheckbox
+import com.ninezero.halo.core.ui.theme.MembershipColors
 import com.ninezero.halo.feature.store.domain.model.CartItem
 import com.ninezero.halo.feature.store.domain.model.calcStorePricing
-import com.ninezero.halo.feature.store.domain.model.isPurchasable
+import com.ninezero.halo.feature.store.domain.model.canBuy
+import com.ninezero.halo.feature.store.domain.model.earnRatePercent
 import com.ninezero.halo.feature.store.domain.model.toOrderLine
+import com.ninezero.halo.feature.store.presentation.cart.components.CartBarSummary
 import com.ninezero.halo.feature.store.presentation.cart.components.CartBottomBar
 import com.ninezero.halo.feature.store.presentation.cart.components.CartItemRow
 import com.ninezero.halo.feature.store.presentation.cart.components.CartSkeleton
 import com.ninezero.halo.feature.store.presentation.cart.components.CreatorGroupHeader
+import com.ninezero.halo.feature.store.presentation.cart.components.FreeShippingNotice
 import com.ninezero.halo.feature.store.presentation.cart.components.GroupSummarySection
+import com.ninezero.halo.feature.store.presentation.components.calcMembershipBreakdown
+import com.ninezero.halo.feature.subscription.domain.model.UserTierInfo
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -112,7 +121,7 @@ fun CartScreen(
         snackbarHostState = snackbarHostState,
         onRefresh = { viewModel.onIntent(CartIntent.Refresh) },
         onNavigateBack = { viewModel.onIntent(CartIntent.NavigateBack) },
-        onUpdateQuantity = { cartItemId, qty -> viewModel.onIntent(CartIntent.UpdateQuantity(cartItemId, qty)) },
+        onUpdateQuantity = { cartItemId, quantity -> viewModel.onIntent(CartIntent.UpdateQuantity(cartItemId, quantity)) },
         onRemoveItem = { cartItemId -> viewModel.onIntent(CartIntent.RemoveItem(cartItemId)) },
         onItemClick = { productId -> viewModel.onIntent(CartIntent.NavigateToProductDetail(productId)) },
         onCheckout = { viewModel.onIntent(CartIntent.NavigateToCheckout) },
@@ -124,7 +133,8 @@ fun CartScreen(
         onNavigateToUserProfile = { userId -> viewModel.onIntent(CartIntent.NavigateToUserProfile(userId)) },
         onShowRestrictedContent = { message ->
             viewModel.onIntent(CartIntent.ShowRestrictedContentSnackbar(message))
-        }
+        },
+        onQuantityLimit = { max -> viewModel.onIntent(CartIntent.ShowQuantityLimitSnackbar(max)) }
     )
 }
 
@@ -144,7 +154,8 @@ internal fun CartScreenContent(
     onToggleSelectAll: () -> Unit = {},
     onRemoveSelectedItems: () -> Unit = {},
     onNavigateToUserProfile: (Int) -> Unit = {},
-    onShowRestrictedContent: (String) -> Unit = {}
+    onShowRestrictedContent: (String) -> Unit = {},
+    onQuantityLimit: (Int) -> Unit = {}
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
     val hazeState = remember { HazeState() }
@@ -155,6 +166,8 @@ internal fun CartScreenContent(
     var bottomBarHeight by rememberSaveableDp()
     // 인셋 제외 바텀바 높이, 수량필드 스크롤 보정용
     var barContentHeight by remember { mutableStateOf(0.dp) }
+    // 스낵바용: 펼침·접힘 애니메이션 중 지금 보이는 카드 높이
+    var barVisibleHeight by remember { mutableStateOf(0.dp) }
     val numberFormat = rememberKoreanNumberFormat()
     val focusManager = LocalFocusManager.current
     DisposableEffect(Unit) {
@@ -163,7 +176,7 @@ internal fun CartScreenContent(
     val cart = state.cart
     val hasItems = cart != null && cart.items.isNotEmpty()
     val isInitialLoading = state.isLoading && cart == null
-    val isPurchasable: (CartItem) -> Boolean = { item -> item.product.isPurchasable() }
+    val canBuy: (CartItem) -> Boolean = { item -> item.product.canBuy() }
 
     val creatorGroups = remember(cart) {
         cart?.items?.groupBy { it.product.creator.id }
@@ -174,28 +187,14 @@ internal fun CartScreenContent(
     // 선택 가격, 구매불가 제외
     val selectedItems = remember(cart, state.selectedItemIds) {
         cart?.items?.filter { item ->
-            item.id in state.selectedItemIds && isPurchasable(item)
+            item.id in state.selectedItemIds && canBuy(item)
         } ?: emptyList()
     }
-    val selectedPricing = remember(selectedItems, state.creatorTierMap) {
-        calcStorePricing(
-            items = selectedItems.map { it.toOrderLine() },
-            subscribedCreatorIds = state.creatorTierMap.keys
-        )
+    val barSummary = remember(selectedItems, state.creatorTierMap) {
+        buildCartBarSummary(selectedItems, state.creatorTierMap)
     }
-    val selectedTotalPrice = selectedPricing.subtotal
-    val selectedTotalShippingFee = selectedPricing.shipping.finalShippingFee
-    val selectedTotalDiscount = selectedPricing.productDiscount
-    val selectedOriginalShippingFee = selectedPricing.shipping.membershipFreeShipFee
-    val hasMembershipFreeShipping = selectedPricing.shipping.membershipFreeShipIds.isNotEmpty()
-    val selectedOrderTotal = selectedPricing.totalBeforePoints
-    val selectedItemCount = remember(selectedItems) {
-        selectedItems.sumOf { it.quantity }
-    }
-    val isAllSelected = remember(cart, state.selectedItemIds) {
-        val availableItems = cart?.items?.filter(isPurchasable) ?: emptyList()
-        availableItems.isNotEmpty() && availableItems.all { it.id in state.selectedItemIds }
-    }
+    val availableCount = remember(cart) { cart?.items?.count(canBuy) ?: 0 }
+    val isAllSelected = availableCount > 0 && selectedItems.size == availableCount
 
     Box(
         modifier = Modifier
@@ -217,42 +216,28 @@ internal fun CartScreenContent(
                     CartSkeleton(topPadding = headerHeight)
                 }
 
+                // 다른 목록 화면처럼 화면 가운데
                 state.error != null && cart == null -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = headerHeight),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = onRetry,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "장바구니를 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = onRetry
+                        )
                     }
                 }
 
                 !state.isLoading && !hasItems -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = headerHeight),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "장바구니가 비어있어요",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ListEmptyState(
+                            title = "장바구니가 비어있어요",
+                            description = "마음에 드는 상품을 담아보세요"
                         )
                     }
                 }
@@ -267,40 +252,62 @@ internal fun CartScreenContent(
                         contentPadding = PaddingValues(top = headerHeight, bottom = bottomBarHeight)
                     ) {
                         creatorGroups.forEachIndexed { groupIndex, (creator, items) ->
-                            val availableCreatorItemIds = items.filter(isPurchasable).map { it.id }.toSet()
+                            val availableCreatorItemIds = items.filter(canBuy).map { it.id }.toSet()
                             val isCreatorAllSelected = availableCreatorItemIds.isNotEmpty() &&
                                 availableCreatorItemIds.all { it in state.selectedItemIds }
+
+                            val isSubscribed = state.creatorTierMap.containsKey(creator.id)
+                            // 그룹 합계, 구매불가 제외
+                            val groupSelectedItems = items.filter { item ->
+                                item.id in state.selectedItemIds && canBuy(item)
+                            }
+                            val cardShape = RoundedCornerShape(20.dp)
 
                             item(key = "creator_group_${creator.id}") {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(
-                                            horizontal = 12.dp,
-                                            vertical = if (groupIndex == 0) 0.dp else 8.dp
+                                            start = 16.dp,
+                                            end = 16.dp,
+                                            top = if (groupIndex == 0) 0.dp else 12.dp
                                         )
-                                        .border(
-                                            width = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                                alpha = 0.5f
-                                            ),
-                                            shape = RoundedCornerShape(12.dp)
+                                        .then(
+                                            if (isSubscribed) {
+                                                Modifier
+                                                    .background(MembershipColors.groupCardBrush, cardShape)
+                                                    .border(0.5.dp, MembershipColors.groupCardBorder, cardShape)
+                                            } else {
+                                                Modifier.cardBorder(cardShape)
+                                            }
                                         )
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(cardShape)
+                                        .padding(top = 2.dp, bottom = 16.dp)
                                 ) {
                                     CreatorGroupHeader(
                                         creator = creator,
                                         isAllSelected = isCreatorAllSelected,
-                                        isSubscribed = state.creatorTierMap.containsKey(creator.id),
+                                        isSubscribed = isSubscribed,
                                         onToggleSelection = { onToggleCreatorSelection(creator.id) },
                                         onCreatorClick = { onNavigateToUserProfile(creator.id) }
                                     )
 
                                     HorizontalDivider(
                                         thickness = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                     )
+
+                                    // 멤버십은 항상 무료배송이라 안내 없음
+                                    if (!isSubscribed && groupSelectedItems.isNotEmpty()) {
+                                        FreeShippingNotice(
+                                            subtotal = groupSelectedItems.sumOf { it.toOrderLine().subtotal },
+                                            numberFormat = numberFormat
+                                        )
+                                        HorizontalDivider(
+                                            thickness = 0.5.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        )
+                                    }
 
                                     items.forEachIndexed { itemIndex, cartItem ->
                                         CartItemRow(
@@ -310,54 +317,43 @@ internal fun CartScreenContent(
                                             onClick = {
                                                 if (cartItem.product.canAccess == false) {
                                                     onShowRestrictedContent(
-                                                        "${cartItem.product.requiredTier} 멤버십 전용 상품입니다"
+                                                        "${cartItem.product.requiredTier.label} 멤버십 전용 상품입니다"
                                                     )
                                                 } else {
                                                     onItemClick(cartItem.product.id)
                                                 }
                                             },
                                             onToggleSelection = { onToggleItemSelection(cartItem.id) },
-                                            onUpdateQuantity = { qty ->
+                                            onUpdateQuantity = { quantity ->
                                                 onUpdateQuantity(
                                                     cartItem.id,
-                                                    qty
+                                                    quantity
                                                 )
                                             },
+                                            onQuantityLimit = onQuantityLimit,
                                             onRemove = { onRemoveItem(cartItem.id) },
-                                            bottomReservedSpace = barContentHeight
+                                            isMembershipCard = isSubscribed,
+                                            bottomReservedSpace = barContentHeight,
+                                            modifier = Modifier.padding(top = if (itemIndex == 0) 14.dp else 20.dp)
                                         )
-                                        if (itemIndex < items.size - 1) {
-                                            HorizontalDivider(
-                                                thickness = 0.5.dp,
-                                                color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                                    alpha = 0.3f
-                                                ),
-                                                modifier = Modifier.padding(
-                                                    start = 52.dp,
-                                                    end = 16.dp
-                                                )
-                                            )
-                                        }
                                     }
 
-                                    // 그룹 합계, 구매불가 제외
-                                    val groupSelectedItems = items.filter { item ->
-                                        item.id in state.selectedItemIds && isPurchasable(item)
-                                    }
                                     if (groupSelectedItems.isNotEmpty()) {
                                         HorizontalDivider(
                                             thickness = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(
-                                                alpha = 0.5f
-                                            ),
-                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                            modifier = Modifier.padding(
+                                                start = 16.dp,
+                                                end = 16.dp,
+                                                top = 16.dp,
+                                                bottom = 12.dp
+                                            )
                                         )
                                         GroupSummarySection(
                                             selectedItems = groupSelectedItems,
                                             numberFormat = numberFormat,
-                                            isCreatorSubscribed = state.creatorTierMap.containsKey(
-                                                creator.id
-                                            )
+                                            earnRatePercent = earnRatePercent(state.creatorTierMap[creator.id]?.tier),
+                                            isCreatorSubscribed = isSubscribed
                                         )
                                     }
                                 }
@@ -372,18 +368,19 @@ internal fun CartScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
+                .haloBlur(
+                    hazeState,
+                    HaloBlurStyle(
                         backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
+                        tint = backgroundColor,
                         blurRadius = 25.dp,
-                        noiseFactor = 0f
+                        noiseFactor = 0f,
+                        progressive = HazeProgressive.verticalGradient(
+                            startIntensity = 0.7f,
+                            endIntensity = 0f
+                        )
                     )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1f,
-                        endIntensity = 0f
-                    )
-                }
+                )
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
@@ -426,25 +423,43 @@ internal fun CartScreenContent(
                         .padding(bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    HaloCheckbox(
-                        checked = isAllSelected,
-                        onClick = onToggleSelectAll
-                    )
-                    Text(
-                        text = "전체선택",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .offset(x = (-4).dp)
-                            .weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.toggleable(
+                            value = isAllSelected,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Checkbox,
+                            onValueChange = { onToggleSelectAll() }
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 체크는 48 터치 칸 자리, 글자 쪽만 11로 붙임
+                        HaloCheckbox(
+                            checked = isAllSelected,
+                            modifier = Modifier.padding(start = 15.dp, top = 15.dp, end = 11.dp, bottom = 15.dp)
+                        )
+                        Text(
+                            text = "전체선택",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (availableCount > 0) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${selectedItems.size}/$availableCount",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
                     if (state.selectedItemIds.isNotEmpty()) {
                         Text(
                             text = "선택삭제",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .clickable { onRemoveSelectedItems() }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         )
@@ -456,14 +471,7 @@ internal fun CartScreenContent(
         // 하단 바
         if (hasItems) {
             CartBottomBar(
-                selectedItemCount = selectedItemCount,
-                selectedTotalPrice = selectedTotalPrice,
-                selectedTotalShippingFee = selectedTotalShippingFee,
-                selectedTotalDiscount = selectedTotalDiscount,
-                selectedOriginalShippingFee = selectedOriginalShippingFee,
-                hasMembershipFreeShipping = hasMembershipFreeShipping,
-                selectedOrderTotal = selectedOrderTotal,
-                hasSelectedItems = selectedItems.isNotEmpty(),
+                summary = barSummary,
                 numberFormat = numberFormat,
                 hazeState = hazeState,
                 backgroundColor = backgroundColor,
@@ -472,20 +480,56 @@ internal fun CartScreenContent(
                     onCheckout()
                 },
                 onBottomBarHeightChanged = { bottomBarHeight = it },
+                onContentHeightChange = { barVisibleHeight = it },
                 onContentHeightChanged = { barContentHeight = it },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
 
-        DefaultSnackbarHost(
+        BottomBarSnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = if (hasItems) 80.dp else 0.dp)
+            bottomPadding = { if (hasItems) barVisibleHeight else 0.dp },
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
 
         if (state.isDeleting) {
             LoadingDialog()
         }
     }
+}
+
+/** 선택 상품의 하단 바 가격 내역 */
+private fun buildCartBarSummary(
+    selectedItems: List<CartItem>,
+    creatorTierMap: Map<Int, UserTierInfo>
+): CartBarSummary {
+    val orderLines = selectedItems.map { it.toOrderLine() }
+    val pricing = calcStorePricing(items = orderLines, subscribedCreatorIds = creatorTierMap.keys)
+    val membership = calcMembershipBreakdown(
+        items = orderLines,
+        pricing = pricing,
+        subscribedCreatorIds = creatorTierMap.keys,
+        tierOf = { creatorTierMap[it]?.tier }
+    )
+    return CartBarSummary(
+        itemCount = selectedItems.size,
+        productAmount = pricing.subtotal + pricing.productDiscount,
+        productDiscount = pricing.productDiscount,
+        shippingFee = pricing.shipping.finalShippingFee + membership.freeShippingAmount,
+        orderTotal = pricing.totalBeforePoints,
+        membership = membership
+    )
+}
+
+/** 바 윗선을 따라가는 스낵바, 높이는 여기서만 읽음 */
+@Composable
+private fun BottomBarSnackbarHost(
+    hostState: SnackbarHostState,
+    bottomPadding: () -> Dp,
+    modifier: Modifier = Modifier
+) {
+    DefaultSnackbarHost(
+        hostState = hostState,
+        modifier = modifier.padding(bottom = bottomPadding())
+    )
 }

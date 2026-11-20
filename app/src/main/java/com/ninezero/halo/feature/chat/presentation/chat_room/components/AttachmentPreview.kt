@@ -43,12 +43,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.core.util.MediaUtils
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toReadableFileSize
 import com.ninezero.halo.core.util.toVideoDuration
 import com.ninezero.halo.feature.chat.presentation.chat_room.AttachmentState
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 fun AttachmentPreviewArea(
@@ -130,12 +130,12 @@ private fun ImageThumbnailItem(
     Box(
         modifier = modifier
             .size(80.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surface)
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             )
     ) {
         when {
@@ -188,12 +188,12 @@ private fun VideoAttachmentPreview(
     Box(
         modifier = modifier
             .size(width = 100.dp, height = 75.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surface)
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             )
     ) {
         if (video.thumbnail != null) {
@@ -224,7 +224,7 @@ private fun VideoAttachmentPreview(
                     .padding(6.dp)
                     .background(
                         color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(4.dp)
+                        shape = MaterialTheme.shapes.extraSmall
                     )
                     .padding(horizontal = 5.dp, vertical = 2.dp)
             ) {
@@ -269,7 +269,7 @@ private fun FileAttachmentPreview(
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {

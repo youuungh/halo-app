@@ -2,6 +2,8 @@ package com.ninezero.halo.feature.coupon.data.remote.dto
 
 import com.ninezero.halo.core.network.PagedDto
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toAmountLong
+import com.ninezero.halo.core.util.toAmountLongOrNull
 import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.coupon.domain.model.Coupon
 import com.ninezero.halo.feature.coupon.domain.model.CouponDiscountTarget
@@ -44,9 +46,9 @@ data class CouponResponseDto(
         description = description,
         type = type.toEnumOrDefault(CouponType.FIXED_AMOUNT),
         discountTarget = discountTarget.toEnumOrDefault(CouponDiscountTarget.ALL),
-        discountValue = discountValue,
-        minOrderAmount = minOrderAmount,
-        maxDiscountAmount = maxDiscountAmount,
+        discountValue = discountValue.toAmountLong(),
+        minOrderAmount = minOrderAmount.toAmountLong(),
+        maxDiscountAmount = maxDiscountAmount.toAmountLongOrNull(),
         totalQuantity = totalQuantity,
         issuedQuantity = issuedQuantity,
         maxUseCount = maxUseCount,
@@ -77,12 +79,13 @@ data class UserCouponResponseDto(
         code = coupon.code,
         name = coupon.name,
         type = coupon.type.toEnumOrDefault(CouponType.FIXED_AMOUNT),
-        discountValue = coupon.discountValue,
-        minOrderAmount = coupon.minOrderAmount.takeIf { it != "0" },
-        maxDiscountAmount = coupon.maxDiscountAmount,
+        discountValue = coupon.discountValue.toAmountLong(),
+        minOrderAmount = coupon.minOrderAmount.toAmountLongOrNull()?.takeIf { it > 0L },
+        maxDiscountAmount = coupon.maxDiscountAmount.toAmountLongOrNull(),
         status = status.toEnumOrDefault(UserCouponStatus.AVAILABLE),
         expiresAt = expiresAt.parseTimestamp(),
-        daysRemaining = daysRemaining
+        daysRemaining = daysRemaining,
+        usedAt = usedAt?.parseTimestamp()
     )
 }
 

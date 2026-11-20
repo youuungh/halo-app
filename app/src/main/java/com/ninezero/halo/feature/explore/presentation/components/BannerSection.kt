@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,8 +53,8 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
 import com.ninezero.halo.core.ui.components.media.LocalAutoplayEnabled
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.explore.domain.model.Banner
-import com.ninezero.halo.ui.theme.HaloTheme
 import kotlinx.coroutines.delay
 import kotlin.math.absoluteValue
 
@@ -86,7 +85,7 @@ fun BannerSection(
             // 자동 슬라이드, 터치 중 정지·뗀 뒤 4초
             var isPressed by remember { mutableStateOf(false) }
             val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
-            // 숨겨진 상태에선 루프 정지 → 복귀 시 자동 재시작
+            // 숨겨진 상태에선 루프 정지 - 복귀 시 자동 재시작
             val autoplayEnabled = LocalAutoplayEnabled.current
             LaunchedEffect(isDragged, isPressed, autoplayEnabled) {
                 if (!isInfinite || isDragged || isPressed || !autoplayEnabled) return@LaunchedEffect
@@ -108,7 +107,7 @@ fun BannerSection(
                 modifier = modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
-                    // 배너 영역 press 감시 → 자동 슬라이드 정지
+                    // 배너 영역 press 감시 - 자동 슬라이드 정지
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
@@ -189,7 +188,7 @@ private fun BannerItem(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer { this.alpha = alpha() }
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onClick)
     ) {
         AsyncImage(

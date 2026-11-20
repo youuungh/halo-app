@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,10 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,9 +35,10 @@ import com.ninezero.halo.core.ui.components.bottomsheet.EditDeleteOptionBottomSh
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
+import com.ninezero.halo.core.ui.components.popup.SortPopupMenu
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
@@ -48,7 +46,6 @@ import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostStat
 import com.ninezero.halo.feature.store.domain.model.Review
 import com.ninezero.halo.feature.store.presentation.review_list.components.ReviewItem
 import com.ninezero.halo.feature.store.presentation.review_list.components.ReviewItemSkeleton
-import com.ninezero.halo.feature.store.presentation.review_list.components.ReviewSortPopupMenu
 import com.ninezero.halo.feature.store.presentation.review_list.components.ReviewSummaryCard
 import com.ninezero.halo.feature.store.presentation.review_list.components.ReviewSummarySkeleton
 import dev.chrisbanes.haze.HazeState
@@ -65,8 +62,7 @@ fun ReviewListScreen(
 ) {
     val state = viewModel.collectAsState().value
     val snackbarHostState = remember { SnackbarHostState() }
-    // 리뷰 작성/수정 화면에서 돌아왔을 때 목록을 다시 읽음
-    // 최초 진입 스킵, 가드는 saveable
+    // 리뷰 작성/수정 화면에서 돌아왔을 때 목록을 다시 읽음. 최초 진입 스킵, 가드는 saveable
     var hasInitialResumeHandled by rememberSaveable { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -199,21 +195,11 @@ internal fun ReviewListScreenContent(
                             .padding(top = headerHeight),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = onRetry,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "리뷰를 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = onRetry
+                        )
                     }
                 }
 
@@ -241,8 +227,11 @@ internal fun ReviewListScreenContent(
                         // 정렬은 리뷰가 있을 때만
                         if (state.reviews.isNotEmpty()) {
                             item(key = "sort") {
-                                ReviewSortPopupMenu(
+                                SortPopupMenu(
+                                    hazeState = hazeState,
+                                    options = ReviewSortType.entries,
                                     currentSort = state.sortBy,
+                                    label = { it.displayName },
                                     onSortChange = onSortChange
                                 )
                             }
@@ -264,7 +253,7 @@ internal fun ReviewListScreenContent(
                             Column(
                                 modifier = if (review.id == highlightTargetId) {
                                     Modifier.drawBehind {
-                                        val alpha = reviewHighlight.value * 0.04f
+                                        val alpha = reviewHighlight.value * 0.08f
                                         if (alpha > 0f) drawRect(highlightColor.copy(alpha = alpha))
                                     }
                                 } else {
@@ -350,4 +339,3 @@ internal fun ReviewListScreenContent(
 
     ViewerOverlayHost(state = viewerHostState)
 }
-

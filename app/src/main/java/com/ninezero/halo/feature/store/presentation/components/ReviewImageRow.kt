@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -22,7 +21,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 @Composable
 fun ReviewImageRow(
@@ -47,7 +46,7 @@ fun ReviewImageRow(
                 .padding(start = startPadding, end = endPadding)
                 .padding(vertical = imagePadding)
                 .height(baseMediaSize)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .clickable { onImageClick(images, 0) },
             contentScale = ContentScale.Crop,
             placeholder = ColorPainter(placeholderColor),
@@ -65,7 +64,7 @@ fun ReviewImageRow(
                     contentDescription = "리뷰 이미지",
                     modifier = Modifier
                         .size(baseMediaSize)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .clickable { onImageClick(images, index) },
                     contentScale = ContentScale.Crop,
                     placeholder = ColorPainter(placeholderColor),

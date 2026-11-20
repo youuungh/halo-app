@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** 네트워크 끊김 뒤 다시 연결 알림 */
 @Singleton
 class NetworkMonitor @Inject constructor(
     @ApplicationContext private val context: Context

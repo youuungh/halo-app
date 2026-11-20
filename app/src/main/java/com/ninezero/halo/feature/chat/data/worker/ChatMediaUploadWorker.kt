@@ -17,12 +17,15 @@ import androidx.work.WorkerParameters
 import com.ninezero.halo.core.database.dao.CachedMessageDao
 import com.ninezero.halo.core.database.dao.PendingChatMessageDao
 import com.ninezero.halo.core.database.entity.UploadStatus
+import com.ninezero.halo.core.media.MediaCopyStore
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.network.ApiException
+import com.ninezero.halo.core.network.safeApiCall
 import com.ninezero.halo.core.network.upload.DirectUploader
 import com.ninezero.halo.core.network.upload.ProgressRequestBody
 import com.ninezero.halo.core.network.upload.UriRequestBody
-import com.ninezero.halo.core.util.MediaPersistenceManager
-import com.ninezero.halo.core.util.MediaUtils
+import com.ninezero.halo.feature.chat.data.remote.api.ChatApi
+import com.ninezero.halo.feature.chat.domain.model.ChatImageUpload
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.feature.chat.domain.model.ChatUploadEvent
 import com.ninezero.halo.feature.chat.domain.repository.ChatRepository
@@ -61,8 +64,9 @@ class ChatMediaUploadWorker @AssistedInject constructor(
     private val pendingChatMessageDao: PendingChatMessageDao,
     private val cachedMessageDao: CachedMessageDao,
     private val chatRepository: ChatRepository,
-    private val uploadResultManager: ChatUploadResultManager,
-    private val mediaPersistence: MediaPersistenceManager,
+    private val chatApi: ChatApi,
+    private val uploadEventBus: ChatUploadEventBus,
+    private val mediaCopyStore: MediaCopyStore,
     private val directUploader: DirectUploader
 ) : CoroutineWorker(context, workerParams) {
 
@@ -153,8 +157,8 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                             Timber.d("ChatMediaUploadWorker: 메시지 전송 성공: ${message.id}")
                             pendingChatMessageDao.deleteById(pendingMessageId)
                             chatRepository.markMediaMessageSent(pendingMessageId.toString())
-                            mediaPersistence.cleanupOwner(
-                                MediaPersistenceManager.OwnerType.PENDING_CHAT,
+                            mediaCopyStore.cleanupOwner(
+                                MediaCopyStore.OwnerType.PENDING_CHAT,
                                 pendingMessageId
                             )
                             Result.success()
@@ -184,14 +188,14 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
     /** 진행률을 placeholder에 기록 */
     private suspend fun publishProgress(pendingMessageId: Long, fraction: Float) {
-        val clamped = fraction.coerceIn(0f, 1f)
-        chatRepository.updateUploadProgress(pendingMessageId.toString(), clamped)
+        val clampedFraction = fraction.coerceIn(0f, 1f)
+        chatRepository.updateUploadProgress(pendingMessageId.toString(), clampedFraction)
         if (foregroundActive) {
             val now = System.currentTimeMillis()
             if (now - lastNotifyAt >= 500) {
                 lastNotifyAt = now
                 ChatTransferNotifications.notifyProgress(
-                    context, notificationId, notificationTitle, null, (clamped * 100).toInt()
+                    context, notificationId, notificationTitle, null, (clampedFraction * 100).toInt()
                 )
             }
         }
@@ -267,7 +271,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                 sentBytes = sentBytes,
                 totalBytes = totalUploadBytes,
                 fromFraction = 0.3f
-            ) { chatRepository.uploadImages(roomId, parts) }
+            ) { uploadImages(roomId, parts) }
 
             var result = upload()
             // 본문 1회 요청이라 401 뒤 직접 한 번 더
@@ -281,7 +285,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             }
 
             // 단일 이미지면 원본 크기 추출
-            val (imgWidth, imgHeight) = if (mediaUris.size == 1) {
+            val (imageWidth, imageHeight) = if (mediaUris.size == 1) {
                 MediaUtils.getImageDimensions(context, mediaUris.first().toUri())
             } else null to null
 
@@ -289,8 +293,8 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                 MediaUploadData(
                     mediaAttachments = uploaded.urls,
                     mediaThumbnails = uploaded.thumbnails,
-                    mediaWidth = imgWidth,
-                    mediaHeight = imgHeight
+                    mediaWidth = imageWidth,
+                    mediaHeight = imageHeight
                 )
             }
         } catch (e: CancellationException) {
@@ -315,7 +319,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                 ?: fileInfo?.fileName
 
             val duration = MediaUtils.getVideoDuration(context, uri)
-            val (vidWidth, vidHeight) = MediaUtils.getVideoDimensions(context, uri)
+            val (videoWidth, videoHeight) = MediaUtils.getVideoDimensions(context, uri)
 
             publishProgress(pendingMessageId, 0.05f)
 
@@ -337,7 +341,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                 // 썸네일 업로드
                 publishProgress(pendingMessageId, 0.1f)
 
-                chatRepository.uploadImages(roomId, listOf(thumbnailPart)).onSuccess { uploaded ->
+                uploadImages(roomId, listOf(thumbnailPart)).onSuccess { uploaded ->
                     thumbnailUrl = uploaded.urls.firstOrNull()
                 }
             }
@@ -366,8 +370,8 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                     uploadId = ticket.uploadId,
                     thumbnailUrl = thumbnailUrl,
                     duration = duration,
-                    mediaWidth = vidWidth,
-                    mediaHeight = vidHeight,
+                    mediaWidth = videoWidth,
+                    mediaHeight = videoHeight,
                     fileSize = fileSize,
                     fileName = fileName
                 )
@@ -461,7 +465,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
     private suspend fun handleFailure(pendingMessageId: Long, roomId: Int, errorMessage: String) {
         pendingChatMessageDao.updateStatus(pendingMessageId, UploadStatus.FAILED)
         chatRepository.markMediaMessageFailed(pendingMessageId.toString())
-        uploadResultManager.emitResult(
+        uploadEventBus.emitResult(
             ChatUploadEvent.Failure(
                 pendingMessageId = pendingMessageId,
                 roomId = roomId,
@@ -500,4 +504,11 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             return workRequest.id.toString()
         }
     }
+
+    private suspend fun uploadImages(roomId: Int, images: List<MultipartBody.Part>): kotlin.Result<ChatImageUpload> =
+        safeApiCall { chatApi.uploadImages(roomId, images) }.map { response ->
+            val urls = response["imageUrls"] ?: emptyList()
+            val thumbnails = response["thumbnailUrls"] ?: urls
+            ChatImageUpload(urls = urls, thumbnails = thumbnails)
+        }
 }

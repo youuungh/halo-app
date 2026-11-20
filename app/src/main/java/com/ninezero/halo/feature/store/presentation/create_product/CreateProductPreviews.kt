@@ -30,7 +30,7 @@ private fun CreateProductEditModePreview() {
                 price = "89000",
                 originalPrice = "110000",
                 stock = "25",
-                requiredTier = SubscriptionPlanTier.FREE.name
+                requiredTier = SubscriptionPlanTier.FREE
             )
         )
     }

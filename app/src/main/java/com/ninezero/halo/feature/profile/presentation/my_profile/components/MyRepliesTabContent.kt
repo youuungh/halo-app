@@ -16,11 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.comment.CommentItemSkeleton
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
 import com.ninezero.halo.feature.profile.presentation.components.CommentThreadItem
 import com.ninezero.halo.feature.profile.presentation.components.ProfileFilterChipsRow
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTabRowHeight
@@ -31,6 +32,7 @@ import com.ninezero.halo.feature.profile.presentation.my_profile.MyProfileState
 @Composable
 fun MyRepliesTabContent(
     state: MyProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onShowMediaViewer: (List<ViewerMediaItem>, Int, String?) -> Unit,
     onProfileClick: (Int, IntOffset) -> Unit,
@@ -41,7 +43,7 @@ fun MyRepliesTabContent(
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
+        contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = LocalBottomBarPadding.current)
     ) {
         // chip은 항상 상단 고정
         item(key = "replies_filter_chips") {
@@ -58,8 +60,8 @@ fun MyRepliesTabContent(
             state.isRepliesLoading && state.myCommentThreads.isEmpty() -> {
                 items(3) {
                     Column(modifier = Modifier.padding(top = 12.dp)) {
-                        CommentItemSkeleton(showLine = true)
-                        CommentItemSkeleton(showLine = false)
+                        CommentItemSkeleton(showLine = true, avatarSize = 40.dp)
+                        CommentItemSkeleton(showLine = false, avatarSize = 40.dp)
                     }
                 }
             }
@@ -139,8 +141,8 @@ fun MyRepliesTabContent(
                 if (state.isRepliesLoading && state.myCommentThreads.isNotEmpty()) {
                     items(2) {
                         Column(modifier = Modifier.padding(top = 12.dp)) {
-                            CommentItemSkeleton(showLine = true)
-                            CommentItemSkeleton(showLine = false)
+                            CommentItemSkeleton(showLine = true, avatarSize = 40.dp)
+                            CommentItemSkeleton(showLine = false, avatarSize = 40.dp)
                         }
                     }
                 }

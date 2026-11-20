@@ -25,13 +25,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -59,17 +57,17 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.deeplink.copyLinkToClipboard
 import com.ninezero.halo.core.deeplink.shareTextExternally
 import com.ninezero.halo.core.model.UserSummary
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
-import com.ninezero.halo.core.ui.components.button.SheetActionButton
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.share.domain.model.ShareResult
 import com.ninezero.halo.feature.share.presentation.components.SelectableUserItem
-import com.ninezero.halo.ui.theme.HaloTheme
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 
@@ -115,17 +113,15 @@ fun ShareBottomSheet(
         }
     }
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = {
             if (!state.isSending) onDismiss()
         },
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dismissEnabled = !state.isSending
     ) {
         Box {
             Column {
-                BottomSheetDragHandle()
                 ShareBottomSheetContent(
                     state = state,
                     onSearchQueryChange = { viewModel.onIntent(ShareIntent.SearchUsers(it)) },
@@ -205,7 +201,7 @@ private fun ShareBottomSheetContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (state.searchQuery.isNotBlank()) "검색 결과가 없습니다" else "팔로잉한 유저가 없습니다",
+                        text = if (state.searchQuery.isNotBlank()) "검색 결과가 없어요" else "팔로잉한 유저가 없어요",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -268,7 +264,7 @@ private fun ShareBottomSheetContent(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         val canSend = state.selectedUserIds.isNotEmpty()
-                        SheetActionButton(
+                        PrimaryButton(
                             text = if (state.selectedUserIds.size > 1) {
                                 "${state.selectedUserIds.size}명에게 보내기"
                             } else {
@@ -313,7 +309,7 @@ private fun ExternalShareRow(
             onClick = onCopyLink
         )
         ExternalShareAction(
-            iconRes = R.drawable.ic_share,
+            iconRes = R.drawable.ic_send,  // 링크 복사와 같은 1.5 굵기 Heroicons
             label = "공유하기",
             onClick = onShareExternal
         )
@@ -334,9 +330,9 @@ private fun ExternalShareAction(
         Box(
             modifier = Modifier
                 .size(56.dp)
+                .bounceClick()  // 원 배경까지 함께 작아지도록 먼저 적용
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .bounceClick()
                 .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
@@ -366,7 +362,7 @@ private fun SearchBar(
         modifier = modifier
             .background(
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             )
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {

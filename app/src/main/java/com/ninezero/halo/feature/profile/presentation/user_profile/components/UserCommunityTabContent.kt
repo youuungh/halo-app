@@ -31,14 +31,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
 import com.ninezero.halo.core.ui.components.post.PostCard
 import com.ninezero.halo.core.ui.components.post.PostCardSkeleton
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
@@ -47,29 +49,30 @@ import com.ninezero.halo.feature.profile.presentation.components.ProfileTab
 import com.ninezero.halo.feature.profile.presentation.components.ProfileTabRowHeight
 import com.ninezero.halo.feature.profile.presentation.user_profile.UserProfileIntent
 import com.ninezero.halo.feature.profile.presentation.user_profile.UserProfileState
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 
 @Composable
 fun UserCommunityTabContent(
     state: UserProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onIntent: (UserProfileIntent) -> Unit,
     onPostClick: (Int) -> Unit,
     onProfileClick: (Int, IntOffset) -> Unit,
     onShowMediaViewer: (List<ViewerMediaItem>, Int) -> Unit
 ) {
-    // 업로드 중인 내 글을 목록 상단에 Optimistic
+    // 업로드 중인 내 글을 목록 상단에 미리 보여줌
     val communityPosts = state.pendingCommunityPosts + state.communityPosts
     val pinnedPosts = state.communityPinnedPosts
     val isLoading = state.isCommunityLoading
-    val hasMore = state.communityHasMore
+    val hasMore = state.hasMoreCommunityPosts
 
     // 차단한 사용자
     if (state.profile?.isBlocked == true) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
         ) {
             item(key = "blocked_message") { BlockedUserPlaceholder() }
         }
@@ -87,7 +90,7 @@ fun UserCommunityTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
         ) {
             items(5) { PostCardSkeleton() }
         }
@@ -96,7 +99,7 @@ fun UserCommunityTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
         ) {
             item(key = "empty_community") {
                 Box(
@@ -130,7 +133,7 @@ fun UserCommunityTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
         ) {
             // 공지 섹션
             if (pinnedPosts.isNotEmpty()) {
@@ -287,7 +290,7 @@ private val previewCommunityPosts = listOf(
         ),
         likeCount = 312,
         commentCount = 89,
-        requiredTier = "TIER1",
+        requiredTier = SubscriptionPlanTier.TIER1,
         canAccess = false,
         createdAt = System.currentTimeMillis() - 3600000L,
     ),
@@ -315,7 +318,7 @@ private val previewCommunityPosts = listOf(
         author = previewAuthor,
         likeCount = 567,
         commentCount = 234,
-        requiredTier = "TIER2",
+        requiredTier = SubscriptionPlanTier.TIER2,
         canAccess = false,
         createdAt = System.currentTimeMillis() - 9000000L,
     ),
@@ -372,7 +375,7 @@ private val previewRestrictedPosts = listOf(
         ),
         likeCount = 312,
         commentCount = 89,
-        requiredTier = "TIER1",
+        requiredTier = SubscriptionPlanTier.TIER1,
         canAccess = false,
         createdAt = System.currentTimeMillis() - 3600000L,
     ),
@@ -383,7 +386,7 @@ private val previewRestrictedPosts = listOf(
         author = previewAuthor,
         likeCount = 567,
         commentCount = 234,
-        requiredTier = "TIER2",
+        requiredTier = SubscriptionPlanTier.TIER2,
         canAccess = false,
         createdAt = System.currentTimeMillis() - 7200000L,
     ),
@@ -414,8 +417,9 @@ private fun CommunityTabContentPreview() {
                     communityPosts = previewCommunityPosts,
                     communityPinnedPosts = previewPinnedPosts,
                     isCommunityLoading = false,
-                    communityHasMore = true
+                    hasMoreCommunityPosts = true
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onPostClick = {},
@@ -440,8 +444,9 @@ private fun CommunityTabContentRestrictedPreview() {
                     communityPosts = previewRestrictedPosts,
                     communityPinnedPosts = emptyList(),
                     isCommunityLoading = false,
-                    communityHasMore = false
+                    hasMoreCommunityPosts = false
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onPostClick = {},
@@ -466,8 +471,9 @@ private fun CommunityTabContentLoadingPreview() {
                     communityPosts = emptyList(),
                     communityPinnedPosts = emptyList(),
                     isCommunityLoading = true,
-                    communityHasMore = false
+                    hasMoreCommunityPosts = false
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onPostClick = {},
@@ -492,8 +498,9 @@ private fun CommunityTabContentEmptyPreview() {
                     communityPosts = emptyList(),
                     communityPinnedPosts = emptyList(),
                     isCommunityLoading = false,
-                    communityHasMore = false
+                    hasMoreCommunityPosts = false
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onPostClick = {},

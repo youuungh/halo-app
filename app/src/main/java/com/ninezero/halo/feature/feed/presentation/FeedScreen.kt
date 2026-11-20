@@ -20,11 +20,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -49,12 +47,13 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.deeplink.DeepLinks
 import com.ninezero.halo.core.model.ReportTargetType
 import com.ninezero.halo.core.ui.components.bottomsheet.PostOptionBottomSheet
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.media.PrefetchUpcomingPostImages
+import com.ninezero.halo.core.ui.components.media.VideoPreloader
 import com.ninezero.halo.core.ui.components.media.rememberSettledVideoPostId
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.toViewerItems
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
@@ -66,22 +65,20 @@ import com.ninezero.halo.core.ui.components.popup.rememberProfilePopupHostState
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
 import com.ninezero.halo.core.ui.components.post.PostCard
 import com.ninezero.halo.core.ui.components.post.PostCardSkeleton
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.ui.components.video_player.VideoPreloader
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
 import com.ninezero.halo.core.ui.components.viewer.ViewerOverlayHost
 import com.ninezero.halo.core.ui.components.viewer.rememberViewerOverlayHostState
+import com.ninezero.halo.core.ui.components.viewer.toViewerItems
+import com.ninezero.halo.core.ui.theme.GodoRounded
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 import com.ninezero.halo.feature.feed.domain.model.PostContextType
 import com.ninezero.halo.feature.feed.domain.model.nextVideoUrlsAfter
 import com.ninezero.halo.feature.feed.presentation.components.RecommendedCreatorsSection
 import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
-import com.ninezero.halo.ui.theme.GodoRounded
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.flow.Flow
@@ -135,7 +132,7 @@ fun FeedScreen(
 
     ShareSheetHost(
         visible = state.showShareSheet && state.sharePostId != null,
-        shareAction = { vm -> vm.onIntent(ShareIntent.SharePost(state.sharePostId!!)) },
+        shareAction = { shareViewModel -> state.sharePostId?.let { shareViewModel.onIntent(ShareIntent.SharePost(it)) } },
         onDismiss = { viewModel.onIntent(FeedIntent.DismissShareSheet) },
         onShareSuccess = { roomIds, count -> viewModel.onIntent(FeedIntent.ShareCompleted(roomIds, count)) },
         externalLink = state.sharePostId?.let(DeepLinks::postLink)
@@ -216,7 +213,7 @@ internal fun FeedScreenContent(
             snackbarHost = {
                 DefaultSnackbarHost(
                     hostState = snackbarHostState,
-                    modifier = Modifier.padding(bottom = BottomBarDefaults.PillFootprint)
+                    modifier = Modifier.padding(bottom = BottomBarDefaults.PillSpace)
                 )
             },
             contentWindowInsets = WindowInsets(0),
@@ -236,7 +233,7 @@ internal fun FeedScreenContent(
                         modifier = Modifier
                             .padding(end = 8.dp)
                             .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(MaterialTheme.shapes.medium)
                             .bounceClick()
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -269,17 +266,7 @@ internal fun FeedScreenContent(
                     .pointerInput(Unit) {
                         detectTapGestures { /* 터치 이벤트 소비 */ }
                     }
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = topBarBlurColor,
-                            tint = HaloBlurTint(topBarBlurColor),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0.5f,
-                            endIntensity = 0f
-                        )
-                    }
+                    .haloBlur(hazeState, HaloBlurs.fadeDown(topBarBlurColor))
             )
         }
     ) { paddingValues ->
@@ -299,7 +286,7 @@ internal fun FeedScreenContent(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(top = topPadding, bottom = LocalBottomBarPadding.current)
                         ) {
-                            items(5) {
+                            items(10) {
                                 PostCardSkeleton()
                             }
                         }
@@ -307,27 +294,18 @@ internal fun FeedScreenContent(
                 }
 
                 state.error != null && state.posts.isEmpty() -> {
+                    // 위 헤더와 아래 바텀바 사이 가운데
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = topPadding),
+                            .padding(top = topPadding, bottom = LocalBottomBarPadding.current),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(FeedIntent.LoadFeed) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "포스트를 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = { onIntent(FeedIntent.LoadFeed) }
+                        )
                     }
                 }
 
@@ -347,100 +325,76 @@ internal fun FeedScreenContent(
                             RecommendedCreatorsSection(
                                 creators = state.recommendedCreators,
                                 isLoading = state.isCreatorsLoading,
+                                isRefreshing = state.isRefreshing,
                                 onCreatorClick = { creatorId ->
                                     onIntent(FeedIntent.NavigateToCreatorProfile(creatorId))
                                 }
                             )
                         }
 
-                        if (state.posts.isEmpty() && state.pendingPosts.isEmpty() && !state.isLoading) {
-                            item(key = "empty_posts") {
-                                Column(
-                                    modifier = Modifier
-                                        .fillParentMaxSize()
-                                        .padding(32.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_no_data),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(120.dp),
-                                        tint = Color.Unspecified
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        text = "아직 포스트가 없어요",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        } else {
-                            itemsIndexed(
-                                items = allPosts,
-                                key = { _, post -> post.pendingId?.let { "pending_$it" } ?: "post_${post.id}" }
-                            ) { index, post ->
-                                Column(modifier = Modifier.animateItem()) {
-                                    if (index == 0) {
-                                        HorizontalDivider(
-                                            thickness = 0.25.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant
-                                        )
-                                    }
-                                    PostCard(
-                                        post = post,
-                                        isUploading = post.isUploading,
-                                        isVideoPlaying = visiblePostId == post.id,
-                                        onPostClick = {
-                                            if (!post.isUploading) {
-                                                onIntent(FeedIntent.NavigateToPostDetail(post.id))
-                                            }
-                                        },
-                                        onProfileClick = { offset ->
-                                            if (!post.isUploading) {
-                                                if (currentUserId == post.author.id) {
-                                                    onIntent(FeedIntent.NavigateToUserProfile(post.author.id))
-                                                } else {
-                                                    profilePopupState.show(post.author.id, offset)
-                                                }
-                                            }
-                                        },
-                                        onLikeClick = {
-                                            if (!post.isUploading) {
-                                                if (post.isLiked) {
-                                                    onIntent(FeedIntent.UnlikePost(post.id))
-                                                } else {
-                                                    onIntent(FeedIntent.LikePost(post.id))
-                                                }
-                                            }
-                                        },
-                                        onCommentClick = {
-                                            if (!post.isUploading) {
-                                                onIntent(FeedIntent.NavigateToPostDetail(post.id))
-                                            }
-                                        },
-                                        onShareClick = {
-                                            if (!post.isUploading) {
-                                                onIntent(FeedIntent.SharePost(post.id))
-                                            }
-                                        },
-                                        onMoreClick = {
-                                            if (!post.isUploading) {
-                                                onIntent(FeedIntent.ShowPostOptions(post))
-                                            }
-                                        },
-                                        onMediaClick = { index ->
-                                            if (!post.isUploading) {
-                                                onShowMediaViewer(post.mediaAttachments.toViewerItems(), index)
-                                            }
-                                        }
-                                    )
+                        itemsIndexed(
+                            items = allPosts,
+                            key = { _, post -> post.pendingId?.let { "pending_$it" } ?: "post_${post.id}" }
+                        ) { index, post ->
+                            Column(modifier = Modifier.animateItem()) {
+                                if (index == 0) {
                                     HorizontalDivider(
                                         thickness = 0.25.dp,
                                         color = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 }
+                                PostCard(
+                                    post = post,
+                                    isUploading = post.isUploading,
+                                    isVideoPlaying = visiblePostId == post.id,
+                                    onPostClick = {
+                                        if (!post.isUploading) {
+                                            onIntent(FeedIntent.NavigateToPostDetail(post.id))
+                                        }
+                                    },
+                                    onProfileClick = { offset ->
+                                        if (!post.isUploading) {
+                                            if (currentUserId == post.author.id) {
+                                                onIntent(FeedIntent.NavigateToUserProfile(post.author.id))
+                                            } else {
+                                                profilePopupState.show(post.author.id, offset)
+                                            }
+                                        }
+                                    },
+                                    onLikeClick = {
+                                        if (!post.isUploading) {
+                                            if (post.isLiked) {
+                                                onIntent(FeedIntent.UnlikePost(post.id))
+                                            } else {
+                                                onIntent(FeedIntent.LikePost(post.id))
+                                            }
+                                        }
+                                    },
+                                    onCommentClick = {
+                                        if (!post.isUploading) {
+                                            onIntent(FeedIntent.NavigateToPostDetail(post.id))
+                                        }
+                                    },
+                                    onShareClick = {
+                                        if (!post.isUploading) {
+                                            onIntent(FeedIntent.SharePost(post.id))
+                                        }
+                                    },
+                                    onMoreClick = {
+                                        if (!post.isUploading) {
+                                            onIntent(FeedIntent.ShowPostOptions(post))
+                                        }
+                                    },
+                                    onMediaClick = { index ->
+                                        if (!post.isUploading) {
+                                            onShowMediaViewer(post.mediaAttachments.toViewerItems(), index)
+                                        }
+                                    }
+                                )
+                                HorizontalDivider(
+                                    thickness = 0.25.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                )
                             }
                         }
 
@@ -448,6 +402,30 @@ internal fun FeedScreenContent(
                             items(3) { _ ->
                                 PostCardSkeleton()
                             }
+                        }
+                    }
+
+                    // 추천 크리에이터 아래가 비면 헤더와 바텀바 사이 가운데
+                    if (state.posts.isEmpty() && state.pendingPosts.isEmpty() && !state.isLoading) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = topPadding, bottom = LocalBottomBarPadding.current),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_no_data),
+                                contentDescription = null,
+                                modifier = Modifier.size(120.dp),
+                                tint = Color.Unspecified
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "아직 포스트가 없어요",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
@@ -458,6 +436,7 @@ internal fun FeedScreenContent(
 
     ProfilePopupHost(
         state = profilePopupState,
+        hazeState = hazeState,
         resolveAuthor = { authorId -> state.posts.find { it.author.id == authorId }?.author?.let { ProfilePopupData(it.id, it.isFollowing) } },
         onNavigateToProfile = { onIntent(FeedIntent.NavigateToUserProfile(it)) },
         onFollow = { onIntent(FeedIntent.FollowUser(it)) },

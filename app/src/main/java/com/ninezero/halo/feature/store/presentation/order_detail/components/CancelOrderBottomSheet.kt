@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,16 +21,15 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -40,30 +40,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.BottomSheetDragHandle
+import com.ninezero.halo.core.ui.components.bottomsheet.FloatingBottomSheet
+import com.ninezero.halo.core.ui.components.bottomsheet.SheetHeader
 import com.ninezero.halo.core.ui.components.bottomsheet.blockSheetFling
-import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.input.FormTextField
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.text.rememberKoreanNumberFormat
+import com.ninezero.halo.core.ui.components.toggle.SelectionRadio
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.GroupShape
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.store.domain.model.Order
 import com.ninezero.halo.feature.store.domain.model.OrderItem
 import com.ninezero.halo.feature.store.domain.model.OrderStatus
+import com.ninezero.halo.feature.store.domain.model.PaymentStatus
 import com.ninezero.halo.feature.store.domain.model.ShippingStatus
 import com.ninezero.halo.feature.store.domain.model.creatorGroupsOrFallback
 import com.ninezero.halo.feature.store.presentation.order_detail.CancelReason
-import com.ninezero.halo.ui.theme.HaloTheme
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import java.text.NumberFormat
@@ -75,35 +80,33 @@ fun CancelOrderBottomSheet(
     order: Order,
     creatorId: Int?,
     selectedReason: CancelReason,
-    reasonEtc: String,
+    otherReason: String,
     isCancelling: Boolean,
     numberFormat: NumberFormat,
     onSelectReason: (CancelReason) -> Unit,
-    onUpdateReasonEtc: (String) -> Unit,
+    onUpdateOtherReason: (String) -> Unit,
     onProceed: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
+    FloatingBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
-        contentWindowInsets = { WindowInsets(0) },
-        modifier = modifier.windowInsetsPadding(WindowInsets.statusBars)
+        modifier = modifier.windowInsetsPadding(WindowInsets.statusBars),
+        showDragHandle = false,  // 헤더 안에 있음
+        dismissEnabled = !isCancelling
     ) {
-        BottomSheetDragHandle()
         CancelOrderContent(
             order = order,
             creatorId = creatorId,
             selectedReason = selectedReason,
-            reasonEtc = reasonEtc,
+            otherReason = otherReason,
             isCancelling = isCancelling,
             numberFormat = numberFormat,
             onSelectReason = onSelectReason,
-            onUpdateReasonEtc = onUpdateReasonEtc,
+            onUpdateOtherReason = onUpdateOtherReason,
             onProceed = onProceed,
             onDismiss = onDismiss
         )
@@ -115,11 +118,11 @@ private fun CancelOrderContent(
     order: Order,
     creatorId: Int?,
     selectedReason: CancelReason,
-    reasonEtc: String,
+    otherReason: String,
     isCancelling: Boolean,
     numberFormat: NumberFormat,
     onSelectReason: (CancelReason) -> Unit,
-    onUpdateReasonEtc: (String) -> Unit,
+    onUpdateOtherReason: (String) -> Unit,
     onProceed: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -133,34 +136,33 @@ private fun CancelOrderContent(
     val group = remember(groups, creatorId) { groups.firstOrNull { it.creatorId == creatorId } }
     val isSingleGroup = groups.size <= 1
 
-    val subtotal = group?.subtotal?.toLongOrNull() ?: 0L
-    val shippingFee = group?.shippingFee?.toLongOrNull() ?: 0L
+    val subtotal = group?.subtotal ?: 0L
+    val shippingFee = group?.shippingFee ?: 0L
     // 단일 그룹은 주문 단위, 멀티는 그룹 귀속분
     val pointsUsed: Long
     val couponDiscount: Long
     val refundEstimate: Long
     if (isSingleGroup) {
-        pointsUsed = order.pointsUsed.toLongOrNull() ?: 0L
-        couponDiscount = order.couponDiscount.toLongOrNull() ?: 0L
-        refundEstimate = order.totalPrice.toLongOrNull() ?: 0L
+        pointsUsed = order.pointsUsed
+        couponDiscount = order.couponDiscount
+        refundEstimate = order.totalPrice
     } else {
-        couponDiscount = group?.couponDiscount?.toLongOrNull() ?: 0L
+        couponDiscount = group?.couponDiscount ?: 0L
         // 포인트는 순액 비율 배분
         val groupNet = (subtotal + shippingFee - couponDiscount).coerceAtLeast(0L)
         val activeNet = groups
             .filter { it.status != OrderStatus.CANCELLED }
             .sumOf { g ->
-                ((g.subtotal.toLongOrNull() ?: 0L) + (g.shippingFee.toLongOrNull() ?: 0L) -
-                    (g.couponDiscount.toLongOrNull() ?: 0L)).coerceAtLeast(0L)
+                (g.subtotal + g.shippingFee - g.couponDiscount).coerceAtLeast(0L)
             }
         // 서버 HALF_UP과 맞춰 반올림
         pointsUsed = if (activeNet > 0L)
-            ((order.pointsUsed.toLongOrNull() ?: 0L) * groupNet + activeNet / 2) / activeNet
+            ((order.pointsUsed) * groupNet + activeNet / 2) / activeNet
         else 0L
         refundEstimate = (groupNet - pointsUsed).coerceAtLeast(0L)
     }
 
-    val canProceed = selectedReason != CancelReason.ETC || reasonEtc.isNotBlank()
+    val canProceed = selectedReason != CancelReason.OTHER || otherReason.isNotBlank()
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -172,138 +174,105 @@ private fun CancelOrderContent(
                 .padding(top = headerHeight, bottom = bottomBarHeight)
                 .padding(horizontal = 16.dp)
         ) {
-            Text(
-                text = "취소 사유",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-            )
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+            // 무엇을 취소하는지
+            val items = group?.items ?: order.items
+            items.firstOrNull()?.let { first ->
+                CancelTargetRow(
+                    imageUrl = first.productImageUrl,
+                    creatorName = group?.creatorName,
+                    itemCount = items.size,
+                    productName = if (items.size > 1) "${first.productName} 외 ${items.size - 1}건" else first.productName,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            CancelSectionLabel("취소 사유")
+            val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(GroupShape)
+                    .border(0.5.dp, lineColor, GroupShape)
             ) {
-                Column {
-                    CancelReason.entries.forEachIndexed { index, reason ->
-                        ReasonOptionItem(
-                            text = reason.label,
-                            selected = reason == selectedReason,
-                            onClick = { onSelectReason(reason) }
-                        )
-                        if (index < CancelReason.entries.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
+                CancelReason.entries.forEachIndexed { index, reason ->
+                    if (index > 0) HorizontalDivider(thickness = 0.5.dp, color = lineColor)
+                    ReasonOptionItem(
+                        text = reason.label,
+                        selected = reason == selectedReason,
+                        onClick = { onSelectReason(reason) }
+                    )
                 }
             }
             AnimatedVisibility(
-                visible = selectedReason == CancelReason.ETC,
+                visible = selectedReason == CancelReason.OTHER,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Column {
                     Spacer(modifier = Modifier.height(8.dp))
                     FormTextField(
-                        value = reasonEtc,
-                        onValueChange = onUpdateReasonEtc,
+                        value = otherReason,
+                        onValueChange = onUpdateOtherReason,
                         placeholder = "취소 사유를 입력해주세요",
                         maxLength = CANCEL_REASON_MAX_LENGTH,
                         showCounter = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        bringIntoViewReserve = bottomBarHeight  // 밑변 · 글자 수까지 하단 바 위로
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "결제 정보를 확인해주세요",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 10.dp)
-            )
-            RefundRow("상품금액", "${numberFormat.format(subtotal)}원")
-            RefundRow("배송비", if (shippingFee > 0) "${numberFormat.format(shippingFee)}원" else "무료")
-            if (pointsUsed > 0) {
-                RefundRow("포인트 사용", "-${numberFormat.format(pointsUsed)}원")
-            }
-            if (couponDiscount > 0) {
-                RefundRow("쿠폰할인", "-${numberFormat.format(couponDiscount)}원")
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // 환불 정보: 내역 → 예상 금액 → 수단
+            CancelSectionLabel("환불 정보")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(0.5.dp, lineColor, GroupShape)
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                Text(
-                    text = "환불 예상금액",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                RefundRow("상품금액", "${numberFormat.format(subtotal)}원")
+                RefundRow("배송비", if (shippingFee > 0) "${numberFormat.format(shippingFee)}원" else "무료")
+                if (pointsUsed > 0) {
+                    RefundRow("포인트 사용", "-${numberFormat.format(pointsUsed)}원", isMinus = true)
+                }
+                if (couponDiscount > 0) {
+                    RefundRow("쿠폰할인", "-${numberFormat.format(couponDiscount)}원", isMinus = true)
+                }
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = lineColor,
+                    modifier = Modifier.padding(vertical = 8.dp)
                 )
-                Text(
-                    text = "${numberFormat.format(refundEstimate)}원",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            RefundRow("환불 수단", order.paymentProvider?.let { getPaymentProviderText(it) } ?: "-")
-        }
-
-        // 헤더
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = surface,
-                        tint = HaloBlurTint(surface),
-                        noiseFactor = 0f
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "환불 예상 금액",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1f,
-                        endIntensity = 0f
+                    Text(
+                        text = "${numberFormat.format(refundEstimate)}원",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                .onGloballyPositioned { headerHeight = with(density) { it.size.height.toDp() } }
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = "주문 취소",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.align(Alignment.Center)
-            )
-            Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                GlassIconButton(
-                    onClick = onDismiss,
-                    icon = painterResource(R.drawable.ic_close),
-                    contentDescription = "닫기",
-                    hazeState = hazeState,
-                    backgroundColor = surface,
-                    size = 36.dp,
-                    iconSize = 20.dp
-                )
+                RefundRow("환불 수단", order.paymentProvider?.let { getPaymentProviderText(it) } ?: "-")
             }
+            Spacer(modifier = Modifier.height(8.dp))
         }
+
+        SheetHeader(
+            title = "주문 취소",
+            onClose = onDismiss,
+            hazeState = hazeState,
+            onHeightChange = { headerHeight = it },
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
 
         // 하단 바
         Box(
@@ -315,24 +284,14 @@ private fun CancelOrderContent(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = surface,
-                            tint = HaloBlurTint(surface),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0f,
-                            endIntensity = 1f
-                        )
-                    }
+                    .haloBlur(hazeState, HaloBlurs.fadeUp(surface, end = 1f))
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars.exclude(WindowInsets.ime))
                     .padding(horizontal = 16.dp)
-                    .padding(top = 12.dp, bottom = 8.dp)
+                    .padding(top = 12.dp, bottom = 16.dp)
             ) {
                 Button(
                     onClick = onProceed,
@@ -341,19 +300,69 @@ private fun CancelOrderContent(
                         .fillMaxWidth()
                         .height(48.dp)
                         .bounceClick(enabled = canProceed && !isCancelling),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError
                     )
                 ) {
                     Text(
-                        text = "주문 취소",
-                        style = MaterialTheme.typography.bodyLarge,
+                        text = "주문 취소하기",
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CancelSectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(top = 20.dp, bottom = 8.dp)
+    )
+}
+
+/** 취소할 상품 한 줄: 사진 · 크리에이터 · 상품 수 · 이름 */
+@Composable
+private fun CancelTargetRow(
+    imageUrl: String?,
+    creatorName: String?,
+    itemCount: Int,
+    productName: String,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .size(44.dp)
+                .clip(MaterialTheme.shapes.small),
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(R.drawable.ic_image_placeholder),
+            error = painterResource(R.drawable.ic_image_placeholder),
+            fallback = painterResource(R.drawable.ic_image_placeholder)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = listOfNotNull(creatorName, "상품 ${itemCount}개").joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = productName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -368,33 +377,26 @@ private fun ReasonOptionItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        SelectionRadio(selected = selected)
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.weight(1f))
-        if (selected) {
-            Icon(
-                painter = painterResource(R.drawable.ic_check),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
     }
 }
 
 @Composable
-private fun RefundRow(label: String, value: String) {
+private fun RefundRow(label: String, value: String, isMinus: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 5.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
@@ -405,7 +407,7 @@ private fun RefundRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = if (isMinus) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -419,21 +421,21 @@ private fun previewOrder() = Order(
             productId = 10,
             productName = "프리미엄 무선 이어폰 Pro Max",
             productImageUrl = null,
-            price = "89000",
+            price = 89000L,
             quantity = 1,
-            subtotal = "89000"
+            subtotal = 89000L
         )
     ),
-    totalPrice = "92000",
+    totalPrice = 92000L,
     status = OrderStatus.PENDING,
     shippingAddress = "서울시 강남구 테헤란로 123",
     shippingPhone = "010-1234-5678",
     shippingName = "홍길동",
     paymentProvider = "TOSS",
-    paymentStatus = "COMPLETED",
+    paymentStatus = PaymentStatus.COMPLETED,
     memo = null,
-    pointsUsed = "0",
-    couponDiscount = "0",
+    pointsUsed = 0L,
+    couponDiscount = 0L,
     trackingNumber = null,
     carrier = null,
     shippingStatus = ShippingStatus.PREPARING,
@@ -450,11 +452,11 @@ private fun CancelOrderContentPreview() {
                 order = previewOrder(),
                 creatorId = null,
                 selectedReason = CancelReason.CHANGED_MIND,
-                reasonEtc = "",
+                otherReason = "",
                 isCancelling = false,
                 numberFormat = rememberKoreanNumberFormat(),
                 onSelectReason = {},
-                onUpdateReasonEtc = {},
+                onUpdateOtherReason = {},
                 onProceed = {},
                 onDismiss = {}
             )
@@ -464,18 +466,18 @@ private fun CancelOrderContentPreview() {
 
 @HaloLightDarkPreview
 @Composable
-private fun CancelOrderContentEtcPreview() {
+private fun CancelOrderContentOtherPreview() {
     HaloTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
             CancelOrderContent(
                 order = previewOrder(),
                 creatorId = null,
-                selectedReason = CancelReason.ETC,
-                reasonEtc = "배송이 너무 늦어서",
+                selectedReason = CancelReason.OTHER,
+                otherReason = "배송이 너무 늦어서",
                 isCancelling = false,
                 numberFormat = rememberKoreanNumberFormat(),
                 onSelectReason = {},
-                onUpdateReasonEtc = {},
+                onUpdateOtherReason = {},
                 onProceed = {},
                 onDismiss = {}
             )

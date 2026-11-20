@@ -11,7 +11,8 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.ninezero.halo.core.database.dao.PendingCommentDao
 import com.ninezero.halo.core.database.entity.UploadStatus
-import com.ninezero.halo.core.util.MediaPersistenceManager
+import com.ninezero.halo.core.media.MediaCopyStore
+import com.ninezero.halo.feature.feed.data.repository.CommentUploadEventRepositoryImpl
 import com.ninezero.halo.feature.feed.domain.model.CommentUploadEvent
 import com.ninezero.halo.feature.feed.domain.model.MediaDraftTargetType
 import com.ninezero.halo.feature.feed.domain.repository.CommentRepository
@@ -31,8 +32,8 @@ class CommentUploadWorker @AssistedInject constructor(
     private val commentRepository: CommentRepository,
     private val postRepository: PostRepository,
     private val mediaDraftRepository: MediaDraftRepository,
-    private val uploadResultManager: CommentUploadResultManager,
-    private val mediaPersistence: MediaPersistenceManager
+    private val uploadEventBus: CommentUploadEventRepositoryImpl,
+    private val mediaCopyStore: MediaCopyStore
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -85,8 +86,8 @@ class CommentUploadWorker @AssistedInject constructor(
                     Timber.d("CommentUploadWorker: 댓글 생성됨: ${comment.id}")
 
                     pendingCommentDao.deleteById(pendingCommentId)
-                    mediaPersistence.cleanupOwner(
-                        MediaPersistenceManager.OwnerType.PENDING_COMMENT,
+                    mediaCopyStore.cleanupOwner(
+                        MediaCopyStore.OwnerType.PENDING_COMMENT,
                         pendingCommentId
                     )
                     // 화면 목록이 캐시 기준이라 새 댓글도 캐시에 넣음
@@ -97,7 +98,7 @@ class CommentUploadWorker @AssistedInject constructor(
                     postRepository.getCachedPost(pendingComment.postId)?.let { post ->
                         postRepository.updateCachedPost(post.copy(commentCount = post.commentCount + 1))
                     }
-                    uploadResultManager.emitResult(
+                    uploadEventBus.emitResult(
                         CommentUploadEvent.Success(
                             postId = pendingComment.postId,
                             parentCommentId = pendingComment.parentCommentId,
@@ -139,11 +140,11 @@ class CommentUploadWorker @AssistedInject constructor(
         errorMessage: String
     ) {
         pendingCommentDao.deleteById(pendingCommentId)
-        mediaPersistence.cleanupOwner(
-            MediaPersistenceManager.OwnerType.PENDING_COMMENT,
+        mediaCopyStore.cleanupOwner(
+            MediaCopyStore.OwnerType.PENDING_COMMENT,
             pendingCommentId
         )
-        uploadResultManager.emitResult(
+        uploadEventBus.emitResult(
             CommentUploadEvent.Failure(
                 postId = postId,
                 parentCommentId = parentCommentId,

@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 
+/** 피드 · 댓글 미디어의 비율 · 높이 한계 */
 object MediaDisplayPolicy {
     const val FEED_SINGLE_MIN_RATIO = 4f / 5f
     const val FEED_SINGLE_MAX_RATIO = 16f / 9f

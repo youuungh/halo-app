@@ -15,13 +15,13 @@ import javax.inject.Inject
 private suspend fun <T : Any, R> applyMutation(  // 실패 시 previous로 롤백
     getCurrent: () -> T?,
     save: (T) -> Unit,
-    optimistic: (T) -> T,
+    change: (T) -> T,
     onSynced: (current: T, synced: R) -> T,
     onRollback: (current: T, previous: T) -> T,
     remote: suspend () -> Result<R>
 ): Result<R> {
     val previous = getCurrent()
-    previous?.let { save(optimistic(it)) }
+    previous?.let { save(change(it)) }
     val result = remote()
     result
         .onSuccess { synced ->
@@ -43,7 +43,7 @@ class TogglePostLikeUseCase @Inject constructor(
         applyMutation(
             getCurrent = { postRepository.getCachedPost(postId) },
             save = { postRepository.updateCachedPost(it) },
-            optimistic = { it.copy(
+            change = { it.copy(
                 isLiked = shouldLike,
                 likeCount = if (shouldLike) it.likeCount + 1 else maxOf(0, it.likeCount - 1)
             )},
@@ -65,7 +65,7 @@ class TogglePostBookmarkUseCase @Inject constructor(
         applyMutation(
             getCurrent = { postRepository.getCachedPost(postId) },
             save = { postRepository.updateCachedPost(it) },
-            optimistic = { it.copy(isBookmarked = shouldBookmark) },
+            change = { it.copy(isBookmarked = shouldBookmark) },
             onSynced = { current, synced -> current.copy(isBookmarked = synced) },
             onRollback = { current, prev -> current.copy(isBookmarked = prev.isBookmarked) },
             remote = { bookmarkRepository.togglePostBookmark(postId) }
@@ -80,7 +80,7 @@ class ToggleCommentLikeUseCase @Inject constructor(
         applyMutation(
             getCurrent = { commentRepository.getCachedComment(commentId) },
             save = { commentRepository.cacheComment(it) },
-            optimistic = { it.copy(
+            change = { it.copy(
                 isLiked = shouldLike,
                 likeCount = if (shouldLike) it.likeCount + 1 else maxOf(0, it.likeCount - 1)
             )},
@@ -102,7 +102,7 @@ class ToggleCommentBookmarkUseCase @Inject constructor(
         applyMutation(
             getCurrent = { commentRepository.getCachedComment(commentId) },
             save = { commentRepository.cacheComment(it) },
-            optimistic = { it.copy(isBookmarked = shouldBookmark) },
+            change = { it.copy(isBookmarked = shouldBookmark) },
             onSynced = { current, synced -> current.copy(isBookmarked = synced) },
             onRollback = { current, prev -> current.copy(isBookmarked = prev.isBookmarked) },
             remote = { bookmarkRepository.toggleCommentBookmark(commentId) }

@@ -20,4 +20,7 @@ interface ChatMediaRepository {
 
     /** 첨부파일 다운로드 예약 */
     fun enqueueFileDownload(fileUrl: String, fileName: String)
+
+    /** 받는 중인 첨부파일 취소 */
+    fun cancelFileDownload(fileUrl: String)
 }

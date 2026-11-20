@@ -10,14 +10,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -34,13 +33,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.notification.presentation.notification_settings.components.NotificationSettingsToggleItem
 import com.ninezero.halo.feature.notification.presentation.notification_settings.components.SettingsDivider
+import com.ninezero.halo.feature.notification.presentation.notification_settings.components.SettingsGroup
+import com.ninezero.halo.feature.notification.presentation.notification_settings.components.SettingsGroupLabel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
@@ -84,7 +85,7 @@ internal fun NotificationSettingsScreenContent(
     val hazeState = remember { HazeState() }
     val backgroundColor = MaterialTheme.colorScheme.background
     var headerHeight by rememberSaveableDp()
-    val categoryControlsEnabled = state.masterEnabled
+    val categoryControlsEnabled = state.mainEnabled
 
     Box(
         modifier = Modifier
@@ -112,21 +113,10 @@ internal fun NotificationSettingsScreenContent(
                         .padding(top = headerHeight),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = state.error,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(
-                            onClick = { onIntent(NotificationSettingsIntent.Retry) },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.bounceClick()
-                        ) {
-                            Text("재시도")
-                        }
-                    }
+                    ListErrorState(
+                        title = "알림 설정을 불러오지 못했습니다",
+                        onRetry = { onIntent(NotificationSettingsIntent.Retry) }
+                    )
                 }
             }
 
@@ -136,71 +126,77 @@ internal fun NotificationSettingsScreenContent(
                         .fillMaxSize()
                         .hazeSource(hazeState)
                         .verticalScroll(rememberScrollState())
-                        .padding(top = headerHeight)
+                        .padding(top = headerHeight + 8.dp)
+                        .padding(horizontal = 16.dp)
                 ) {
-                    NotificationSettingsToggleItem(
-                        title = "푸시 알림",
-                        checked = state.masterEnabled,
-                        enabled = true,
-                        onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleAll(it)) }
-                    )
+                    SettingsGroup {
+                        NotificationSettingsToggleItem(
+                            title = "푸시 알림",
+                            checked = state.mainEnabled,
+                            enabled = true,
+                            onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleAll(it)) }
+                        )
+                    }
 
-                    SettingsDivider()
+                    SettingsGroupLabel(text = "알림 종류")
+                    SettingsGroup {
+                        NotificationSettingsToggleItem(
+                            title = "소셜",
+                            description = "팔로우, 좋아요, 댓글, 답글, 멘션",
+                            checked = state.socialEnabled,
+                            enabled = categoryControlsEnabled,
+                            onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleSocial(it)) }
+                        )
+                        SettingsDivider()
+                        NotificationSettingsToggleItem(
+                            title = "크리에이터 활동",
+                            description = "팔로우 중인 크리에이터의 새 포스트, 새 상품",
+                            checked = state.creatorActivityEnabled,
+                            enabled = categoryControlsEnabled,
+                            onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleCreatorActivity(it)) }
+                        )
+                        SettingsDivider()
+                        NotificationSettingsToggleItem(
+                            title = "쇼핑",
+                            description = "주문, 배송, 리뷰",
+                            checked = state.commerceEnabled,
+                            enabled = categoryControlsEnabled,
+                            onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleCommerce(it)) }
+                        )
+                        SettingsDivider()
+                        NotificationSettingsToggleItem(
+                            title = "채팅",
+                            description = "새 메시지",
+                            checked = state.chatEnabled,
+                            enabled = categoryControlsEnabled,
+                            onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleChat(it)) }
+                        )
+                        SettingsDivider()
+                        NotificationSettingsToggleItem(
+                            title = "시스템",
+                            description = "공지사항, 크리에이터 승인, 멤버십, 포인트",
+                            checked = state.systemEnabled,
+                            enabled = categoryControlsEnabled,
+                            onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleSystem(it)) }
+                        )
+                    }
+                    if (!state.mainEnabled) {
+                        Text(
+                            text = "푸시 알림을 켜면 종류별로 설정할 수 있습니다",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                        )
+                    }
 
-                    NotificationSettingsToggleItem(
-                        title = "소셜",
-                        description = "팔로우, 좋아요, 댓글, 답글, 멘션",
-                        checked = state.socialEnabled,
-                        enabled = categoryControlsEnabled,
-                        onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleSocial(it)) }
-                    )
-
-                    SettingsDivider()
-
-                    NotificationSettingsToggleItem(
-                        title = "크리에이터 활동",
-                        description = "팔로우 중인 크리에이터의 새 포스트, 새 상품",
-                        checked = state.creatorActivityEnabled,
-                        enabled = categoryControlsEnabled,
-                        onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleCreatorActivity(it)) }
-                    )
-
-                    SettingsDivider()
-
-                    // 크리에이터별 알림은 마스터와 독립이라 늘 진입
-                    CreatorNotificationsRow(
-                        onClick = { onIntent(NotificationSettingsIntent.OpenCreatorNotifications) }
-                    )
-
-                    SettingsDivider()
-
-                    NotificationSettingsToggleItem(
-                        title = "쇼핑",
-                        description = "주문, 배송, 리뷰",
-                        checked = state.commerceEnabled,
-                        enabled = categoryControlsEnabled,
-                        onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleCommerce(it)) }
-                    )
-
-                    SettingsDivider()
-
-                    NotificationSettingsToggleItem(
-                        title = "채팅",
-                        description = "새 메시지",
-                        checked = state.chatEnabled,
-                        enabled = categoryControlsEnabled,
-                        onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleChat(it)) }
-                    )
-
-                    SettingsDivider()
-
-                    NotificationSettingsToggleItem(
-                        title = "시스템",
-                        description = "공지사항, 크리에이터 승인, 멤버십, 포인트",
-                        checked = state.systemEnabled,
-                        enabled = categoryControlsEnabled,
-                        onCheckedChange = { onIntent(NotificationSettingsIntent.ToggleSystem(it)) }
-                    )
+                    // 크리에이터별 알림은 마스터와 따로
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsGroup {
+                        CreatorNotificationsRow(
+                            onClick = { onIntent(NotificationSettingsIntent.OpenCreatorNotifications) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
@@ -232,23 +228,17 @@ private fun CreatorNotificationsRow(onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             ) { onClick() }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .heightIn(min = 56.dp)  // 한 줄 목록 높이
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "크리에이터별 알림 관리",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "팔로우 중인 크리에이터별로 알림을 켜고 끌 수 있어요",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(
+            text = "크리에이터별 알림 관리",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -260,4 +250,3 @@ private fun CreatorNotificationsRow(onClick: () -> Unit) {
         )
     }
 }
-

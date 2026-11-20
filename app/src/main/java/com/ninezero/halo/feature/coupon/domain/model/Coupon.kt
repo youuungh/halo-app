@@ -9,16 +9,17 @@ data class Coupon(
     val code: String,
     val name: String,
     val type: CouponType,
-    val discountValue: String,
-    val minOrderAmount: String?,
-    val maxDiscountAmount: String?,
+    val discountValue: Long,
+    val minOrderAmount: Long?,
+    val maxDiscountAmount: Long?,
     val status: UserCouponStatus,
     val expiresAt: Long,
-    val daysRemaining: Int
+    val daysRemaining: Int,
+    val usedAt: Long? = null
 ) {
     val discountText: String
         get() = when (type) {
-            CouponType.FIXED_AMOUNT -> discountValue.toBigDecimal().toInt().toFormattedPrice()
+            CouponType.FIXED_AMOUNT -> discountValue.toFormattedPrice()
             CouponType.PERCENTAGE -> "${discountValue}%"
             CouponType.FREE_SHIPPING -> "무료 배송 쿠폰"
         }

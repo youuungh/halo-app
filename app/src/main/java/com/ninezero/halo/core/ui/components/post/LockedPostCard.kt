@@ -1,6 +1,5 @@
 package com.ninezero.halo.core.ui.components.post
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -13,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,15 +29,17 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
+import com.ninezero.halo.core.ui.components.media.Avatar
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.LockedOverlayLabelColor
 import com.ninezero.halo.core.ui.components.overlay.LockedOverlaySubLabelColor
 import com.ninezero.halo.core.ui.components.overlay.lockedOverlayStyle
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toRelativeTime
 import com.ninezero.halo.feature.feed.domain.model.Author
 import com.ninezero.halo.feature.feed.domain.model.Post
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -57,7 +56,7 @@ fun LockedPostCard(
     val labelColor = LockedOverlayLabelColor
     val subLabelColor = LockedOverlaySubLabelColor
 
-    val title = if (post.isSecret) "비밀글" else "${post.requiredTier} 이상 멤버십 전용"
+    val title = if (post.isSecret) "비밀글" else "${post.requiredTier.label} 이상 멤버십 전용"
     val subtitle = if (post.isSecret) "크리에이터만 볼 수 있습니다" else "멤버십 가입하고 보기"
 
     Column(
@@ -77,16 +76,9 @@ fun LockedPostCard(
                 .padding(top = 8.dp),
             verticalAlignment = Alignment.Top
         ) {
-            AsyncImage(
+            Avatar(
                 model = post.author.avatarThumbUrl ?: post.author.avatarUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(R.drawable.ic_profile_placeholder),
-                error = painterResource(R.drawable.ic_profile_placeholder)
+                size = 40.dp
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -108,7 +100,7 @@ fun LockedPostCard(
                 }
 
                 // 콘텐츠 영역
-                val lockShape = RoundedCornerShape(8.dp)
+                val lockShape = MaterialTheme.shapes.small
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -145,7 +137,7 @@ fun LockedPostCard(
                         modifier = Modifier
                             .matchParentSize()
                             .clip(lockShape)
-                            .haloBlur(state = hazeState, style = lockedOverlayStyle()),
+                            .haloBlur(hazeState, lockedOverlayStyle()),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -183,7 +175,7 @@ fun LockedPostCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(if (post.isLiked) R.drawable.ic_heart_filled else R.drawable.ic_heart),
+                    painter = painterResource(if (post.isLiked) R.drawable.ic_post_heart_filled else R.drawable.ic_post_heart),
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -197,7 +189,7 @@ fun LockedPostCard(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_comment),
+                    painter = painterResource(R.drawable.ic_post_comment),
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -222,7 +214,7 @@ private fun LockedPostCardPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             Column {
                 LockedPostCard(
-                    post = Post(id = 1, content = "", author = author, requiredTier = "TIER1", canAccess = false, createdAt = createdAt),
+                    post = Post(id = 1, content = "", author = author, requiredTier = SubscriptionPlanTier.TIER1, canAccess = false, createdAt = createdAt),
                     onClick = {}
                 )
                 LockedPostCard(

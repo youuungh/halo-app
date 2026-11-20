@@ -4,18 +4,14 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -33,24 +29,22 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.ninezero.halo.core.ui.components.bottomsheet.ChatOptionMode
-import com.ninezero.halo.core.ui.components.bottomsheet.ChatOptionsBottomSheet
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
-import com.ninezero.halo.core.ui.components.layout.ListEmptyState
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListEmptyState
+import com.ninezero.halo.core.ui.components.list.ListErrorState
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
 import com.ninezero.halo.core.ui.components.navigation.LocalBottomBarPadding
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.chat.presentation.chat_list.components.ChatListItemSkeleton
 import com.ninezero.halo.feature.chat.presentation.components.ChatListItem
-import dev.chrisbanes.haze.HazeProgressive
+import com.ninezero.halo.feature.chat.presentation.components.ChatOptionMode
+import com.ninezero.halo.feature.chat.presentation.components.ChatOptionsBottomSheet
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.flow.Flow
@@ -145,7 +139,7 @@ internal fun ChatListScreenContent(
         snackbarHost = {
             DefaultSnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = BottomBarDefaults.PillFootprint)
+                modifier = Modifier.padding(bottom = BottomBarDefaults.PillSpace)
             )
         },
         contentWindowInsets = WindowInsets(0),
@@ -165,17 +159,7 @@ internal fun ChatListScreenContent(
                     .pointerInput(Unit) {
                         detectTapGestures { /* 터치 이벤트 소비 */ }
                     }
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = topBarBlurColor,
-                            tint = HaloBlurTint(topBarBlurColor),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0.5f,
-                            endIntensity = 0f
-                        )
-                    }
+                    .haloBlur(hazeState, HaloBlurs.fadeDown(topBarBlurColor))
             )
         }
     ) { paddingValues ->
@@ -214,24 +198,17 @@ internal fun ChatListScreenContent(
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             item {
                                 Box(
-                                    modifier = Modifier.fillParentMaxSize().padding(top = topPadding),
+                                    modifier = Modifier
+                                        .fillParentMaxSize()
+                                        // 헤더와 떠 있는 탭 바 사이의 가운데
+                                        .padding(top = topPadding, bottom = LocalBottomBarPadding.current),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = state.error,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        OutlinedButton(
-                                            onClick = { onIntent(ChatListIntent.LoadChatRooms) },
-                                            shape = RoundedCornerShape(12.dp),
-                                            modifier = Modifier.bounceClick()
-                                        ) {
-                                            Text("재시도")
-                                        }
-                                    }
+                                    ListErrorState(
+                                        title = "채팅 목록을 불러오지 못했습니다",
+                                        reason = state.error,
+                                        onRetry = { onIntent(ChatListIntent.LoadChatRooms) }
+                                    )
                                 }
                             }
                         }
@@ -242,7 +219,10 @@ internal fun ChatListScreenContent(
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             item {
                                 Box(
-                                    modifier = Modifier.fillParentMaxSize().padding(top = topPadding),
+                                    modifier = Modifier
+                                        .fillParentMaxSize()
+                                        // 헤더와 떠 있는 탭 바 사이의 가운데
+                                        .padding(top = topPadding, bottom = LocalBottomBarPadding.current),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     ListEmptyState(

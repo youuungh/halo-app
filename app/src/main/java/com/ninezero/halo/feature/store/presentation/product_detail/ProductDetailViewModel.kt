@@ -68,7 +68,6 @@ class ProductDetailViewModel @Inject constructor(
             is ProductDetailIntent.RefreshProduct -> refreshProduct()
             is ProductDetailIntent.ToggleInfoExpanded -> toggleInfoExpanded()
             is ProductDetailIntent.ToggleDetailExpanded -> toggleDetailExpanded()
-            is ProductDetailIntent.SelectDetailTab -> selectDetailTab(intent.index)
             is ProductDetailIntent.ToggleWishlist -> toggleWishlist()
             is ProductDetailIntent.ShareProduct -> shareProduct()
             is ProductDetailIntent.DismissShareSheet -> dismissShareSheet()
@@ -85,8 +84,7 @@ class ProductDetailViewModel @Inject constructor(
             is ProductDetailIntent.UpdateQuantity -> updateQuantity(intent.quantity)
             is ProductDetailIntent.AddToCart -> addToCart()
             is ProductDetailIntent.BuyNow -> buyNow()
-            is ProductDetailIntent.ShowCouponDetailDialog -> showCouponDetailDialog()
-            is ProductDetailIntent.DismissCouponDetailDialog -> dismissCouponDetailDialog()
+            is ProductDetailIntent.ToggleCouponDetail -> toggleCouponDetail()
             is ProductDetailIntent.NavigateBack -> navigateBack()
             is ProductDetailIntent.NavigateToCart -> navigateToCart()
             is ProductDetailIntent.NavigateToReviewList -> navigateToReviewList(intent.productId)
@@ -125,7 +123,7 @@ class ProductDetailViewModel @Inject constructor(
                 async { getProductReviewsUseCase(productId, limit = 5) }
             val wishlistStatusDeferred = async { wishlistRepository.getWishlistStatus(productId) }
             val couponsDeferred =
-                async { product.price.toIntOrNull()?.let { loadBestCoupon(creatorId, it) } }
+                async { loadBestCoupon(creatorId, product.price.toInt()) }
             val tierDeferred = async { loadUserTierInfo(creatorId) }
 
             val summaryResult = reviewSummaryDeferred.await()
@@ -189,7 +187,7 @@ class ProductDetailViewModel @Inject constructor(
             ?.filter { coupon ->
                 coupon.creatorId == creatorId &&
                         coupon.type != CouponType.FREE_SHIPPING &&
-                        (coupon.minOrderAmount?.toIntOrNull() ?: 0) <= productPrice
+                        (coupon.minOrderAmount ?: 0L) <= productPrice
             }
             ?.maxByOrNull { calcSingleCouponDiscount(it, productPrice.toLong()) }
             ?.takeIf { calcSingleCouponDiscount(it, productPrice.toLong()) > 0 }
@@ -223,10 +221,6 @@ class ProductDetailViewModel @Inject constructor(
 
     private fun toggleDetailExpanded() = intent {
         reduce { state.copy(isDetailExpanded = !state.isDetailExpanded) }
-    }
-
-    private fun selectDetailTab(index: Int) = intent {
-        reduce { state.copy(selectedDetailTab = index) }
     }
 
     private fun navigateToCart() = intent {
@@ -444,11 +438,7 @@ class ProductDetailViewModel @Inject constructor(
         }
     }
 
-    private fun showCouponDetailDialog() = intent {
-        reduce { state.copy(showCouponDetailDialog = true) }
-    }
-
-    private fun dismissCouponDetailDialog() = intent {
-        reduce { state.copy(showCouponDetailDialog = false) }
+    private fun toggleCouponDetail() = intent {
+        reduce { state.copy(isCouponDetailExpanded = !state.isCouponDetailExpanded) }
     }
 }

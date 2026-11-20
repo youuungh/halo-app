@@ -82,7 +82,7 @@ fun ProfileFilterChipsRow(
         // 우측: 정렬 토글 버튼
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .clickable {
                     val newSortType = if (selectedSortType == UserPostSortType.LATEST) {
                         UserPostSortType.OLDEST

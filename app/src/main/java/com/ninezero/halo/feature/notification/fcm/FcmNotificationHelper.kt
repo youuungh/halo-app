@@ -276,8 +276,8 @@ object FcmNotificationHelper {
             .build()
 
         val style = NotificationCompat.MessagingStyle(me)
-        messages.forEach { msg ->
-            style.addMessage(lineTextOf(msg), msg.createdAt, if (msg.isFromMe) me else other)
+        messages.forEach { message ->
+            style.addMessage(lineTextOf(message), message.createdAt, if (message.isFromMe) me else other)
         }
         if (appendLatest) {
             style.addMessage(latestText, latestTimestamp, other)

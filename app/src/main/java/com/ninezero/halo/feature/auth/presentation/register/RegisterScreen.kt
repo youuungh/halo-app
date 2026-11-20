@@ -28,7 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.button.ActionButton
-import com.ninezero.halo.core.ui.components.input.AuthTextField
+import com.ninezero.halo.core.ui.components.input.LabeledTextField
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
@@ -112,7 +112,7 @@ internal fun RegisterScreenContent(
         ) {
             Spacer(modifier = Modifier.height(headerHeight + 16.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.username,
                 onValueChange = { onIntent(RegisterIntent.UsernameChanged(it)) },
                 label = "사용자명",
@@ -123,7 +123,7 @@ internal fun RegisterScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.email,
                 onValueChange = { onIntent(RegisterIntent.EmailChanged(it)) },
                 label = "이메일",
@@ -135,7 +135,7 @@ internal fun RegisterScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.password,
                 onValueChange = { onIntent(RegisterIntent.PasswordChanged(it)) },
                 label = "비밀번호",
@@ -152,14 +152,14 @@ internal fun RegisterScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.confirmPassword,
                 onValueChange = { onIntent(RegisterIntent.ConfirmPasswordChanged(it)) },
                 label = "비밀번호 확인",
                 isPassword = true,
-                isPasswordVisible = state.isConfirmPwVisible,
+                isPasswordVisible = state.isConfirmPasswordVisible,
                 onPasswordVisibilityToggle = {
-                    onIntent(RegisterIntent.ToggleConfirmPwVisibility)
+                    onIntent(RegisterIntent.ToggleConfirmPasswordVisibility)
                 },
                 keyboardType = KeyboardType.Password,
                 isError = state.confirmPasswordError != null,

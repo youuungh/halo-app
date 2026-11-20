@@ -5,12 +5,12 @@ data class ResetCodeState(
     val code: String = "",
     val codeError: String? = null,
     val isLoading: Boolean = false,
-    val remainingSeconds: Int = CODE_VALIDITY_SECONDS,
-    val resendCooldownSeconds: Int = RESEND_COOLDOWN_SECONDS
+    val remainingSeconds: Int = CODE_EXPIRE_SECONDS,
+    val resendWaitSeconds: Int = RESEND_WAIT_SECONDS
 ) {
     companion object {
-        const val CODE_VALIDITY_SECONDS = 5 * 60
-        const val RESEND_COOLDOWN_SECONDS = 60
+        const val CODE_EXPIRE_SECONDS = 5 * 60
+        const val RESEND_WAIT_SECONDS = 60
     }
 }
 

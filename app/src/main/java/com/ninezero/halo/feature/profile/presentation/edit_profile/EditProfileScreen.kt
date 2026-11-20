@@ -17,10 +17,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,18 +42,16 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassActionButton
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
+import com.ninezero.halo.core.ui.components.input.LabeledTextField
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.profile.presentation.edit_profile.components.AvatarSection
-import com.ninezero.halo.feature.profile.presentation.edit_profile.components.EditProfileTextField
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
@@ -156,7 +152,7 @@ internal fun EditProfileScreenContent(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                EditProfileTextField(
+                LabeledTextField(
                     value = state.displayName,
                     onValueChange = { onIntent(EditProfileIntent.DisplayNameChanged(it)) },
                     label = "닉네임",
@@ -167,7 +163,7 @@ internal fun EditProfileScreenContent(
                     singleLine = true
                 )
 
-                EditProfileTextField(
+                LabeledTextField(
                     value = state.bio,
                     onValueChange = { onIntent(EditProfileIntent.BioChanged(it)) },
                     label = "소개",
@@ -180,7 +176,7 @@ internal fun EditProfileScreenContent(
                     minHeight = 120.dp
                 )
 
-                EditProfileTextField(
+                LabeledTextField(
                     value = state.location,
                     onValueChange = { onIntent(EditProfileIntent.LocationChanged(it)) },
                     label = "위치",
@@ -191,7 +187,7 @@ internal fun EditProfileScreenContent(
                     leadingIcon = painterResource(id = R.drawable.ic_location)
                 )
 
-                EditProfileTextField(
+                LabeledTextField(
                     value = state.website,
                     onValueChange = { onIntent(EditProfileIntent.WebsiteChanged(it)) },
                     label = "웹사이트",
@@ -207,7 +203,7 @@ internal fun EditProfileScreenContent(
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // 로딩/에러 오버레이
+        // 로딩·에러 오버레이
         if (state.isLoading || state.error != null) {
             Box(
                 modifier = Modifier
@@ -219,21 +215,11 @@ internal fun EditProfileScreenContent(
                 if (state.isLoading) {
                     CenteredLoadingIndicator(size = LoadingIndicatorSize.Large)
                 } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = state.error.orEmpty(),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(
-                            onClick = { onIntent(EditProfileIntent.LoadProfile) },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.bounceClick()
-                        ) {
-                            Text("재시도")
-                        }
-                    }
+                    ListErrorState(
+                        title = "프로필을 불러오지 못했습니다",
+                        reason = state.error,
+                        onRetry = { onIntent(EditProfileIntent.LoadProfile) }
+                    )
                 }
             }
         }
@@ -242,17 +228,7 @@ internal fun EditProfileScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 0.5f,
-                        endIntensity = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
@@ -305,4 +281,3 @@ internal fun EditProfileScreenContent(
         )
     }
 }
-

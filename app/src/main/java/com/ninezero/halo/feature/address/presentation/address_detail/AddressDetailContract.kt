@@ -29,6 +29,7 @@ sealed interface AddressDetailIntent {
     data class UpdateRecipientPhone(val phone: String) : AddressDetailIntent
     data class UpdateAddressDetail(val detail: String) : AddressDetailIntent
     data class UpdateMemo(val memo: String) : AddressDetailIntent
+    data class UpdateDefault(val isDefault: Boolean) : AddressDetailIntent
     data object Save : AddressDetailIntent
     data object ShowPostcodeSheet : AddressDetailIntent
     data object DismissPostcodeSheet : AddressDetailIntent

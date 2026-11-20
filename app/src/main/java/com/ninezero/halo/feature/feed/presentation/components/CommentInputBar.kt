@@ -18,14 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.feed.domain.model.Comment
-import com.ninezero.halo.ui.theme.HaloTheme
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 
 @Composable
@@ -47,24 +45,13 @@ fun CommentInputBar(
             .pointerInput(Unit) {
                 detectTapGestures { /* 터치 이벤트 소비 */ }
             }
-            .haloBlur(state = hazeState) {
-                style = HaloBlurStyle(
-                    backgroundColor = backgroundColor,
-                    tint = HaloBlurTint(backgroundColor),
-                    noiseFactor = 0f
-                )
-                progressive = HazeProgressive.verticalGradient(
-                    startIntensity = 0f,
-                    endIntensity = 0.5f
-                )
-            }
+            .haloBlur(hazeState, HaloBlurs.fadeUp(backgroundColor))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            val fieldGlassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -80,14 +67,7 @@ fun CommentInputBar(
                         } else Modifier
                     )
                     .clip(RoundedCornerShape(20.dp))
-                    .haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = backgroundColor,
-                            tint = HaloBlurTint(fieldGlassTint),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0f
-                        )
-                    }
+                    .haloBlur(hazeState, HaloBlurs.glassField(backgroundColor))
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 contentAlignment = Alignment.CenterStart
             ) {

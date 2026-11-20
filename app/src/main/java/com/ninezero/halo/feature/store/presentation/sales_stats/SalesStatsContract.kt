@@ -47,9 +47,11 @@ sealed interface SalesStatsIntent {
     data object ShowMonthPicker : SalesStatsIntent
     data object HideMonthPicker : SalesStatsIntent
     data object NavigateBack : SalesStatsIntent
+    data class NavigateToProductDetail(val productId: Int) : SalesStatsIntent
     data object SnackbarDismissed : SalesStatsIntent
 }
 
 sealed interface SalesStatsSideEffect {
     data object NavigateBack : SalesStatsSideEffect
+    data class NavigateToProductDetail(val productId: Int) : SalesStatsSideEffect
 }

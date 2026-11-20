@@ -1,15 +1,13 @@
 package com.ninezero.halo.feature.store.presentation.create_review
 
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import com.ninezero.halo.core.media.MediaFileReader
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
-import com.ninezero.halo.core.util.MediaUtils
 import com.ninezero.halo.feature.profile.domain.usecase.GetCachedMyProfileUseCase
 import com.ninezero.halo.feature.store.domain.repository.ReviewRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import org.orbitmvi.orbit.OrbitContainer
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.blockingIntent
@@ -21,7 +19,7 @@ class CreateReviewViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val reviewRepository: ReviewRepository,
     private val getCachedMyProfileUseCase: GetCachedMyProfileUseCase,
-    @param:ApplicationContext private val context: Context
+    private val mediaFileReader: MediaFileReader
 ) : ViewModel(), OrbitContainerHost<CreateReviewState, CreateReviewState, CreateReviewSideEffect> {
 
     private val productId: Int = savedStateHandle.get<Int>("productId") ?: 0
@@ -113,7 +111,7 @@ class CreateReviewViewModel @Inject constructor(
         }
 
         val validUris = uris.take(availableSlots).filter { uri ->
-            val fileInfo = MediaUtils.getFileInfo(context, uri) ?: return@filter false
+            val fileInfo = mediaFileReader.getFileInfo(uri) ?: return@filter false
 
             if (fileInfo.fileSize > MAX_IMAGE_SIZE) {
                 reduce {
@@ -167,28 +165,12 @@ class CreateReviewViewModel @Inject constructor(
     private fun submitCreate() = intent {
         val trimmedContent = state.content.trim()
 
-        // 목록은 한 번만 읽음, 변환 중 바뀌면 개수 비교가 틀어짐
-        val uris = state.selectedMediaUris
-        val parts = uris.mapIndexedNotNull { index, uri ->
-            MediaUtils.createUploadPart(context, uri, "images", "image_$index")
-        }
-
-        if (parts.size != uris.size) {
-            reduce {
-                state.copy(
-                    isSubmitting = false,
-                    snackbarState = SnackbarState("이미지를 처리하지 못했습니다")
-                )
-            }
-            return@intent
-        }
-
         reviewRepository.createReviewWithImages(
             productId = state.productId,
             orderId = state.orderId,
             rating = state.rating,
             content = trimmedContent,
-            images = parts
+            images = state.selectedMediaUris
         ).onSuccess {
             reduce { state.copy(isSubmitting = false) }
             postSideEffect(CreateReviewSideEffect.ReviewSaved)
@@ -210,24 +192,12 @@ class CreateReviewViewModel @Inject constructor(
         val current = state.selectedMediaUris
         val keepImages = originalImageUrls?.let { current.filter { uri -> uri.isRemote() }.map { it.toString() } }
         val addedUris = current.filterNot { it.isRemote() }
-        val newParts = addedUris.mapIndexedNotNull { index, uri -> MediaUtils.createUploadPart(context, uri, "images", "image_$index") }
-
-        if (newParts.size != addedUris.size) {
-            reduce {
-                state.copy(
-                    isSubmitting = false,
-                    snackbarState = SnackbarState("이미지를 처리하지 못했습니다")
-                )
-            }
-            return@intent
-        }
-
         reviewRepository.updateReviewWithImages(
             reviewId = reviewId,
             rating = state.rating,
             content = trimmedContent,
             keepImages = keepImages,
-            newImages = newParts
+            newImages = addedUris
         ).onSuccess {
             reduce { state.copy(isSubmitting = false) }
             postSideEffect(CreateReviewSideEffect.ReviewSaved)

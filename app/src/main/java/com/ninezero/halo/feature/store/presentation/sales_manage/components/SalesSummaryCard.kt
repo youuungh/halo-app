@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -30,15 +28,13 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.shimmer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.CardShape
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.MembershipColors
+import com.ninezero.halo.core.ui.theme.Primary
 import com.ninezero.halo.core.util.toFormattedPrice
 import com.ninezero.halo.feature.store.domain.model.CreatorSalesSummary
-import com.ninezero.halo.feature.store.presentation.components.GlassCard
-import com.ninezero.halo.feature.store.presentation.components.SalesDeltaPill
-import com.ninezero.halo.feature.store.presentation.components.SalesInfoTooltip
-import com.ninezero.halo.feature.store.presentation.components.SummaryStatCell
 import com.ninezero.halo.feature.store.presentation.sales_manage.OrderFilter
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.Primary
 
 @Composable
 fun SalesSummaryCard(
@@ -56,95 +52,73 @@ fun SalesSummaryCard(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        GlassCard(onClick = onClick) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(CardShape)
+                .background(MembershipColors.cardBrush)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 18.dp, vertical = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "이번 달 매출",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "이번 달 매출",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "매출 통계",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Primary
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "매출 통계",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Primary
-                        )
-                        Icon(
-                            painter = painterResource(R.drawable.ic_chevron_right),
-                            contentDescription = null,
-                            tint = Primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(R.drawable.ic_chevron_right),
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
+            }
 
+            Spacer(modifier = Modifier.height(4.dp))
+
+            if (hasSales) {
+                Text(
+                    text = summary.thisMonthRevenue.toFormattedPrice(),
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "지난달 ${summary.lastMonthRevenue.toFormattedPrice()} · 누적 ${summary.cumulativeRevenue.toFormattedPrice()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = "아직 매출이 없어요",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(2.dp))
-
-                if (hasSales) {
-                    Text(
-                        text = summary.thisMonthRevenue.toFormattedPrice(),
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            platformStyle = PlatformTextStyle(includeFontPadding = false)
-                        ),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SalesDeltaPill(
-                        thisMonth = summary.thisMonthRevenue,
-                        lastMonth = summary.lastMonthRevenue
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        SummaryStatCell(
-                            label = "누적 매출",
-                            value = summary.cumulativeRevenue.toFormattedPrice(),
-                            modifier = Modifier.weight(1f)
-                        )
-                        SummaryStatCell(
-                            label = "순매출",
-                            value = summary.thisMonthNetRevenue.toFormattedPrice(),
-                            modifier = Modifier.weight(1f),
-                            labelTrailing = {
-                                SalesInfoTooltip(
-                                    text = "환불 금액을 제외한 순매출이에요.",
-                                    size = 13.dp
-                                )
-                            }
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "아직 매출이 없어요",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "상품이 판매되면 여기에 표시돼요",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "상품이 판매되면 여기에 표시돼요",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
         if (hasSales) {
-            PipelineFilter(
+            StepFilter(
                 summary = summary,
                 selectedFilter = selectedFilter,
                 onSelectFilter = onSelectFilter
@@ -154,7 +128,7 @@ fun SalesSummaryCard(
 }
 
 @Composable
-private fun PipelineFilter(
+private fun StepFilter(
     summary: CreatorSalesSummary,
     selectedFilter: OrderFilter,
     onSelectFilter: (OrderFilter) -> Unit
@@ -169,7 +143,7 @@ private fun PipelineFilter(
             .padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        PipelineSegment(
+        StepSegment(
             label = "전체",
             count = totalCount,
             filter = OrderFilter.ALL,
@@ -177,8 +151,8 @@ private fun PipelineFilter(
             onSelectFilter = onSelectFilter,
             modifier = Modifier.weight(1f)
         )
-        PipelineDot()
-        PipelineSegment(
+        StepDot()
+        StepSegment(
             label = "대기",
             count = waitingCount,
             filter = OrderFilter.PENDING,
@@ -186,8 +160,8 @@ private fun PipelineFilter(
             onSelectFilter = onSelectFilter,
             modifier = Modifier.weight(1.1f)
         )
-        PipelineArrow()
-        PipelineSegment(
+        StepArrow()
+        StepSegment(
             label = "배송중",
             count = summary.shippingCount,
             filter = OrderFilter.SHIPPED,
@@ -195,8 +169,8 @@ private fun PipelineFilter(
             onSelectFilter = onSelectFilter,
             modifier = Modifier.weight(1.1f)
         )
-        PipelineArrow()
-        PipelineSegment(
+        StepArrow()
+        StepSegment(
             label = "완료",
             count = summary.deliveredCount,
             filter = OrderFilter.DELIVERED,
@@ -204,8 +178,8 @@ private fun PipelineFilter(
             onSelectFilter = onSelectFilter,
             modifier = Modifier.weight(1.1f)
         )
-        PipelineDot()
-        PipelineSegment(
+        StepDot()
+        StepSegment(
             label = "취소",
             count = summary.cancelledCount,
             filter = OrderFilter.CANCELLED,
@@ -217,7 +191,7 @@ private fun PipelineFilter(
 }
 
 @Composable
-private fun PipelineDot() {
+private fun StepDot() {
     Text(
         text = "·",
         style = MaterialTheme.typography.titleMedium,
@@ -227,7 +201,7 @@ private fun PipelineDot() {
 }
 
 @Composable
-private fun PipelineSegment(
+private fun StepSegment(
     label: String,
     count: Int,
     filter: OrderFilter,
@@ -241,9 +215,9 @@ private fun PipelineSegment(
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .bounceClick()  // 선택 배경까지 함께 작아지도록 먼저 적용
+            .clip(MaterialTheme.shapes.medium)
             .background(background)
-            .bounceClick()
             .clickable {
                 onSelectFilter(if (isSelected) OrderFilter.ALL else filter)
             }
@@ -266,7 +240,7 @@ private fun PipelineSegment(
 }
 
 @Composable
-private fun PipelineArrow() {
+private fun StepArrow() {
     Text(
         text = "›",
         style = MaterialTheme.typography.titleMedium,
@@ -285,15 +259,15 @@ fun SalesSummaryCardSkeleton(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .height(112.dp)
+                .clip(CardShape)
                 .shimmer()
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .shimmer()
         )
     }

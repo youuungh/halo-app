@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -30,17 +30,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.ninezero.halo.core.ui.components.media.ImageThumbnailInfoStore
 import com.ninezero.halo.core.ui.components.media.MediaDisplayPolicy
+import com.ninezero.halo.core.ui.components.media.VideoPlayer
 import com.ninezero.halo.core.ui.components.media.clampedAspectRatio
 import com.ninezero.halo.core.ui.components.media.preferredAspectRatio
+import com.ninezero.halo.core.ui.components.media.rememberAnimatedImage
 import com.ninezero.halo.core.ui.components.media.singleMediaHeightForWidth
-import com.ninezero.halo.core.ui.components.modifiers.ImageThumbnailInfoStore
 import com.ninezero.halo.core.ui.components.modifiers.LocalActiveViewerMediaKey
 import com.ninezero.halo.core.ui.components.modifiers.LocalMediaSharedTransitionScope
 import com.ninezero.halo.core.ui.components.modifiers.blockHorizontalScrollLeak
 import com.ninezero.halo.core.ui.components.modifiers.mediaSharedElement
-import com.ninezero.halo.core.ui.components.video_player.VideoPlayer
 import com.ninezero.halo.core.ui.components.viewer.LocalViewerOverlayHostState
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
+import com.ninezero.halo.core.ui.preview.previewMediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaItem
 import com.ninezero.halo.feature.feed.domain.model.MediaType
 
@@ -58,14 +62,13 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
     onMediaClick: (index: Int) -> Unit = {},
     isVideoPlaying: Boolean = false,
     isUploading: Boolean = false,
-    // shared element owner 키, null이면 URL만
-    mediaOwnerKey: String? = null
+    mediaOwnerKey: String? = null  // shared element owner 키, null이면 URL만
 ) {
     if (mediaAttachments.isEmpty()) return
 
     // 영상 뷰어 열리면 인라인 정지
-    val overlayOpen = LocalViewerOverlayHostState.current?.suppressInlineVideo ?: false
-    val effectiveVideoPlaying = isVideoPlaying && !overlayOpen
+    val overlayOpen = LocalViewerOverlayHostState.current?.pauseInlineVideo ?: false
+    val shouldPlayVideo = isVideoPlaying && !overlayOpen
     // 썸네일 morph용, scope null이면 일반 표시
     val mediaSharedScope = LocalMediaSharedTransitionScope.current
     val activeViewerKey = LocalActiveViewerMediaKey.current
@@ -98,7 +101,7 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
                 minRatio = singleMinRatio,
                 maxRatio = MediaDisplayPolicy.COMMENT_SINGLE_MAX_RATIO
             )
-            val effectiveHeight = if (media.type == MediaType.VIDEO) {
+            val actualHeight = if (media.type == MediaType.VIDEO) {
                 singleMediaHeight.coerceAtMost(
                     availableWidth * MediaDisplayPolicy.COMMENT_SINGLE_VIDEO_MAX_HEIGHT_RATIO
                 )
@@ -109,7 +112,7 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(effectiveHeight + imagePadding * 2)
+                    .height(actualHeight + imagePadding * 2)
             ) {
                 // 선, 전체 높이
                 if (showLine) {
@@ -133,10 +136,10 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
                         VideoPlayer(
                             videoUrl = media.url,
                             thumbnailUrl = media.thumbnailUrl,
-                            isPlaying = effectiveVideoPlaying && !isUploading,
+                            isPlaying = shouldPlayVideo && !isUploading,
                             onClick = { onMediaClick(0) },
-                            modifier = Modifier.clip(RoundedCornerShape(12.dp)),
-                            fixedHeight = effectiveHeight,
+                            modifier = Modifier.clip(MaterialTheme.shapes.medium),
+                            fixedHeight = actualHeight,
                             maxWidth = availableWidth,
                             preferredAspectRatio = clampedRatio,
                             minAspectRatio = singleMinRatio,
@@ -146,13 +149,13 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
                     } else {
                         AsyncImage(
                             // 목록은 썸네일, 키는 원본
-                            model = media.thumbnailUrl ?: media.url,
+                            model = rememberAnimatedImage(media.thumbnailUrl ?: media.url),
                             contentDescription = "댓글 이미지",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(singleMediaHeight)
                                 .mediaSharedElement(mediaSharedScope, activeViewerKey, media.url, mediaOwnerKey)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(MaterialTheme.shapes.medium)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
@@ -227,9 +230,9 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
                             VideoPlayer(
                                 videoUrl = media.url,
                                 thumbnailUrl = media.thumbnailUrl,
-                                isPlaying = effectiveVideoPlaying && !isUploading && (videoCount <= 1 || activeMediaId == media.id),
+                                isPlaying = shouldPlayVideo && !isUploading && (videoCount <= 1 || activeMediaId == media.id),
                                 onClick = { onMediaClick(index) },
-                                modifier = Modifier.clip(RoundedCornerShape(12.dp)),
+                                modifier = Modifier.clip(MaterialTheme.shapes.medium),
                                 fixedHeight = multiMediaHeight,
                                 maxWidth = maxItemWidth,
                                 preferredAspectRatio = clampedAspectRatio(
@@ -249,13 +252,13 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
                             )
                             AsyncImage(
                                 // 목록은 썸네일, 키는 원본
-                                model = media.thumbnailUrl ?: media.url,
+                                model = rememberAnimatedImage(media.thumbnailUrl ?: media.url),
                                 contentDescription = "댓글 이미지",
                                 modifier = Modifier
                                     .width(multiMediaHeight * itemRatio)
                                     .height(multiMediaHeight)
                                     .mediaSharedElement(mediaSharedScope, activeViewerKey, media.url, mediaOwnerKey)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(MaterialTheme.shapes.medium)
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
@@ -270,6 +273,17 @@ internal fun CommentMedia(  // 단일은 종횡비, 다중은 가로 스크롤 �
                     }
                 }
             }
+        }
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun CommentMediaPreview() {
+    HaloSurfacePreview {
+        Column(modifier = Modifier.padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CommentMedia(mediaAttachments = listOf(previewMediaItem()), startPadding = 16.dp, endPadding = 16.dp)
+            CommentMedia(mediaAttachments = List(3) { previewMediaItem(id = it) }, startPadding = 16.dp, endPadding = 16.dp)
         }
     }
 }

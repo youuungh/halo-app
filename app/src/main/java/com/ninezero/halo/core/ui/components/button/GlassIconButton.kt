@@ -1,9 +1,11 @@
 package com.ninezero.halo.core.ui.components.button
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -14,15 +16,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
-import com.ninezero.halo.core.ui.components.modifiers.haloBlur
+import com.ninezero.halo.core.ui.components.modifiers.haloGlass
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 import dev.chrisbanes.haze.HazeState
 
 /** 글래스 아이콘 버튼 */
@@ -47,20 +50,7 @@ fun GlassIconButton(
             modifier = modifier
                 .then(if (enabled) Modifier.bounceClick() else Modifier)
                 .size(size)
-                .clip(CircleShape)
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor.copy(alpha = 0.7f),
-                        tint = HaloBlurTint(hazeTintColor ?: backgroundColor.copy(alpha = 0.4f)),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0f
-                    )
-                }
-                .border(
-                    width = 0.5.dp,
-                    color = iconTint.copy(alpha = 0.3f),
-                    shape = CircleShape
-                )
+                .haloGlass(hazeState, hazeTintColor ?: backgroundColor.copy(alpha = 0.4f), CircleShape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = ripple(bounded = true),
@@ -94,6 +84,17 @@ fun GlassIconButton(
                     tint = actualIconTint
                 )
             }
+        }
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun GlassIconButtonPreview() {
+    HaloSurfacePreview {
+        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassIconButton(onClick = {}, icon = painterResource(R.drawable.ic_close), contentDescription = "닫기")
+            GlassIconButton(onClick = {}, icon = painterResource(R.drawable.ic_share), contentDescription = "공유", enabled = false)
         }
     }
 }

@@ -4,12 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,16 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.Error
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
-import com.ninezero.halo.ui.theme.Primary
-import com.ninezero.halo.ui.theme.Success
+import com.ninezero.halo.core.ui.theme.Error
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
+import com.ninezero.halo.core.ui.theme.Primary
+import com.ninezero.halo.core.ui.theme.Success
 import java.util.Locale
 import kotlin.math.abs
 
@@ -36,7 +30,7 @@ fun SalesDeltaPill(
     thisMonth: Long,
     lastMonth: Long,
     modifier: Modifier = Modifier,
-    prefix: String = "전월 대비",
+    prefix: String = "지난달보다",
     verb: Boolean = false
 ) {
     val isDark = LocalIsDarkTheme.current
@@ -58,24 +52,13 @@ fun SalesDeltaPill(
             val deltaPercent = (thisMonth - lastMonth) * 100.0 / lastMonth
             val isUp = deltaPercent >= 0.0
             val color = if (isUp) Success else Error
-            val pctText = String.format(Locale.KOREA, "%.1f%%", abs(deltaPercent))
+            val percentText = String.format(Locale.KOREA, "%.1f%%", abs(deltaPercent))
             DeltaPillContainer(color = color, bgAlpha = bgAlpha, modifier = modifier) {
-                if (!verb) {
-                    Icon(
-                        painter = painterResource(
-                            if (isUp) R.drawable.ic_trending_up else R.drawable.ic_trending_down
-                        ),
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
                 Text(
                     text = if (verb) {
-                        "$prefix $pctText ${if (isUp) "늘었어요" else "줄었어요"}"
+                        "$prefix $percentText ${if (isUp) "늘었어요" else "줄었어요"}"
                     } else {
-                        "$prefix $pctText"
+                        "$prefix $percentText ${if (isUp) "↑" else "↓"}"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,

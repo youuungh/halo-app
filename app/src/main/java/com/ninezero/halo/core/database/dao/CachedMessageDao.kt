@@ -81,7 +81,7 @@ interface CachedMessageDao {
     suspend fun failStuckSendingText(roomId: Int, activeTempIds: List<String>)  // 미디어는 워커가 상태 관리
 
     @Transaction
-    suspend fun replaceOptimisticMessage(clientTempId: String, message: CachedMessageEntity) {
+    suspend fun replaceTempMessage(clientTempId: String, message: CachedMessageEntity) {
         deleteByClientTempId(clientTempId)
         insertMessage(message)
     }

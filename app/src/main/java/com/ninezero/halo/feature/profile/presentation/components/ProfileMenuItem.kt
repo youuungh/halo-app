@@ -5,27 +5,34 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
+import com.ninezero.halo.core.ui.theme.DarkMenuTile
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
+
+private val LightTileOutline = Shadow(radius = 0.dp, spread = 0.5.dp, color = Color.Black.copy(alpha = 0.05f))
+private val DarkTileOutline = Shadow(radius = 0.dp, spread = 0.5.dp, color = Color.White.copy(alpha = 0.06f))
+private val LightTileShadow = Shadow(radius = 4.dp, color = Color.Black.copy(alpha = 0.08f))
+private val DarkTileShadow = Shadow(radius = 4.dp, color = Color.Black.copy(alpha = 0.5f))
 
 @Composable
 fun ProfileMenuItem(
@@ -35,51 +42,44 @@ fun ProfileMenuItem(
     modifier: Modifier = Modifier,
     isCreatorMenu: Boolean = false
 ) {
-    val backgroundColor = if (isCreatorMenu) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    }
+    val contentColor = if (isCreatorMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    val shape = MaterialTheme.shapes.large
 
-    val contentColor = if (isCreatorMenu) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Box(
+    Column(
         modifier = modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
-            .background(backgroundColor)
+            .aspectRatio(4f / 3f)
             .bounceClick()
+            .profileTileSurface(shape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(bounded = true)
-            ) { onClick() },
-        contentAlignment = Alignment.Center
+            ) { onClick() }
+            .padding(horizontal = 11.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = label,
-                modifier = Modifier.size(22.dp),
-                tint = contentColor
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = contentColor,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-        }
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = contentColor
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isCreatorMenu) FontWeight.SemiBold else FontWeight.Medium,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
+}
+
+@Composable
+internal fun Modifier.profileTileSurface(shape: Shape): Modifier {
+    val isDark = LocalIsDarkTheme.current
+    return this
+        .dropShadow(shape, if (isDark) DarkTileOutline else LightTileOutline)
+        .dropShadow(shape, if (isDark) DarkTileShadow else LightTileShadow)
+        .clip(shape)
+        .background(if (isDark) DarkMenuTile else Color.White)
 }

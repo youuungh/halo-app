@@ -3,10 +3,10 @@ package com.ninezero.halo.core.network.upload
 import android.content.Context
 import android.net.Uri
 import com.ninezero.halo.core.di.DirectUpload
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.model.UploadTicket
 import com.ninezero.halo.core.network.ApiException
 import com.ninezero.halo.core.network.exceptionFailure
-import com.ninezero.halo.core.util.MediaUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +25,6 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-/** 서버가 발급한 서명 URL로 스토리지에 업로드 */
 @Singleton
 class DirectUploader @Inject constructor(
     @param:ApplicationContext private val context: Context,
@@ -66,7 +65,6 @@ class DirectUploader @Inject constructor(
         }
     }
 
-    /** 형식·크기로 허가를 받아 올리고 업로드 ID 반환 */
     suspend fun uploadVideo(
         uri: Uri,
         prepare: suspend (mimeType: String, size: Long) -> Result<UploadTicket>
@@ -75,6 +73,6 @@ class DirectUploader @Inject constructor(
             MediaUtils.resolveMimeType(context, uri) to (MediaUtils.getFileInfo(context, uri)?.fileSize ?: 0L)
         }
         val ticket = prepare(mimeType, size).getOrElse { return Result.failure(it) }
-        return upload(ticket.uploadUrl, uri, ticket.contentType).map { ticket.uploadId }
+        return upload(ticket.uploadUrl, uri, ticket.contentType).map { ticket.uploadId }  // 업로드 ID 반환
     }
 }

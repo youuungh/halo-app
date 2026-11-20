@@ -158,7 +158,7 @@ class ExploreViewModel @Inject constructor(
                         isTrendingLoading = false,
                         trendingPosts = result.items,
                         trendingPage = result.currentPage,
-                        trendingHasMore = result.hasNext,
+                        hasMoreTrendingPosts = result.hasNext,
                         trendingError = null
                     )
                 }
@@ -186,7 +186,7 @@ class ExploreViewModel @Inject constructor(
                         isPopularLoading = false,
                         popularPosts = result.items,
                         popularPage = result.currentPage,
-                        popularHasMore = result.hasNext,
+                        hasMorePopularPosts = result.hasNext,
                         popularError = null
                     )
                 }
@@ -202,7 +202,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     private fun loadMoreTrending() = intent {
-        if (state.isTrendingLoading || state.isRefreshing || !state.trendingHasMore) return@intent
+        if (state.isTrendingLoading || state.isRefreshing || !state.hasMoreTrendingPosts) return@intent
 
         val generation = trendingGeneration.current()
         val nextPage = state.trendingPage + 1
@@ -219,7 +219,7 @@ class ExploreViewModel @Inject constructor(
                         isTrendingLoading = false,
                         trendingPosts = (state.trendingPosts + result.items).distinctBy { it.id },
                         trendingPage = result.currentPage,
-                        trendingHasMore = result.hasNext
+                        hasMoreTrendingPosts = result.hasNext
                     )
                 }
             }
@@ -229,7 +229,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     private fun loadMorePopular() = intent {
-        if (state.isPopularLoading || state.isRefreshing || !state.popularHasMore) return@intent
+        if (state.isPopularLoading || state.isRefreshing || !state.hasMorePopularPosts) return@intent
 
         val generation = popularGeneration.current()
         val nextPage = state.popularPage + 1
@@ -246,7 +246,7 @@ class ExploreViewModel @Inject constructor(
                         isPopularLoading = false,
                         popularPosts = (state.popularPosts + result.items).distinctBy { it.id },
                         popularPage = result.currentPage,
-                        popularHasMore = result.hasNext
+                        hasMorePopularPosts = result.hasNext
                     )
                 }
             }
@@ -273,7 +273,7 @@ class ExploreViewModel @Inject constructor(
                                 isRefreshing = false,
                                 trendingPosts = result.items,
                                 trendingPage = result.currentPage,
-                                trendingHasMore = result.hasNext
+                                hasMoreTrendingPosts = result.hasNext
                             )
                         }
                     }
@@ -295,7 +295,7 @@ class ExploreViewModel @Inject constructor(
                                 isRefreshing = false,
                                 popularPosts = result.items,
                                 popularPage = result.currentPage,
-                                popularHasMore = result.hasNext
+                                hasMorePopularPosts = result.hasNext
                             )
                         }
                     }

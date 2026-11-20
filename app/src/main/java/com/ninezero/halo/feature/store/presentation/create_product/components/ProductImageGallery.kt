@@ -2,20 +2,17 @@ package com.ninezero.halo.feature.store.presentation.create_product.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -36,8 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.input.inputBorder
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 @Composable
 fun ProductImageGallery(
@@ -49,76 +48,68 @@ fun ProductImageGallery(
     modifier: Modifier = Modifier
 ) {
     val placeholderColor = MaterialTheme.colorScheme.surfaceVariant
-    val imageCornerShape = RoundedCornerShape(12.dp)
-    val hasImages = existingImageUrls.isNotEmpty() || selectedImageUris.isNotEmpty()
+    val imageCornerShape = MaterialTheme.shapes.medium
     val totalImageCount = existingImageUrls.size + selectedImageUris.size
 
-    Column(
-        modifier = modifier.padding(vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    // 사진 줄 맨 앞이 추가 칸, 첫 사진은 대표
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 20.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    shape = RoundedCornerShape(10.dp)
-                )
-                .clickable(onClick = onAddImagesClick)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "이미지 추가",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "$totalImageCount / 10",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(50)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 3.dp)
+        item(key = "add") {
+            AddImageTile(count = totalImageCount, onClick = onAddImagesClick)
+        }
+        items(existingImageUrls, key = { it }) { url ->
+            ImageThumbnail(
+                model = url,
+                contentDescription = "상품 이미지",
+                cornerShape = imageCornerShape,
+                placeholderColor = placeholderColor,
+                isMainImage = url == existingImageUrls.firstOrNull(),
+                onRemove = { onRemoveExistingImage(url) }
             )
         }
+        items(selectedImageUris, key = { it.toString() }) { uri ->
+            ImageThumbnail(
+                model = uri,
+                contentDescription = "선택된 이미지",
+                cornerShape = imageCornerShape,
+                placeholderColor = placeholderColor,
+                isMainImage = existingImageUrls.isEmpty() && uri == selectedImageUris.firstOrNull(),
+                onRemove = { onRemoveNewImage(uri) }
+            )
+        }
+    }
+}
 
-        if (hasImages) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(existingImageUrls, key = { it }) { url ->
-                    ImageThumbnail(
-                        model = url,
-                        contentDescription = "상품 이미지",
-                        cornerShape = imageCornerShape,
-                        placeholderColor = placeholderColor,
-                        onRemove = { onRemoveExistingImage(url) }
-                    )
-                }
-                items(selectedImageUris, key = { it.toString() }) { uri ->
-                    ImageThumbnail(
-                        model = uri,
-                        contentDescription = "선택된 이미지",
-                        cornerShape = imageCornerShape,
-                        placeholderColor = placeholderColor,
-                        onRemove = { onRemoveNewImage(uri) }
-                    )
-                }
-            }
-        }
+/** 카메라 아이콘 + 'N / 10' 추가 칸 */
+@Composable
+private fun AddImageTile(count: Int, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Column(
+        modifier = Modifier
+            .size(ImageTileSize)
+            .clip(shape)
+            .inputBorder(shape)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_camera),
+            contentDescription = "이미지 추가",
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "$count / 10",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -126,14 +117,14 @@ fun ProductImageGallery(
 private fun ImageThumbnail(
     model: Any?,
     contentDescription: String,
-    cornerShape: RoundedCornerShape,
+    cornerShape: Shape,
     placeholderColor: Color,
+    isMainImage: Boolean,
     onRemove: () -> Unit
 ) {
     Box(
         modifier = Modifier
-            .width(100.dp)
-            .aspectRatio(1f)
+            .size(ImageTileSize)
             .clip(cornerShape)
     ) {
         AsyncImage(
@@ -161,8 +152,23 @@ private fun ImageThumbnail(
                 tint = Color.White
             )
         }
+        if (isMainImage) {
+            Text(
+                text = "대표",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(6.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), MaterialTheme.shapes.extraSmall)
+                    .padding(horizontal = 5.dp, vertical = 1.dp)
+            )
+        }
     }
 }
+
+private val ImageTileSize = 88.dp
 
 @HaloLightDarkPreview
 @Composable

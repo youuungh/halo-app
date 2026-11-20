@@ -38,8 +38,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
         buildConfigField("String", "TOSS_CLIENT_KEY", "\"$tossClientKey\"")
 
         // 웹 클라이언트 ID — 구글 로그인 serverClientId
@@ -164,6 +162,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.coil.video)
+    implementation(libs.coil.gif)
 
     // Media3 (ExoPlayer)
     implementation(libs.media3.exoplayer)
@@ -176,12 +175,10 @@ dependencies {
     // Haze
     implementation(libs.haze)
     implementation(libs.haze.blur)
+    implementation(libs.haze.glass)
 
     // Kyant AndroidLiquidGlass
     implementation(libs.kyant.backdrop)
-
-    // Collapsing Toolbar
-    implementation(libs.collapsing.toolbar)
 
     // Reorderable (drag & drop)
     implementation(libs.reorderable)
@@ -220,14 +217,6 @@ dependencies {
     // LeakCanary (debug only)
     debugImplementation(libs.leakcanary)
 
-    // Testing
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

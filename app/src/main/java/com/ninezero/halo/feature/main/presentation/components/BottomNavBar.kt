@@ -54,15 +54,15 @@ import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.popClick
-import com.ninezero.halo.core.ui.components.navigation.BottomBarAccessory
 import com.ninezero.halo.core.ui.components.navigation.BottomBarDefaults
-import com.ninezero.halo.core.ui.components.navigation.liquidtabs.DampedDragAnimation
-import com.ninezero.halo.core.ui.components.navigation.liquidtabs.InteractiveHighlight
-import com.ninezero.halo.core.ui.components.navigation.liquidtabs.LiquidNavTab
+import com.ninezero.halo.core.ui.components.navigation.BottomBarSideButton
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
 import com.ninezero.halo.feature.main.presentation.MainTab
-import com.ninezero.halo.ui.theme.HaloTheme
-import com.ninezero.halo.ui.theme.LocalIsDarkTheme
+import com.ninezero.halo.feature.main.presentation.components.liquidtabs.DampedDragAnimation
+import com.ninezero.halo.feature.main.presentation.components.liquidtabs.InteractiveHighlight
+import com.ninezero.halo.feature.main.presentation.components.liquidtabs.LiquidNavTab
 
 data class BottomNavItem(
     val tab: MainTab,
@@ -87,7 +87,7 @@ fun BottomNavBar(  // Kyant liquid glass
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
-    accessory: BottomBarAccessory? = null
+    sideButton: BottomBarSideButton? = null
 ) {
     val items = navItems(hasUnreadMessage)
     val tabsCount = items.size
@@ -127,7 +127,7 @@ fun BottomNavBar(  // Kyant liquid glass
     }
 
     // 옆 버튼이 물방울처럼 떨어져 나오는 만큼 바가 비켜남
-    val accessoryMotion = rememberAccessoryMotion(visible = accessory != null)
+    val sideButtonMotion = rememberSideButtonMotion(visible = sideButton != null)
 
     CompositionLocalProvider(LocalRippleConfiguration provides null) {
         Box(
@@ -143,7 +143,7 @@ fun BottomNavBar(  // Kyant liquid glass
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(end = AccessorySlot * accessoryMotion.separation.value.coerceIn(0f, 1f))
+                    .padding(end = SideButtonSlot * sideButtonMotion.separation.value.coerceIn(0f, 1f))
                     .shadow(elevation = 6.dp, shape = shape, clip = false),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -165,18 +165,18 @@ fun BottomNavBar(  // Kyant liquid glass
                         onDragStopped = {
                             val target = targetValue.fastRoundToInt().coerceIn(0, tabsCount - 1)
                             val targetTab = items[target].tab
-                            val selIdx = latestSelectedIndex.value
+                            val currentIndex = latestSelectedIndex.value
                             when {
-                                // 다른 탭으로 드래그 → 그 탭으로 이동
-                                targetTab != MainTab.CREATE && target != selIdx ->
+                                // 다른 탭으로 드래그: 그 탭으로 이동
+                                targetTab != MainTab.CREATE && target != currentIndex ->
                                     latestOnTabSelected.value(targetTab)
                                 // 같은 탭 재탭은 재선택, 처리는 MainScreen
-                                target == selIdx -> {
-                                    animateToValue(selIdx.toFloat())
-                                    latestOnTabSelected.value(items[selIdx].tab)
+                                target == currentIndex -> {
+                                    animateToValue(currentIndex.toFloat())
+                                    latestOnTabSelected.value(items[currentIndex].tab)
                                 }
-                                // CREATE → 현재 선택으로 복귀
-                                else -> animateToValue(selIdx.toFloat())
+                                // CREATE: 현재 선택으로 복귀
+                                else -> animateToValue(currentIndex.toFloat())
                             }
                         },
                         onDrag = { _, dragAmount ->
@@ -341,9 +341,9 @@ fun BottomNavBar(  // Kyant liquid glass
             }
 
             // 바 위에 그려서 바 그림자를 덮으며 바 끝에서 떨어져 나옴
-            LiquidAccessory(
-                accessory = accessory,
-                motion = accessoryMotion,
+            LiquidSideButton(
+                sideButton = sideButton,
+                motion = sideButtonMotion,
                 backdrop = backdrop,
                 modifier = Modifier.fillMaxSize()
             )

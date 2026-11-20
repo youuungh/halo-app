@@ -9,7 +9,7 @@ data class PendingChatMessageEntity(
     val id: Long = 0,
     val roomId: Int,
     val content: String?,
-    val messageType: String,  // IMAGE, VIDEO, FILE
+    val messageType: String,  // IMAGE·VIDEO·FILE
     val mediaUris: String?,
     val status: UploadStatus = UploadStatus.PENDING,
     val createdAt: Long = System.currentTimeMillis(),

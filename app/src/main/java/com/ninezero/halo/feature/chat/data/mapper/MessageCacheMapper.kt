@@ -2,11 +2,15 @@ package com.ninezero.halo.feature.chat.data.mapper
 
 import com.ninezero.halo.core.database.entity.CachedMessageEntity
 import com.ninezero.halo.core.model.UserSummary
+import com.ninezero.halo.core.util.toAmountLong
+import com.ninezero.halo.core.util.toAmountLongOrNull
+import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
 import com.ninezero.halo.feature.chat.domain.model.Message
 import com.ninezero.halo.feature.chat.domain.model.MessageStatus
 import com.ninezero.halo.feature.chat.domain.model.PostMessageInfo
 import com.ninezero.halo.feature.chat.domain.model.ProductMessageInfo
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import kotlinx.serialization.json.Json
 
 object MessageCacheMapper {
@@ -33,14 +37,14 @@ object MessageCacheMapper {
             fileName = fileName,
             productId = productInfo?.productId,
             productName = productInfo?.name,
-            productPrice = productInfo?.price,
-            productOriginalPrice = productInfo?.originalPrice,
+            productPrice = productInfo?.price?.toString(),
+            productOriginalPrice = productInfo?.originalPrice?.toString(),
             productDiscountRate = productInfo?.discountRate,
             productImageUrl = productInfo?.imageUrl,
             productCanAccess = productInfo?.canAccess,
             productCreatorId = productInfo?.creatorId,
             productCreatorName = productInfo?.creatorName,
-            productRequiredTier = productInfo?.requiredTier,
+            productRequiredTier = productInfo?.requiredTier?.name,
             postId = postInfo?.postId,
             postContent = postInfo?.content,
             postAuthorName = postInfo?.authorName,
@@ -55,7 +59,7 @@ object MessageCacheMapper {
             postCommentCount = postInfo?.commentCount,
             postShareCount = postInfo?.shareCount,
             postCreatorId = postInfo?.creatorId,
-            postRequiredTier = postInfo?.requiredTier,
+            postRequiredTier = postInfo?.requiredTier?.name,
             postIsHidden = postInfo?.isHidden,
             isRead = isRead,
             readAt = readAt,
@@ -104,14 +108,14 @@ object MessageCacheMapper {
                 ProductMessageInfo(
                     productId = productId,
                     name = productName,
-                    price = productPrice,
-                    originalPrice = productOriginalPrice,
+                    price = productPrice.toAmountLong(),
+                    originalPrice = productOriginalPrice.toAmountLongOrNull(),
                     discountRate = productDiscountRate,
                     imageUrl = productImageUrl,
                     canAccess = productCanAccess ?: true,
                     creatorId = productCreatorId,
                     creatorName = productCreatorName,
-                    requiredTier = productRequiredTier
+                    requiredTier = productRequiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE)
                 )
             } else null,
             postInfo = if (postId != null && postContent != null && postAuthorName != null) {
@@ -148,7 +152,7 @@ object MessageCacheMapper {
                     shareCount = postShareCount ?: 0,
                     canAccess = postCanAccess ?: true,
                     creatorId = postCreatorId,
-                    requiredTier = postRequiredTier,
+                    requiredTier = postRequiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE),
                     isHidden = postIsHidden ?: false
                 )
             } else null,

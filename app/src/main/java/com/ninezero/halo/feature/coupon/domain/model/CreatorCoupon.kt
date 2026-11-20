@@ -9,9 +9,9 @@ data class CreatorCoupon(
     val description: String?,
     val type: CouponType,
     val discountTarget: CouponDiscountTarget,
-    val discountValue: String,
-    val minOrderAmount: String,
-    val maxDiscountAmount: String?,
+    val discountValue: Long,
+    val minOrderAmount: Long,
+    val maxDiscountAmount: Long?,
     val totalQuantity: Int,
     val issuedQuantity: Int,
     val maxUseCount: Int,
@@ -21,7 +21,7 @@ data class CreatorCoupon(
 ) {
     val discountText: String
         get() = when (type) {
-            CouponType.FIXED_AMOUNT -> discountValue.toBigDecimal().toInt().toFormattedPrice()
+            CouponType.FIXED_AMOUNT -> discountValue.toFormattedPrice()
             CouponType.PERCENTAGE -> "${discountValue}%"
             CouponType.FREE_SHIPPING -> "무료 배송"
         }

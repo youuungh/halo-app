@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.settings.presentation.SettingsIntent
-import com.ninezero.halo.ui.theme.HaloTheme
 
 data class SettingsMenuItemData(
     val iconRes: Int,
@@ -46,7 +45,7 @@ fun SettingsMenuItem(
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 2.dp)
             .bounceClick()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(

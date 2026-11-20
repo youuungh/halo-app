@@ -2,6 +2,7 @@ package com.ninezero.halo.feature.point.data.remote.dto
 
 import com.ninezero.halo.core.network.PagedDto
 import com.ninezero.halo.core.util.parseTimestamp
+import com.ninezero.halo.core.util.toAmountLong
 import com.ninezero.halo.core.util.toEnumOrDefault
 import com.ninezero.halo.feature.point.domain.model.PointBalance
 import com.ninezero.halo.feature.point.domain.model.PointHistory
@@ -19,8 +20,8 @@ data class PointBalanceDto(
     val expiresAt: String? = null
 ) {
     fun toDomain(): PointBalance = PointBalance(
-        totalPoints = balance.toBigDecimal().toInt(),
-        expiringPoints = expiringPoints.toBigDecimal().toInt(),
+        totalPoints = balance.toAmountLong().toInt(),
+        expiringPoints = expiringPoints.toAmountLong().toInt(),
         expiresAt = expiresAt?.parseTimestamp()?.takeIf { it > 0L }
     )
 }
@@ -42,7 +43,8 @@ data class PointHistoryDto(
         type = type.toEnumOrDefault(PointType.EARN),
         amount = amount.toBigDecimalOrNull()?.toInt() ?: 0,
         description = description,
-        createdAt = createdAt.parseTimestamp()
+        createdAt = createdAt.parseTimestamp(),
+        balanceAfter = balanceAfter.toBigDecimalOrNull()?.toInt() ?: 0
     )
 }
 

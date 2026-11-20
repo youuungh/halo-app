@@ -1,6 +1,9 @@
 package com.ninezero.halo.feature.store.presentation.my_products
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,8 +14,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,11 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,7 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,22 +45,23 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.R
-import com.ninezero.halo.core.ui.components.bottomsheet.ProductOptionBottomSheet
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.HaloPullToRefreshBox
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListEmptyState
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
-import com.ninezero.halo.core.ui.components.refresh.HaloPullToRefreshBox
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.store.domain.model.ProductStatus
 import com.ninezero.halo.feature.store.domain.model.hasLiveDeal
 import com.ninezero.halo.feature.store.presentation.my_products.components.DealSetupBottomSheet
 import com.ninezero.halo.feature.store.presentation.my_products.components.MyProductCard
+import com.ninezero.halo.feature.store.presentation.my_products.components.ProductOptionBottomSheet
 import com.ninezero.halo.feature.store.presentation.my_products.components.SectionGroupHeader
 import com.ninezero.halo.feature.store.presentation.my_products.components.myProductsSkeleton
 import dev.chrisbanes.haze.HazeState
@@ -114,6 +116,23 @@ fun MyProductsScreen(
     )
 }
 
+/** 그룹 안 상품 묶음, 높이가 줄고 늘어남 */
+@Composable
+private fun CollapsibleGroupBody(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = expandVertically(expandFrom = Alignment.Top),
+        exit = shrinkVertically(shrinkTowards = Alignment.Top)
+    ) {
+        Column { content() }
+    }
+}
+
 @Composable
 internal fun MyProductsScreenContent(
     state: MyProductsState,
@@ -159,39 +178,26 @@ internal fun MyProductsScreenContent(
                 state.error != null && state.products.isEmpty() -> {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = headerHeight),
+                            .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(MyProductsIntent.Load) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "상품 목록을 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = { onIntent(MyProductsIntent.Load) }
+                        )
                     }
                 }
 
                 state.products.isEmpty() -> {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = headerHeight),
+                            .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "등록된 상품이 없습니다",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ListEmptyState(
+                            title = "등록된 상품이 없어요",
+                            description = "상품을 등록하면 여기에 표시돼요"
                         )
                     }
                 }
@@ -200,8 +206,10 @@ internal fun MyProductsScreenContent(
                     // 그룹핑: 타임딜 → sectionTag → 미분류
                     val grouped = remember(state.products) {
                         val (dealProducts, rest) = state.products.partition { it.hasLiveDeal() }
-                        val (withSection, withoutSection) = rest.partition { it.sectionTag != null }
-                        val sectionGroups = withSection.groupBy { it.sectionTag!! }
+                        val withoutSection = rest.filter { it.sectionTag == null }
+                        val sectionGroups = rest
+                            .mapNotNull { product -> product.sectionTag?.let { it to product } }
+                            .groupBy({ it.first }, { it.second })
                             .toSortedMap(compareBy { it.name })
                         Triple(dealProducts, sectionGroups, withoutSection)
                     }
@@ -222,7 +230,7 @@ internal fun MyProductsScreenContent(
                                     targetValue = if (state.isTimeDealCollapsed) -90f else 0f,
                                     label = "timedeal_chevron"
                                 )
-                                Column(modifier = Modifier.animateItem()) {
+                                Column(modifier = Modifier.animateItem(placementSpec = null)) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -246,7 +254,6 @@ internal fun MyProductsScreenContent(
                                             fontWeight = FontWeight.Medium,
                                             color = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier
-                                                .offset(y = 1.dp)
                                                 .background(
                                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                                     shape = RoundedCornerShape(50)
@@ -259,7 +266,7 @@ internal fun MyProductsScreenContent(
                                             contentDescription = if (state.isTimeDealCollapsed) "펼치기" else "접기",
                                             modifier = Modifier
                                                 .size(16.dp)
-                                                .rotate(chevronRotation),
+                                                .graphicsLayer { rotationZ = chevronRotation },
                                             tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
@@ -269,18 +276,23 @@ internal fun MyProductsScreenContent(
                                     )
                                 }
                             }
-                            if (!state.isTimeDealCollapsed) {
-                                items(items = dealProducts, key = { it.id }) { product ->
-                                    Column(modifier = Modifier.animateItem()) {
-                                        MyProductCard(
-                                            product = product,
-                                            onClick = { onIntent(MyProductsIntent.NavigateToProductDetail(product.id)) },
-                                            onMoreOptions = { onIntent(MyProductsIntent.ShowOptions(product)) }
-                                        )
-                                        HorizontalDivider(
-                                            thickness = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                        )
+                            item(key = "body_timedeal") {
+                                CollapsibleGroupBody(
+                                    visible = !state.isTimeDealCollapsed,
+                                    modifier = Modifier.animateItem(placementSpec = null)
+                                ) {
+                                    dealProducts.forEach { product ->
+                                        key(product.id) {
+                                            MyProductCard(
+                                                product = product,
+                                                onClick = { onIntent(MyProductsIntent.NavigateToProductDetail(product.id)) },
+                                                onMoreOptions = { onIntent(MyProductsIntent.ShowOptions(product)) }
+                                            )
+                                            HorizontalDivider(
+                                                thickness = 0.5.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -292,8 +304,9 @@ internal fun MyProductsScreenContent(
                             val groupColor = state.groupColors[tag.id]
 
                             item(key = "header_${tag.id}") {
-                                Column(modifier = Modifier.animateItem()) {
+                                Column(modifier = Modifier.animateItem(placementSpec = null)) {
                                     SectionGroupHeader(
+                                        hazeState = hazeState,
                                         tagName = tag.name,
                                         itemCount = products.size,
                                         isCollapsed = isCollapsed,
@@ -316,22 +329,24 @@ internal fun MyProductsScreenContent(
                                 }
                             }
 
-                            if (!isCollapsed) {
-                                items(
-                                    items = products,
-                                    key = { it.id }
-                                ) { product ->
-                                    Column(modifier = Modifier.animateItem()) {
-                                        MyProductCard(
-                                            product = product,
-                                            groupColor = groupColor,
-                                            onClick = { onIntent(MyProductsIntent.NavigateToProductDetail(product.id)) },
-                                            onMoreOptions = { onIntent(MyProductsIntent.ShowOptions(product)) }
-                                        )
-                                        HorizontalDivider(
-                                            thickness = 0.5.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                        )
+                            item(key = "body_${tag.id}") {
+                                CollapsibleGroupBody(
+                                    visible = !isCollapsed,
+                                    modifier = Modifier.animateItem(placementSpec = null)
+                                ) {
+                                    products.forEach { product ->
+                                        key(product.id) {
+                                            MyProductCard(
+                                                product = product,
+                                                groupColor = groupColor,
+                                                onClick = { onIntent(MyProductsIntent.NavigateToProductDetail(product.id)) },
+                                                onMoreOptions = { onIntent(MyProductsIntent.ShowOptions(product)) }
+                                            )
+                                            HorizontalDivider(
+                                                thickness = 0.5.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -341,7 +356,7 @@ internal fun MyProductsScreenContent(
                         if (ungroupedProducts.isNotEmpty()) {
                             if (sectionGroups.isNotEmpty()) {
                                 item(key = "header_ungrouped") {
-                                    Column(modifier = Modifier.animateItem()) {
+                                    Column(modifier = Modifier.animateItem(placementSpec = null)) {
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -361,7 +376,6 @@ internal fun MyProductsScreenContent(
                                                 fontWeight = FontWeight.Medium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier
-                                                    .offset(y = 1.dp)
                                                     .background(
                                                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                                         shape = RoundedCornerShape(50)
@@ -381,7 +395,7 @@ internal fun MyProductsScreenContent(
                                 items = ungroupedProducts,
                                 key = { it.id }
                             ) { product ->
-                                Column(modifier = Modifier.animateItem()) {
+                                Column(modifier = Modifier.animateItem(placementSpec = null)) {
                                     MyProductCard(
                                         product = product,
                                         onClick = { onIntent(MyProductsIntent.NavigateToProductDetail(product.id)) },

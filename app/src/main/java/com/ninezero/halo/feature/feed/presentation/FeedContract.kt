@@ -16,15 +16,12 @@ data class FeedState(
     val error: String? = null,
     val snackbarState: SnackbarState? = null,
     val centerToastMessage: String? = null,
-
     // 현재 로그인한 사용자 정보
     val currentUserId: Int? = null,
     val isCurrentUserCreator: Boolean = false,
-
     // 포스트 옵션 시트
     val selectedPost: Post? = null,
     val showPostOptionsSheet: Boolean = false,
-
     // 공유 시트
     val showShareSheet: Boolean = false,
     val sharePostId: Int? = null,
@@ -36,7 +33,6 @@ sealed interface FeedIntent {
     data object LoadFeed : FeedIntent
     data object RefreshFeed : FeedIntent
     data object LoadMorePosts : FeedIntent
-
     // 포스트 상호작용
     data class LikePost(val postId: Int) : FeedIntent
     data class UnlikePost(val postId: Int) : FeedIntent
@@ -45,22 +41,21 @@ sealed interface FeedIntent {
     data class BlockUser(val userId: Int) : FeedIntent
     data class FollowUser(val userId: Int) : FeedIntent
     data class UnfollowUser(val userId: Int) : FeedIntent
-
     // 포스트 옵션 시트
     data class ShowPostOptions(val post: Post) : FeedIntent
     data object DismissPostOptions : FeedIntent
     data object EditPost : FeedIntent
     data object DeletePost : FeedIntent
     data object PinPost : FeedIntent
-
     // 공유
     data class SharePost(val postId: Int) : FeedIntent
     data object DismissShareSheet : FeedIntent
     data class ShareCompleted(val sharedRoomIds: List<Int>, val recipientCount: Int) : FeedIntent
-
+    // 네비게이션
     data class NavigateToPostDetail(val postId: Int) : FeedIntent
     data class NavigateToUserProfile(val userId: Int) : FeedIntent
     data class NavigateToCreatorProfile(val creatorId: Int) : FeedIntent
+    // Snackbar
     data object SnackbarDismissed : FeedIntent
     data object DismissCenterToast : FeedIntent
 }

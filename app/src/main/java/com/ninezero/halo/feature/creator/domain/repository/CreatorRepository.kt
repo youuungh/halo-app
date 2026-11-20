@@ -10,5 +10,5 @@ interface CreatorRepository {
     /** 신청 취소 */
     suspend fun cancelApplication(): Result<Unit>
     /** 크리에이터 셀프 해제 */
-    suspend fun revokeCreator(): Result<Unit>
+    suspend fun leaveCreator(): Result<Unit>
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,13 +31,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ninezero.halo.R
+import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.previewUserSummary
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.core.util.toFormattedDate
 import com.ninezero.halo.feature.store.domain.model.Review
 import com.ninezero.halo.feature.store.presentation.components.ReviewImageRow
 import com.ninezero.halo.feature.store.presentation.components.StarRating
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 internal fun MyReviewItem(
@@ -67,6 +69,7 @@ internal fun MyReviewItem(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bounceClick()
                         .shadow(
                             elevation = 3.dp,
                             shape = RoundedCornerShape(10.dp),
@@ -80,7 +83,11 @@ internal fun MyReviewItem(
                             color = MaterialTheme.colorScheme.outlineVariant,
                             shape = RoundedCornerShape(10.dp)
                         )
-                        .clickable(onClick = onClick)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onClick
+                        )
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     AsyncImage(
@@ -88,11 +95,11 @@ internal fun MyReviewItem(
                         contentDescription = review.productName,
                         modifier = Modifier
                             .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .clip(MaterialTheme.shapes.small),
                         contentScale = ContentScale.Crop,
-                        placeholder = painterResource(R.drawable.ic_img_placeholder),
-                        error = painterResource(R.drawable.ic_img_placeholder),
-                        fallback = painterResource(R.drawable.ic_img_placeholder)
+                        placeholder = painterResource(R.drawable.ic_image_placeholder),
+                        error = painterResource(R.drawable.ic_image_placeholder),
+                        fallback = painterResource(R.drawable.ic_image_placeholder)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
@@ -137,18 +144,26 @@ internal fun MyReviewItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    painter = painterResource(R.drawable.ic_ellipsis_horizontal),
-                    contentDescription = "더보기",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                // 다른 ⋯처럼 32dp 너비
+                Box(
                     modifier = Modifier
-                        .size(20.dp)
+                        .width(32.dp)
+                        .height(20.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onMoreClick
                         )
-                )
+                        .bounceClick(),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_ellipsis_horizontal),
+                        contentDescription = "더보기",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))

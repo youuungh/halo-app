@@ -4,22 +4,22 @@ import android.net.Uri
 import androidx.core.net.toUri
 import com.ninezero.halo.core.database.dao.PostDraftDao
 import com.ninezero.halo.core.database.entity.PostDraftEntity
-import com.ninezero.halo.core.util.MediaPersistenceManager
+import com.ninezero.halo.core.media.MediaCopyStore
 import com.ninezero.halo.feature.feed.domain.model.PostDraft
 import com.ninezero.halo.feature.feed.domain.repository.PostDraftRepository
-import java.io.IOException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PostDraftRepositoryImpl @Inject constructor(
     private val postDraftDao: PostDraftDao,
-    private val mediaPersistence: MediaPersistenceManager
+    private val mediaCopyStore: MediaCopyStore
 ) : PostDraftRepository {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -50,19 +50,19 @@ class PostDraftRepositoryImpl @Inject constructor(
 
         if (mediaUris.isNotEmpty()) {
             try {
-                val persistedUris = mediaPersistence.persistForOwner(
+                val copiedUris = mediaCopyStore.copyForOwner(
                     sourceUris = mediaUris,
-                    ownerType = MediaPersistenceManager.OwnerType.DRAFT,
+                    ownerType = MediaCopyStore.OwnerType.DRAFT,
                     ownerId = id
                 )
                 // 하나라도 못 옮기면 저장 실패
-                if (persistedUris.size != mediaUris.size) throw IOException("임시 저장 미디어 복사 실패")
-                postDraftDao.update(initialEntity.copy(id = id, mediaUris = json.encodeToString(persistedUris.map { it.toString() })))
+                if (copiedUris.size != mediaUris.size) throw IOException("임시 저장 미디어 복사 실패")
+                postDraftDao.update(initialEntity.copy(id = id, mediaUris = json.encodeToString(copiedUris.map { it.toString() })))
             } catch (e: Exception) {
                 // 글만 남은 초안 줄·옮긴 사본 정리
                 withContext(NonCancellable) {
                     postDraftDao.deleteById(id)
-                    mediaPersistence.cleanupOwner(MediaPersistenceManager.OwnerType.DRAFT, id)
+                    mediaCopyStore.cleanupOwner(MediaCopyStore.OwnerType.DRAFT, id)
                 }
                 throw e
             }
@@ -73,7 +73,7 @@ class PostDraftRepositoryImpl @Inject constructor(
 
     override suspend fun deleteDraft(id: Long) {
         postDraftDao.deleteById(id)
-        mediaPersistence.cleanupOwner(MediaPersistenceManager.OwnerType.DRAFT, id)
+        mediaCopyStore.cleanupOwner(MediaCopyStore.OwnerType.DRAFT, id)
     }
 
     override suspend fun deleteDraftRecordOnly(id: Long) {

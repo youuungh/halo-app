@@ -168,14 +168,14 @@ internal fun ResetCodeScreenContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             ActionButton(
-                text = if (state.resendCooldownSeconds > 0) {
-                    "인증 코드 재전송 (${state.resendCooldownSeconds}초)"
+                text = if (state.resendWaitSeconds > 0) {
+                    "인증 코드 재전송 (${state.resendWaitSeconds}초)"
                 } else {
                     "인증 코드 재전송"
                 },
                 onClick = { onIntent(ResetCodeIntent.ResendCode) },
                 style = ActionButtonStyle.Text,
-                enabled = state.resendCooldownSeconds == 0 && !state.isLoading
+                enabled = state.resendWaitSeconds == 0 && !state.isLoading
             )
 
             Spacer(modifier = Modifier.height(48.dp))

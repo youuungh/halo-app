@@ -3,7 +3,7 @@ package com.ninezero.halo.feature.store.presentation.checkout
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.ninezero.halo.BuildConfig
-import com.ninezero.halo.core.local.PreferencesManager
+import com.ninezero.halo.core.datastore.PreferencesManager
 import com.ninezero.halo.core.network.ApiException
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.core.util.Constants
@@ -20,14 +20,16 @@ import com.ninezero.halo.feature.store.domain.model.CartItem
 import com.ninezero.halo.feature.store.domain.model.CreateDirectOrderRequest
 import com.ninezero.halo.feature.store.domain.model.CreateOrderRequest
 import com.ninezero.halo.feature.store.domain.model.OrderLine
-import com.ninezero.halo.feature.store.domain.model.billingAuthFailMessage
-import com.ninezero.halo.feature.store.domain.model.isBillingAuthCanceled
 import com.ninezero.halo.feature.store.domain.model.PaymentStatus
+import com.ninezero.halo.feature.store.domain.model.billingAuthFailMessage
 import com.ninezero.halo.feature.store.domain.model.calcCouponDiscount
 import com.ninezero.halo.feature.store.domain.model.calcStorePricing
-import com.ninezero.halo.feature.store.domain.model.calcUsablePointsCap
+import com.ninezero.halo.feature.store.domain.model.calcUsablePointsLimit
+import com.ninezero.halo.feature.store.domain.model.isBillingAuthCanceled
+import com.ninezero.halo.feature.store.domain.model.isCouponApplicable
 import com.ninezero.halo.feature.store.domain.model.isCouponUsable
 import com.ninezero.halo.feature.store.domain.model.isFreeShippingReached
+import com.ninezero.halo.feature.store.domain.model.pickBestCoupons
 import com.ninezero.halo.feature.store.domain.model.toOrderLine
 import com.ninezero.halo.feature.store.domain.repository.BillingRepository
 import com.ninezero.halo.feature.store.domain.repository.CartRepository
@@ -91,6 +93,9 @@ class CheckoutViewModel @Inject constructor(
         val usedPoints: Int,
         val message: String?
     )
+
+    // 처음 쿠폰을 받았을 때 한 번만 최대 할인 쿠폰을 골라 둠
+    private var hasAutoAppliedCoupons = false
 
     private val initialSelectedItemIds: List<Int> =
         savedStateHandle.get<IntArray>("selectedItemIds")?.toList() ?: emptyList()
@@ -217,11 +222,17 @@ class CheckoutViewModel @Inject constructor(
         reduce { state.copy(isCouponLoading = true, couponError = null) }
         loadAvailableCoupons()
             .onSuccess { coupons ->
+                val shouldAutoApply = !hasAutoAppliedCoupons
+                hasAutoAppliedCoupons = true
                 reduce {
-                    state.copy(
-                        isCouponLoading = false,
-                        availableCoupons = coupons
-                    )
+                    val loaded = state.copy(isCouponLoading = false, availableCoupons = coupons)
+                    if (shouldAutoApply) {
+                        loaded.withSelectedCoupons(
+                            pickBestCoupons(coupons, loaded.orderLines.orEmpty(), loaded.subscribedCreatorIds)
+                        )
+                    } else {
+                        loaded
+                    }
                 }
             }
             .onFailure { error ->
@@ -317,11 +328,9 @@ class CheckoutViewModel @Inject constructor(
 
     private fun applyCoupons() = intent {
         val orderItems = state.orderLines.orEmpty()
-        val orderCreatorIds = orderItems.mapTo(mutableSetOf()) { it.product.creator.id }
         val filteredCoupons = filterCouponsForCurrentOrder(
             coupons = state.draftSelectedCoupons,
             orderItems = orderItems,
-            orderCreatorIds = orderCreatorIds,
             subscribedCreatorIds = state.subscribedCreatorIds
         )
         val removedInvalidCoupon = filteredCoupons.size != state.draftSelectedCoupons.size
@@ -353,7 +362,7 @@ class CheckoutViewModel @Inject constructor(
 
     private fun selectPaymentProvider(provider: String) = intent {
         reduce { state.copy(selectedPaymentProvider = provider) }
-        persistPaymentProvider(provider)
+        savePaymentProvider(provider)
     }
 
     // 신용·체크카드 시트
@@ -383,7 +392,7 @@ class CheckoutViewModel @Inject constructor(
     private fun confirmCardSheet() = intent {
         val draft = state.cardSheetDraft ?: return@intent
         reduce { state.copy(selectedPaymentProvider = draft, showCardSheet = false, cardSheetError = null) }
-        persistPaymentProvider(draft)
+        savePaymentProvider(draft)
     }
 
     private fun restorePaymentProvider() = intent {
@@ -396,7 +405,7 @@ class CheckoutViewModel @Inject constructor(
         }
     }
 
-    private suspend fun persistPaymentProvider(provider: String) {
+    private suspend fun savePaymentProvider(provider: String) {
         val userId = getCurrentUserIdUseCase() ?: return
         preferencesManager.setPaymentProvider(userId, provider)
     }
@@ -498,7 +507,7 @@ class CheckoutViewModel @Inject constructor(
         )
         val balance = state.pointBalance?.totalPoints ?: 0
         // 전액사용 = 보유와 사용제한 중 작은 값
-        val target = minOf(balance, calcUsablePointsCap(pricing.subtotal, pricing.totalBeforePoints))
+        val target = minOf(balance, calcUsablePointsLimit(pricing.subtotal, pricing.totalBeforePoints))
         val pointUsage = limitUsedPoints(
             requestedPoints = target,
             orderItems = orderItems,
@@ -866,14 +875,26 @@ class CheckoutViewModel @Inject constructor(
     private fun filterCouponsForCurrentOrder(
         coupons: Map<Int, Coupon>,
         orderItems: List<OrderLine>,
-        orderCreatorIds: Set<Int>,
         subscribedCreatorIds: Set<Int>
-    ): Map<Int, Coupon> {
-        return coupons.filterValues { coupon ->
-            coupon.creatorId in orderCreatorIds &&
-                isCouponUsable(coupon, creatorOrderAmount(orderItems, coupon.creatorId)) &&
-                !isFreeShipCouponBlocked(coupon, orderItems, subscribedCreatorIds)
-        }
+    ): Map<Int, Coupon> =
+        coupons.filterValues { coupon -> isCouponApplicable(coupon, orderItems, subscribedCreatorIds) }
+
+    /** 고른 쿠폰과 그에 맞춘 할인·포인트 상한 */
+    private fun CheckoutState.withSelectedCoupons(coupons: Map<Int, Coupon>): CheckoutState {
+        val orderItems = orderLines.orEmpty()
+        val pointUsage = limitUsedPoints(
+            requestedPoints = usedPoints,
+            orderItems = orderItems,
+            pointBalance = pointBalance?.totalPoints,
+            selectedCoupons = coupons,
+            subscribedCreatorIds = subscribedCreatorIds
+        )
+        return copy(
+            selectedCoupons = coupons,
+            couponDiscount = calcCouponDiscount(coupons, orderItems),
+            usedPoints = pointUsage.usedPoints,
+            pointValidationMessage = pointUsage.message
+        )
     }
 
     /** 크리에이터 상품 소계 */
@@ -962,8 +983,8 @@ class CheckoutViewModel @Inject constructor(
         }
 
         val availableBalance = pointBalance ?: Int.MAX_VALUE
-        val maxUsablePoints = calcUsablePointsCap(subtotal, pricing.totalBeforePoints)
-        val cappedPoints = minOf(normalizedPoints, availableBalance, maxUsablePoints)
+        val maxUsablePoints = calcUsablePointsLimit(subtotal, pricing.totalBeforePoints)
+        val clampedPoints = minOf(normalizedPoints, availableBalance, maxUsablePoints)
 
         return when {
             normalizedPoints < MIN_USABLE_POINTS -> {
@@ -973,7 +994,7 @@ class CheckoutViewModel @Inject constructor(
                 )
             }
             // 보유·상한으로 깎은 값이 최소 미만이면 서버가 거절
-            cappedPoints < MIN_USABLE_POINTS -> {
+            clampedPoints < MIN_USABLE_POINTS -> {
                 PointUsageResult(
                     usedPoints = 0,
                     message = "사용 가능한 포인트가 ${MIN_USABLE_POINTS}P 미만이라 사용할 수 없습니다"
@@ -981,13 +1002,13 @@ class CheckoutViewModel @Inject constructor(
             }
             normalizedPoints > availableBalance -> {
                 PointUsageResult(
-                    usedPoints = cappedPoints,
+                    usedPoints = clampedPoints,
                     message = "보유 포인트까지만 사용할 수 있습니다"
                 )
             }
             normalizedPoints > maxUsablePoints -> {
                 PointUsageResult(
-                    usedPoints = cappedPoints,
+                    usedPoints = clampedPoints,
                     message = "주문 금액 기준 최대 ${maxUsablePoints}P까지 사용할 수 있습니다"
                 )
             }
@@ -1030,25 +1051,30 @@ class CheckoutViewModel @Inject constructor(
         val filteredSelectedCoupons = filterCouponsForCurrentOrder(
             coupons = currentState.selectedCoupons,
             orderItems = orderItems,
-            orderCreatorIds = orderCreatorIds,
             subscribedCreatorIds = subscribedCreatorIds
         )
         val filteredDraftCoupons = if (currentState.showCouponSheet) {
             filterCouponsForCurrentOrder(
                 coupons = currentState.draftSelectedCoupons,
                 orderItems = orderItems,
-                orderCreatorIds = orderCreatorIds,
                 subscribedCreatorIds = subscribedCreatorIds
             )
         } else {
             emptyMap()
         }
-        val couponDiscount = calcCouponDiscount(filteredSelectedCoupons, orderItems)
+        // 처음 받은 쿠폰 목록이면 최대 할인 쿠폰으로 시작
+        val selectedCoupons = if (!hasAutoAppliedCoupons && couponsResult.isSuccess) {
+            hasAutoAppliedCoupons = true
+            pickBestCoupons(availableCoupons, orderItems, subscribedCreatorIds)
+        } else {
+            filteredSelectedCoupons
+        }
+        val couponDiscount = calcCouponDiscount(selectedCoupons, orderItems)
         val pointUsage = limitUsedPoints(
             requestedPoints = currentState.usedPoints,
             orderItems = orderItems,
             pointBalance = pointBalance.totalPoints,
-            selectedCoupons = filteredSelectedCoupons,
+            selectedCoupons = selectedCoupons,
             subscribedCreatorIds = subscribedCreatorIds
         )
         val selectedAddress = resolveSelectedAddress(
@@ -1069,7 +1095,7 @@ class CheckoutViewModel @Inject constructor(
                 availableCoupons = availableCoupons,
                 couponError = couponError,
                 pointBalance = pointBalance,
-                selectedCoupons = filteredSelectedCoupons,
+                selectedCoupons = selectedCoupons,
                 draftSelectedCoupons = filteredDraftCoupons,
                 couponDiscount = couponDiscount,
                 usedPoints = pointUsage.usedPoints,

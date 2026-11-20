@@ -12,14 +12,17 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.ninezero.halo.core.database.dao.PendingPostDao
 import com.ninezero.halo.core.database.entity.UploadStatus
-import com.ninezero.halo.core.util.MediaPersistenceManager
-import com.ninezero.halo.core.util.MediaUtils
+import com.ninezero.halo.core.media.MediaCopyStore
+import com.ninezero.halo.core.media.MediaUtils
+import com.ninezero.halo.core.util.toEnumOrDefault
+import com.ninezero.halo.feature.feed.data.repository.PostUploadEventRepositoryImpl
 import com.ninezero.halo.feature.feed.domain.model.MediaDraftTargetType
 import com.ninezero.halo.feature.feed.domain.model.PostType
 import com.ninezero.halo.feature.feed.domain.model.PostUploadEvent
 import com.ninezero.halo.feature.feed.domain.repository.MediaDraftRepository
 import com.ninezero.halo.feature.feed.domain.repository.PostRepository
 import com.ninezero.halo.feature.profile.domain.repository.ProfileRepository
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -34,8 +37,8 @@ class PostUploadWorker @AssistedInject constructor(
     private val postRepository: PostRepository,
     private val profileRepository: ProfileRepository,
     private val mediaDraftRepository: MediaDraftRepository,
-    private val uploadResultManager: PostUploadResultManager,
-    private val mediaPersistence: MediaPersistenceManager
+    private val uploadEventBus: PostUploadEventRepositoryImpl,
+    private val mediaCopyStore: MediaCopyStore
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -100,7 +103,7 @@ class PostUploadWorker @AssistedInject constructor(
                 postRepository.createPost(
                     content = pendingPost.content,
                     postType = postType,
-                    requiredTier = pendingPost.requiredTier,
+                    requiredTier = pendingPost.requiredTier.toEnumOrDefault(SubscriptionPlanTier.FREE),
                     tagIds = tagIds,
                     sectionTagId = pendingPost.sectionTagId,
                     mediaDraftIds = mediaDraftIds,
@@ -113,11 +116,11 @@ class PostUploadWorker @AssistedInject constructor(
                     Timber.d("PostUploadWorker: 포스트 생성됨: ${post.id}")
 
                     pendingPostDao.deleteById(pendingPostId)
-                    mediaPersistence.cleanupOwner(
-                        MediaPersistenceManager.OwnerType.PENDING_POST,
+                    mediaCopyStore.cleanupOwner(
+                        MediaCopyStore.OwnerType.PENDING_POST,
                         pendingPostId
                     )
-                    uploadResultManager.emitResult(
+                    uploadEventBus.emitResult(
                         PostUploadEvent.Success(
                             creatorId = pendingPost.creatorId
                         )
@@ -142,11 +145,11 @@ class PostUploadWorker @AssistedInject constructor(
 
     private suspend fun handleFailure(pendingPostId: Long, creatorId: Int?) {
         pendingPostDao.deleteById(pendingPostId)
-        mediaPersistence.cleanupOwner(
-            MediaPersistenceManager.OwnerType.PENDING_POST,
+        mediaCopyStore.cleanupOwner(
+            MediaCopyStore.OwnerType.PENDING_POST,
             pendingPostId
         )
-        uploadResultManager.emitResult(
+        uploadEventBus.emitResult(
             PostUploadEvent.Failure(
                 creatorId = creatorId
             )

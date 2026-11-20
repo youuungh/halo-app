@@ -26,13 +26,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.model.UserSummary
 import com.ninezero.halo.core.ui.components.section.ProductThumbnail
 import com.ninezero.halo.core.ui.components.section.ProductThumbnailRow
 import com.ninezero.halo.core.ui.components.section.ProductThumbnailSkeleton
-import com.ninezero.halo.core.ui.components.section.SectionHeader
+import com.ninezero.halo.core.ui.components.section.ProfileSectionHeader
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.profile.domain.model.ProductTagSection
 import com.ninezero.halo.feature.profile.domain.model.SectionTag
 import com.ninezero.halo.feature.profile.domain.model.SectionType
@@ -41,11 +43,13 @@ import com.ninezero.halo.feature.profile.presentation.components.ProfileTabRowHe
 import com.ninezero.halo.feature.profile.presentation.user_profile.UserProfileIntent
 import com.ninezero.halo.feature.profile.presentation.user_profile.UserProfileState
 import com.ninezero.halo.feature.store.domain.model.Product
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.store.domain.model.ProductStatus
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 
 @Composable
 fun CreatorStoreTabContent(
     state: UserProfileState,
+    topPadding: Dp,
     listState: LazyListState,
     onIntent: (UserProfileIntent) -> Unit,
     onProductClick: (Int) -> Unit
@@ -59,7 +63,7 @@ fun CreatorStoreTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
         ) {
             item(key = "blocked_message") { BlockedUserPlaceholder() }
         }
@@ -77,7 +81,7 @@ fun CreatorStoreTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight + 16.dp, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight + 16.dp, bottom = 16.dp)
         ) {
             // 상품 그리드 스켈레톤
             items(3) {
@@ -98,7 +102,7 @@ fun CreatorStoreTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
         ) {
             item(key = "empty_store") {
                 Box(
@@ -119,13 +123,13 @@ fun CreatorStoreTabContent(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = ProfileTabRowHeight, bottom = 16.dp)
+            contentPadding = PaddingValues(top = topPadding + ProfileTabRowHeight, bottom = 16.dp)
         ) {
             // 태그 섹션, 최대 3개
             if (productSections.isNotEmpty()) {
                 productSections.forEach { section ->
                     item(key = "section_header_${section.tag.id}") {
-                        SectionHeader(
+                        ProfileSectionHeader(
                             title = section.tag.name,
                             showViewAll = section.hasMore,
                             onViewAllClick = {
@@ -147,7 +151,7 @@ fun CreatorStoreTabContent(
                                 if (product.canAccess == false) {
                                     onIntent(
                                         UserProfileIntent.ShowRestrictedContentSnackbar(
-                                            "${product.requiredTier} 멤버십 전용 상품입니다"
+                                            "${product.requiredTier.label} 멤버십 전용 상품입니다"
                                         )
                                     )
                                 } else {
@@ -176,8 +180,8 @@ fun CreatorStoreTabContent(
                     ) {
                         Text(
                             text = "전체 상품",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
                         )
                         ProductSortChip(
                             currentSort = state.storeSortType,
@@ -223,7 +227,7 @@ fun CreatorStoreTabContent(
                                         if (product.canAccess == false) {
                                             onIntent(
                                                 UserProfileIntent.ShowRestrictedContentSnackbar(
-                                                    "${product.requiredTier} 멤버십 전용 상품입니다"
+                                                    "${product.requiredTier.label} 멤버십 전용 상품입니다"
                                                 )
                                             )
                                         } else {
@@ -242,7 +246,7 @@ fun CreatorStoreTabContent(
                     }
 
                     // 추가 로딩
-                    if (state.storeHasMore) {
+                    if (state.hasMoreStoreProducts) {
                         item(key = "load_more_trigger") {
                             // 목록 수당 한 번, InfiniteScrollTrigger와 같은 규칙
                             var firedAtCount by remember { mutableStateOf<Int?>(null) }
@@ -285,20 +289,20 @@ private val previewProducts = List(6) { index ->
         id = index + 1,
         name = "상품 ${index + 1}",
         description = "상품 설명입니다.",
-        price = "${10000 + index * 5000}.00",
-        originalPrice = if (index % 2 == 0) "${15000 + index * 5000}.00" else null,
+        price = 10000L + index * 5000,
+        originalPrice = if (index % 2 == 0) 15000L + index * 5000 else null,
         discountRate = if (index % 2 == 0) 20 else null,
         imageUrls = emptyList(),
         brandName = "브랜드",
         tags = listOf("태그1", "태그2"),
         stock = if (index == 2) 0 else 100,
-        status = if (index == 2) "SOLD_OUT" else "ACTIVE",
+        status = if (index == 2) ProductStatus.SOLD_OUT else ProductStatus.ACTIVE,
         isActive = true,
         viewCount = 100,
         likeCount = 10,
         salesCount = 5,
         creator = previewCreator,
-        requiredTier = if (index == 3) "TIER2" else "FREE",
+        requiredTier = if (index == 3) SubscriptionPlanTier.TIER2 else SubscriptionPlanTier.FREE,
         canAccess = index != 3,
     )
 }
@@ -332,6 +336,7 @@ private fun CreatorStoreTabContentPreview() {
                     storeProductSections = previewProductSections,
                     storeProducts = previewProducts
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onProductClick = {}
@@ -350,6 +355,7 @@ private fun CreatorStoreTabContentGridPreview() {
                     storeProductSections = emptyList(),
                     storeProducts = previewProducts
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onProductClick = {}
@@ -368,6 +374,7 @@ private fun CreatorStoreTabContentLoadingPreview() {
                     isStoreLoading = true,
                     storeProducts = emptyList()
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onProductClick = {}
@@ -386,6 +393,7 @@ private fun CreatorStoreTabContentEmptyPreview() {
                     storeProductSections = emptyList(),
                     storeProducts = emptyList()
                 ),
+                topPadding = 0.dp,
                 listState = rememberLazyListState(),
                 onIntent = {},
                 onProductClick = {}

@@ -25,17 +25,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.StarYellow
 import com.ninezero.halo.core.util.toFormattedCount
 import com.ninezero.halo.feature.store.domain.model.ReviewSummary
 import com.ninezero.halo.feature.store.presentation.components.StarRating
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 internal fun ReviewSummaryCard(
@@ -80,7 +80,7 @@ internal fun ReviewSummaryCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 for (star in 5 downTo 1) {
-                    // key(star)로 saveable 슬롯 분리
+                    // key로 saveable 슬롯 분리
                     key(star) {
                         val count = summary.ratingDistribution[star] ?: 0
                         val targetRatio = if (summary.totalReviews > 0) {
@@ -110,7 +110,7 @@ internal fun ReviewSummaryCard(
                                     .weight(1f)
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
-                                color = Color(0xFFFFC107),
+                                color = StarYellow,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                 strokeCap = StrokeCap.Round
                             )

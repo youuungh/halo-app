@@ -37,6 +37,7 @@ class SalesStatsViewModel @Inject constructor(
             is SalesStatsIntent.ShowMonthPicker -> showMonthPicker()
             is SalesStatsIntent.HideMonthPicker -> hideMonthPicker()
             is SalesStatsIntent.NavigateBack -> navigateBack()
+            is SalesStatsIntent.NavigateToProductDetail -> navigateToProductDetail(intent.productId)
             is SalesStatsIntent.SnackbarDismissed -> dismissSnackbar()
         }
     }
@@ -153,5 +154,9 @@ class SalesStatsViewModel @Inject constructor(
 
     private fun navigateBack() = intent {
         postSideEffect(SalesStatsSideEffect.NavigateBack)
+    }
+
+    private fun navigateToProductDetail(productId: Int) = intent {
+        postSideEffect(SalesStatsSideEffect.NavigateToProductDetail(productId))
     }
 }

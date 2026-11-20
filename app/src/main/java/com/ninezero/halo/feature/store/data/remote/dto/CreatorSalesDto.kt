@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.store.data.remote.dto
 
+import com.ninezero.halo.core.util.toAmountLong
 import com.ninezero.halo.feature.store.domain.model.BestSeller
 import com.ninezero.halo.feature.store.domain.model.CreatorMonthlySales
 import com.ninezero.halo.feature.store.domain.model.CreatorSalesSummary
@@ -61,8 +62,6 @@ data class BestSellerDto(
     val revenue: String
 )
 
-private fun String.toAmountLong(): Long = toBigDecimalOrNull()?.toLong() ?: 0L
-
 private fun String.toYearMonth(): YearMonth =
     runCatching { YearMonth.parse(this) }.getOrElse { YearMonth.now() }
 
@@ -104,6 +103,7 @@ fun MonthRevenueDto.toDomain(): MonthRevenue = MonthRevenue(
 )
 
 fun BestSellerDto.toDomain(): BestSeller = BestSeller(
+    productId = productId,
     productName = productName,
     productImageUrl = productImageUrl,
     quantity = quantity,

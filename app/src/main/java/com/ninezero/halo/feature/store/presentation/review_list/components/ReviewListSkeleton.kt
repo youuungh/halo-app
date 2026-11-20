@@ -21,7 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.modifiers.shimmer
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
 
 @Composable
 fun ReviewSummarySkeleton(
@@ -45,7 +45,7 @@ fun ReviewSummarySkeleton(
                     modifier = Modifier
                         .width(56.dp)
                         .height(32.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -53,7 +53,7 @@ fun ReviewSummarySkeleton(
                     modifier = Modifier
                         .width(70.dp)
                         .height(14.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -61,7 +61,7 @@ fun ReviewSummarySkeleton(
                     modifier = Modifier
                         .width(60.dp)
                         .height(12.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
             }
@@ -82,7 +82,7 @@ fun ReviewSummarySkeleton(
                             modifier = Modifier
                                 .width(12.dp)
                                 .height(12.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(MaterialTheme.shapes.extraSmall)
                                 .shimmer()
                         )
                         Box(
@@ -96,7 +96,7 @@ fun ReviewSummarySkeleton(
                             modifier = Modifier
                                 .width(24.dp)
                                 .height(12.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(MaterialTheme.shapes.extraSmall)
                                 .shimmer()
                         )
                     }
@@ -141,7 +141,7 @@ fun ReviewItemSkeleton(
                         modifier = Modifier
                             .width(70.dp)
                             .height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .shimmer()
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -149,7 +149,7 @@ fun ReviewItemSkeleton(
                         modifier = Modifier
                             .width(24.dp)
                             .height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .shimmer()
                     )
                 }
@@ -161,7 +161,7 @@ fun ReviewItemSkeleton(
                         modifier = Modifier
                             .width(50.dp)
                             .height(12.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .shimmer()
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -169,7 +169,7 @@ fun ReviewItemSkeleton(
                         modifier = Modifier
                             .width(55.dp)
                             .height(12.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .shimmer()
                     )
                 }
@@ -180,7 +180,7 @@ fun ReviewItemSkeleton(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(14.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -189,7 +189,7 @@ fun ReviewItemSkeleton(
                     modifier = Modifier
                         .fillMaxWidth(0.7f)
                         .height(14.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmer()
                 )
             }

@@ -57,7 +57,7 @@ class WishlistViewModel @Inject constructor(
             is WishlistIntent.Load -> loadWishlist()
             is WishlistIntent.LoadMore -> loadMore()
             is WishlistIntent.Refresh -> refresh()
-            is WishlistIntent.ScreenResumed -> refreshWishlistQuietly()
+            is WishlistIntent.ScreenResumed -> refreshWishlistSilently()
             is WishlistIntent.RemoveItem -> removeItem(intent.productId)
             is WishlistIntent.MoveToCart -> moveToCart(intent.productId)
             is WishlistIntent.NavigateBack -> navigateBack()
@@ -129,7 +129,7 @@ class WishlistViewModel @Inject constructor(
     }
 
     // 첫 페이지만 받아 앞에 합침
-    private fun refreshWishlistQuietly() = intent {
+    private fun refreshWishlistSilently() = intent {
         if (state.isLoading || state.isRefreshing) return@intent
         // 보류 건 먼저 커밋
         commitPendingRemoval()

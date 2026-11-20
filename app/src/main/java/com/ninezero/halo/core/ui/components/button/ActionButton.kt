@@ -22,6 +22,7 @@ import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
+/** 액션 버튼 모양, 채움 또는 글자만 */
 enum class ActionButtonStyle {
     Primary,
     Text

@@ -41,26 +41,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.chat.presentation.chat_room.AttachmentState
-import com.ninezero.halo.ui.theme.HaloTheme
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 
 @Composable
@@ -88,81 +88,82 @@ fun MessageInputBar(
     onRemoveImage: (Int) -> Unit = {},
     onRemoveVideo: () -> Unit = {},
     onRemoveFile: () -> Unit = {},
-    canSend: Boolean = false
+    canSend: Boolean = false,
+    blurTopExtension: () -> Dp = { 0.dp }  // 위로 더 번지는 블러 높이, 바 크기는 그대로
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (hazeState != null) {
-                    Modifier.haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = backgroundColor,
-                            tint = HaloBlurTint(backgroundColor),
-                            noiseFactor = 0f
-                        )
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0f,
-                            endIntensity = 0.5f
-                        )
+    Box(modifier = modifier.fillMaxWidth()) {
+        if (hazeState != null) {
+            // 바 위로 늘린 만큼도 한 번에 옅어지는 블러
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .layout { measurable, constraints ->
+                        val extension = blurTopExtension().roundToPx()
+                        val height = constraints.maxHeight + extension
+                        val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+                        layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, -extension) }
                     }
-                } else {
-                    Modifier.background(MaterialTheme.colorScheme.surface)
-                }
+                    .haloBlur(hazeState, HaloBlurs.fadeUp(backgroundColor))
             )
-            .navigationBarsPadding()
-    ) {
-        Box(
+        }
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .then(if (hazeState == null) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier)
+                .navigationBarsPadding()
         ) {
-            AnimatedContent(
-                targetState = isSearchMode,
-                transitionSpec = {
-                    fadeIn() togetherWith fadeOut()
-                },
-                label = "InputBarContent"
-            ) { searchMode ->
-                if (searchMode) {
-                    SearchNavigationContent(
-                        currentIndex = searchResultIndex,
-                        totalCount = searchResultCount,
-                        hazeState = hazeState,
-                        backgroundColor = backgroundColor,
-                        onPreviousClick = onPreviousResult,
-                        onNextClick = onNextResult
-                    )
-                } else {
-                    MessageInputContent(
-                        value = value,
-                        onValueChange = onValueChange,
-                        onSendClick = onSendClick,
-                        isAttachmentExpanded = isAttachmentExpanded,
-                        onAttachmentToggle = onAttachmentToggle,
-                        isSending = isSending,
-                        canSend = canSend,
-                        hazeState = hazeState,
-                        backgroundColor = backgroundColor,
-                        selectedImages = selectedImages,
-                        selectedVideo = selectedVideo,
-                        selectedFile = selectedFile,
-                        onRemoveImage = onRemoveImage,
-                        onRemoveVideo = onRemoveVideo,
-                        onRemoveFile = onRemoveFile
-                    )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                AnimatedContent(
+                    targetState = isSearchMode,
+                    transitionSpec = {
+                        fadeIn() togetherWith fadeOut()
+                    },
+                    label = "InputBarContent"
+                ) { searchMode ->
+                    if (searchMode) {
+                        SearchNavigationContent(
+                            currentIndex = searchResultIndex,
+                            totalCount = searchResultCount,
+                            hazeState = hazeState,
+                            backgroundColor = backgroundColor,
+                            onPreviousClick = onPreviousResult,
+                            onNextClick = onNextResult
+                        )
+                    } else {
+                        MessageInputContent(
+                            value = value,
+                            onValueChange = onValueChange,
+                            onSendClick = onSendClick,
+                            isAttachmentExpanded = isAttachmentExpanded,
+                            onAttachmentToggle = onAttachmentToggle,
+                            isSending = isSending,
+                            canSend = canSend,
+                            hazeState = hazeState,
+                            backgroundColor = backgroundColor,
+                            selectedImages = selectedImages,
+                            selectedVideo = selectedVideo,
+                            selectedFile = selectedFile,
+                            onRemoveImage = onRemoveImage,
+                            onRemoveVideo = onRemoveVideo,
+                            onRemoveFile = onRemoveFile
+                        )
+                    }
                 }
             }
-        }
 
-        AttachmentExpandedPanel(
-            isExpanded = isAttachmentExpanded && !isSearchMode,
-            onImageClick = onImageClick,
-            onVideoClick = onVideoClick,
-            onFileClick = onFileClick,
-            hazeState = hazeState,
-            backgroundColor = backgroundColor
-        )
+            AttachmentExpandedPanel(
+                isExpanded = isAttachmentExpanded && !isSearchMode,
+                onImageClick = onImageClick,
+                onVideoClick = onVideoClick,
+                onFileClick = onFileClick,
+                hazeState = hazeState,
+                backgroundColor = backgroundColor
+            )
+        }
     }
 }
 
@@ -191,7 +192,6 @@ private fun MessageInputContent(
 
     val hasAttachment = selectedImages.isNotEmpty() || selectedVideo != null || selectedFile != null
 
-    val fieldGlassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -205,7 +205,7 @@ private fun MessageInputContent(
             backgroundColor = backgroundColor,
             iconSize = 22.dp,
             modifier = Modifier
-                .rotate(attachmentIconRotation)
+                .graphicsLayer { rotationZ = attachmentIconRotation }
         )
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -216,14 +216,7 @@ private fun MessageInputContent(
                 .clip(RoundedCornerShape(20.dp))
                 .then(
                     if (hazeState != null) {
-                        Modifier.haloBlur(state = hazeState) {
-                            style = HaloBlurStyle(
-                                backgroundColor = backgroundColor,
-                                tint = HaloBlurTint(fieldGlassTint),
-                                blurRadius = 20.dp,
-                                noiseFactor = 0f
-                            )
-                        }
+                        Modifier.haloBlur(hazeState, HaloBlurs.glassField(backgroundColor))
                     } else {
                         Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
                     }
@@ -388,22 +381,14 @@ private fun AttachmentTypeButton(
     backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
-    val glassTint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
 
     Column(
         modifier = modifier
             .bounceClick()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .then(
                 if (hazeState != null) {
-                    Modifier.haloBlur(state = hazeState) {
-                        style = HaloBlurStyle(
-                            backgroundColor = backgroundColor,
-                            tint = HaloBlurTint(glassTint),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0f
-                        )
-                    }
+                    Modifier.haloBlur(hazeState, HaloBlurs.glassField(backgroundColor))
                 } else {
                     Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
                 }
@@ -411,7 +396,7 @@ private fun AttachmentTypeButton(
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             )
             .clickable { onClick() }
             .padding(vertical = 12.dp),
@@ -459,20 +444,33 @@ private fun SearchNavigationContent(
             enabled = canGoPrevious
         )
 
-        Text(
-            text = if (hasResults) {
-                "${currentIndex + 1}/$totalCount"
-            } else {
-                "검색결과 없음"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (hasResults) FontWeight.Medium else FontWeight.Normal,
-            color = if (hasResults) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
-        )
+        // 메시지가 바 뒤로 지나가도 숫자가 묻히지 않게 흐린 알약 위에
+        Box(
+            modifier = Modifier
+                .height(36.dp)
+                .clip(CircleShape)
+                .then(
+                    if (hazeState != null) Modifier.haloBlur(hazeState, HaloBlurs.glassField(backgroundColor))
+                    else Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (hasResults) {
+                    "${currentIndex + 1} / $totalCount"
+                } else {
+                    "검색결과 없음"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (hasResults) FontWeight.Medium else FontWeight.Normal,
+                color = if (hasResults) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
 
         GlassIconButton(
             onClick = onNextClick,

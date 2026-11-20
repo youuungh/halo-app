@@ -26,5 +26,5 @@ interface CreatorApi {
 
     /** 크리에이터 셀프 해제 */
     @POST("api/v1/creator/revoke")
-    suspend fun revokeCreator(): Response<ApiResponse<String>>
+    suspend fun leaveCreator(): Response<ApiResponse<String>>
 }

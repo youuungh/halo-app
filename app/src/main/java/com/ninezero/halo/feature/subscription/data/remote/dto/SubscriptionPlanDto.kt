@@ -1,6 +1,7 @@
 package com.ninezero.halo.feature.subscription.data.remote.dto
 
 import com.ninezero.halo.core.network.PagedDto
+import com.ninezero.halo.core.util.toAmountLong
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlan
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanListResult
 import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
@@ -52,7 +53,7 @@ fun SubscriptionPlanDto.toDomain(): SubscriptionPlan {
             SubscriptionPlanTier.TIER1
         },
         description = description,
-        price = price,
+        price = price.toAmountLong(),
         benefits = benefits,
         subscriberCount = subscriberCount,
         isActive = isActive

@@ -1,5 +1,8 @@
 package com.ninezero.halo.feature.store.data.repository
 
+import android.content.Context
+import android.net.Uri
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.model.CursorPage
 import com.ninezero.halo.core.network.auth.TokenProvider
 import com.ninezero.halo.core.network.safeApiCall
@@ -10,15 +13,16 @@ import com.ninezero.halo.feature.store.domain.event.StoreEventBus
 import com.ninezero.halo.feature.store.domain.model.Review
 import com.ninezero.halo.feature.store.domain.model.ReviewSummary
 import com.ninezero.halo.feature.store.domain.repository.ReviewRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ReviewRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: ReviewApi,
     private val tokenProvider: TokenProvider,
     private val storeEventBus: StoreEventBus
@@ -46,9 +50,11 @@ class ReviewRepositoryImpl @Inject constructor(
         orderId: Int,
         rating: Int,
         content: String,
-        images: List<MultipartBody.Part>
+        images: List<Uri>
     ): Result<Review> {
         fun String.toTextBody() = toRequestBody("text/plain".toMediaType())
+        val parts = images.mapIndexedNotNull { index, uri -> MediaUtils.createUploadPart(context, uri, "images", "image_$index") }
+        if (parts.size != images.size) return Result.failure(IllegalStateException("이미지를 처리하지 못했습니다"))
 
         return safeApiCall {
             api.createReviewWithImages(
@@ -56,7 +62,7 @@ class ReviewRepositoryImpl @Inject constructor(
                 orderId = orderId.toString().toTextBody(),
                 rating = rating.toString().toTextBody(),
                 content = content.toTextBody(),
-                images = images
+                images = parts
             )
         }.map { it.toDomain() }
             .onSuccess { storeEventBus.emitReviewCreated(it) }
@@ -73,9 +79,11 @@ class ReviewRepositoryImpl @Inject constructor(
         rating: Int?,
         content: String?,
         keepImages: List<String>?,
-        newImages: List<MultipartBody.Part>
+        newImages: List<Uri>
     ): Result<Review> {
         fun String.toTextBody() = toRequestBody("text/plain".toMediaType())
+        val newParts = newImages.mapIndexedNotNull { index, uri -> MediaUtils.createUploadPart(context, uri, "images", "image_$index") }
+        if (newParts.size != newImages.size) return Result.failure(IllegalStateException("이미지를 처리하지 못했습니다"))
 
         return safeApiCall {
             api.updateReviewWithImages(
@@ -84,7 +92,7 @@ class ReviewRepositoryImpl @Inject constructor(
                 content = content?.toTextBody(),
                 // null이면 파트 자체를 빼서 서버가 기존 목록을 유지하게 함
                 keepImages = keepImages?.let { Json.encodeToString(it).toTextBody() },
-                images = newImages
+                images = newParts
             )
         }.map { it.toDomain() }
             .onSuccess { storeEventBus.emitReviewUpdated(it) }

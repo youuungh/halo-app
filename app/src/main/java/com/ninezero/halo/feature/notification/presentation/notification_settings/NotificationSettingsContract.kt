@@ -4,7 +4,7 @@ import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 
 data class NotificationSettingsState(
     val isLoading: Boolean = true,
-    val masterEnabled: Boolean = true,
+    val mainEnabled: Boolean = true,
     val socialEnabled: Boolean = true,
     val creatorActivityEnabled: Boolean = true,
     val commerceEnabled: Boolean = true,

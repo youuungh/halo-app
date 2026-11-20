@@ -24,16 +24,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.core.ui.theme.HaloTheme
+import dev.chrisbanes.haze.HazeState
 
 /** 프로필 팝업 메뉴 */
 @Composable
 fun ProfilePopupMenu(
     isFollowing: Boolean,
+    hazeState: HazeState?,
     onDismiss: () -> Unit,
     onVisitProfile: () -> Unit,
     onToggleFollow: () -> Unit,
@@ -43,83 +43,73 @@ fun ProfilePopupMenu(
     val density = LocalDensity.current
     val verticalPadding = with(density) { 8.dp.roundToPx() }
 
-    Popup(
-        onDismissRequest = onDismiss,
-        offset = IntOffset(offset.x, offset.y + verticalPadding),
-        properties = PopupProperties(focusable = true)
+    HaloPopupMenu(
+        hazeState = hazeState,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        offset = IntOffset(offset.x, offset.y + verticalPadding)
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp,
-            shape = RoundedCornerShape(6.dp),
-            modifier = modifier
-                .width(IntrinsicSize.Max)
-                .widthIn(min = 140.dp)
+        // 프로필 방문
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    onVisitProfile()
+                    onDismiss()
+                }
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
-                // 프로필 방문
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onVisitProfile()
-                            onDismiss()
-                        }
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "프로필 방문",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            painter = painterResource(R.drawable.ic_profile),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
-                HorizontalDivider(
-                    thickness = 0.3.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "프로필 방문",
+                    style = MaterialTheme.typography.bodyMedium
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    painter = painterResource(R.drawable.ic_profile),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
 
-                // 팔로우 / 팔로우 취소
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onToggleFollow()
-                            onDismiss()
-                        }
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (isFollowing) "팔로우 취소" else "팔로우",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            painter = painterResource(
-                                if (isFollowing) R.drawable.ic_circle_minus
-                                else R.drawable.ic_circle_plus
-                            ),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+        HorizontalDivider(
+            thickness = 0.25.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        // 팔로우 / 팔로우 취소
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    onToggleFollow()
+                    onDismiss()
                 }
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isFollowing) "팔로우 취소" else "팔로우",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    painter = painterResource(
+                        if (isFollowing) R.drawable.ic_circle_minus
+                        else R.drawable.ic_circle_plus
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
@@ -163,7 +153,7 @@ private fun ProfilePopupMenuNotFollowingPreview() {
                         }
                     }
                     HorizontalDivider(
-                        thickness = 0.3.dp,
+                        thickness = 0.25.dp,
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
                     Box(
@@ -233,7 +223,7 @@ private fun ProfilePopupMenuFollowingPreview() {
                         }
                     }
                     HorizontalDivider(
-                        thickness = 0.3.dp,
+                        thickness = 0.25.dp,
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
                     Box(

@@ -1,11 +1,10 @@
 package com.ninezero.halo.feature.address.presentation.address_manage
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -24,7 +23,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.address.presentation.address_manage.components.AddressItem
@@ -89,6 +88,7 @@ internal fun AddressManageScreenContent(
         hasMore = false,
         isEmpty = state.addresses.isEmpty(),
         error = state.error,
+        errorTitle = "배송지를 불러오지 못했습니다",
         emptyTitle = "등록된 배송지가 없어요",
         emptyDescription = "배송지를 추가해보세요",
         onNavigateBack = { onIntent(AddressManageIntent.NavigateBack) },
@@ -115,18 +115,15 @@ internal fun AddressManageScreenContent(
                 items = state.addresses,
                 key = { it.id }
             ) { address ->
-                Column(modifier = Modifier.animateItem()) {
-                    AddressItem(
-                        address = address,
-                        onEdit = { onIntent(AddressManageIntent.NavigateToEdit(address.id)) },
-                        onDelete = { onIntent(AddressManageIntent.ShowDeleteDialog(address.id)) },
-                        onSetDefault = { onIntent(AddressManageIntent.SetDefault(address.id)) }
-                    )
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                }
+                AddressItem(
+                    address = address,
+                    onEdit = { onIntent(AddressManageIntent.NavigateToEdit(address.id)) },
+                    onDelete = { onIntent(AddressManageIntent.ShowDeleteDialog(address.id)) },
+                    onSetDefault = { onIntent(AddressManageIntent.SetDefault(address.id)) },
+                    modifier = Modifier
+                        .animateItem()
+                        .padding(horizontal = 16.dp, vertical = 5.dp)
+                )
             }
         }
     }

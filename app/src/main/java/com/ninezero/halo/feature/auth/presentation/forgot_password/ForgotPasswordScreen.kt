@@ -25,7 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.button.ActionButton
-import com.ninezero.halo.core.ui.components.input.AuthTextField
+import com.ninezero.halo.core.ui.components.input.LabeledTextField
 import com.ninezero.halo.core.ui.components.layout.HazeScreenHeader
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
 import dev.chrisbanes.haze.HazeState
@@ -111,7 +111,7 @@ internal fun ForgotPasswordScreenContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            AuthTextField(
+            LabeledTextField(
                 value = state.email,
                 onValueChange = { onIntent(ForgotPasswordIntent.EmailChanged(it)) },
                 label = "이메일",

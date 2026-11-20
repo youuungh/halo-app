@@ -1,11 +1,9 @@
 package com.ninezero.halo.core.ui.components.input
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,8 +28,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.ninezero.halo.core.ui.components.util.CommaVisualTransformation
+import com.ninezero.halo.core.ui.components.modifiers.bringIntoViewOnFocus
+import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.preview.HaloSurfacePreview
 
 /** 폼 입력 필드 */
 @Composable
@@ -52,6 +53,8 @@ fun FormTextField(
     errorMessage: String? = null,
     showCounter: Boolean = false,
     numberFormat: Boolean = false,
+    visualTransformation: VisualTransformation? = null,  // numberFormat보다 우선
+    bringIntoViewReserve: Dp = 0.dp,  // 내용 위에 떠 있는 하단 바 높이
     showClearButton: Boolean = true
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -67,28 +70,14 @@ fun FormTextField(
         platformStyle = PlatformTextStyle(includeFontPadding = false)
     )
 
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isError -> MaterialTheme.colorScheme.error
-            isFocused -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.outline
-        },
-        animationSpec = tween(150),
-        label = "borderColor"
-    )
-
-    Column(modifier = modifier) {
+    Column(modifier = modifier.bringIntoViewOnFocus(isFocused, bringIntoViewReserve)) {
         BasicTextField(
             value = value,
             onValueChange = { if (it.length <= maxLength) onValueChange(it) },
-            visualTransformation = if (numberFormat) CommaVisualTransformation else VisualTransformation.None,
+            visualTransformation = visualTransformation ?: if (numberFormat) CommaVisualTransformation else VisualTransformation.None,
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(10.dp)
-                )
+                .inputBorder(RoundedCornerShape(10.dp), isFocused = isFocused, isError = isError)
                 .background(
                     color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(10.dp)
@@ -109,15 +98,21 @@ fun FormTextField(
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             decorationBox = { innerTextField ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // ₩ · %는 글자 높이가 달라 가운데가 아닌 기준선으로 맞춤
                     if (prefix != null) {
                         Text(
                             text = prefix,
                             style = fieldTextStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.alignByBaseline()
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
-                    Box(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(if (prefix != null) Modifier.alignByBaseline() else Modifier)
+                    ) {
                         if (value.isEmpty()) {
                             Text(
                                 text = placeholder,
@@ -164,6 +159,24 @@ fun FormTextField(
                     )
                 }
             }
+        }
+    }
+}
+
+@HaloLightDarkPreview
+@Composable
+private fun FormTextFieldPreview() {
+    HaloSurfacePreview {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            FormTextField(value = "", onValueChange = {}, placeholder = "상품 이름을 입력하세요")
+            FormTextField(
+                value = "89000",
+                onValueChange = {},
+                placeholder = "판매가",
+                keyboardType = KeyboardType.Number,
+                numberFormat = true
+            )
+            FormTextField(value = "", onValueChange = {}, placeholder = "재고", isError = true, errorMessage = "재고를 입력하세요")
         }
     }
 }

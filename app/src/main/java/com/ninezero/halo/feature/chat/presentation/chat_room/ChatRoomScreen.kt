@@ -5,7 +5,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
@@ -20,9 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +40,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -46,30 +49,31 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.ninezero.halo.core.fcm.ActiveChatRoomTracker
+import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.model.ReportTargetType
 import com.ninezero.halo.core.ui.components.bottomsheet.ProfileOptionBottomSheet
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.dialog.LoadingDialog
 import com.ninezero.halo.core.ui.components.layout.rememberSaveableDp
+import com.ninezero.halo.core.ui.components.list.InfiniteScrollTrigger
+import com.ninezero.halo.core.ui.components.list.ListErrorState
 import com.ninezero.halo.core.ui.components.loading.CenteredLoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerOverlay
-import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerState
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaType
-import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.post.LocalReportRequester
-import com.ninezero.halo.core.ui.components.scroll.InfiniteScrollTrigger
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.util.MediaUtils
+import com.ninezero.halo.core.ui.components.viewer.MediaViewerOverlay
+import com.ninezero.halo.core.ui.components.viewer.MediaViewerState
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaType
 import com.ninezero.halo.core.util.isSameDay
 import com.ninezero.halo.core.util.isSameMinute
 import com.ninezero.halo.feature.chat.domain.model.ChatMessageType
@@ -87,6 +91,7 @@ import com.ninezero.halo.feature.chat.presentation.chat_room.components.ScrollTo
 import com.ninezero.halo.feature.chat.presentation.chat_room.components.UnreadSeparator
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
@@ -112,25 +117,25 @@ fun ChatRoomScreen(
     // roomId가 key라 draft 승격 시 재등록
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, state.roomId) {
-        val rid = state.roomId
+        val roomId = state.roomId
         // RESUMED 중 승격이면 바로 등록
-        if (rid > 0 && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            ActiveChatRoomTracker.enter(rid)
+        if (roomId > 0 && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            ActiveChatRoomTracker.enter(roomId)
         }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
                     viewModel.onIntent(ChatRoomIntent.ScreenResumed)
-                    ActiveChatRoomTracker.enter(rid)
+                    ActiveChatRoomTracker.enter(roomId)
                 }
-                Lifecycle.Event.ON_PAUSE -> ActiveChatRoomTracker.leave(rid)
+                Lifecycle.Event.ON_PAUSE -> ActiveChatRoomTracker.leave(roomId)
                 else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            ActiveChatRoomTracker.leave(rid)
+            ActiveChatRoomTracker.leave(roomId)
         }
     }
 
@@ -163,6 +168,9 @@ fun ChatRoomScreen(
         viewModel.onIntent(ChatRoomIntent.ToggleSearchMode)
     }
 
+    val searchHighlight = remember { Animatable(0f) }
+    var searchHighlightId by remember { mutableStateOf<Int?>(null) }
+
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
             is ChatRoomSideEffect.NavigateBack -> {
@@ -170,7 +178,7 @@ fun ChatRoomScreen(
                 onNavigateBack()
             }
             is ChatRoomSideEffect.ScrollToBottom -> {
-                coroutineScope.launch { listState.animateScrollToItem(0) }
+                coroutineScope.launch { listState.animateScrollToBottom() }
             }
             is ChatRoomSideEffect.HideKeyboard -> {
                 focusManager.clearFocus()
@@ -178,7 +186,14 @@ fun ChatRoomScreen(
             is ChatRoomSideEffect.ScrollToMessage -> {
                 val index = state.messages.indexOfFirst { it.id == sideEffect.messageId }
                 if (index >= 0) {
-                    coroutineScope.launch { listState.animateScrollToItem(index) }
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(index)
+                        // 멈춘 뒤 그 줄을 잠깐 강조
+                        searchHighlightId = sideEffect.messageId
+                        searchHighlight.snapTo(1f)
+                        delay(400)
+                        searchHighlight.animateTo(0f, animationSpec = tween(durationMillis = 1200))
+                    }
                 }
             }
             is ChatRoomSideEffect.ScrollToUnread -> {
@@ -284,6 +299,8 @@ fun ChatRoomScreen(
     ChatRoomScreenContent(
         state = state,
         listState = listState,
+        searchHighlightId = searchHighlightId,
+        searchHighlightAlpha = { searchHighlight.value },
         searchFocusRequester = searchFocusRequester,
         snackbarHostState = snackbarHostState,
         onIntent = viewModel::onIntent,
@@ -350,6 +367,8 @@ internal fun ChatRoomScreenContent(
     state: ChatRoomState,
     onIntent: (ChatRoomIntent) -> Unit,
     listState: LazyListState = rememberLazyListState(),
+    searchHighlightId: Int? = null,
+    searchHighlightAlpha: () -> Float = { 0f },
     searchFocusRequester: FocusRequester = remember { FocusRequester() },
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onImagePickerClick: () -> Unit = {},
@@ -371,31 +390,37 @@ internal fun ChatRoomScreenContent(
     var topBarHeight by rememberSaveableDp()
     var bottomBarHeight by rememberSaveableDp()
 
-    // reverseLayout이라 index > 0이면 위로 스크롤됨
+    // 맨 아래에서 올라온 거리로 판단, 깜빡임 방지
+    // reverseLayout이라 index > 0이면 맨 아래가 화면 밖
+    val scrollToBottomThresholdPx = with(density) { 200.dp.roundToPx() }
     val showScrollToBottom by remember {
         derivedStateOf {
-            listState.firstVisibleItemIndex > 2 ||
-                (listState.firstVisibleItemIndex > 0 && listState.firstVisibleItemScrollOffset > 100)
+            listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > scrollToBottomThresholdPx
         }
     }
 
-    // 새 메시지 바 상태: 스크롤 중일 때 새 메시지 도착 시 표시
+    // 위로 올려 보던 중 도착한 새 메시지
     var newMessageBarData by remember { mutableStateOf<Message?>(null) }
-    // "맨밑 메시지의 변화"를 추적
+    // 맨 밑 메시지 키
     val latestKey = state.messages.firstOrNull()?.let { it.clientTempId ?: "id_${it.id}" }
     val previousLatestKey = remember { mutableStateOf(latestKey) }
 
-    LaunchedEffect(latestKey, showScrollToBottom) {
+    // 맨 밑 메시지가 바뀔 때만 실행
+    LaunchedEffect(latestKey) {
         if (latestKey != null && latestKey != previousLatestKey.value) {
             val latestMessage = state.messages.firstOrNull()
+            // 스크롤 전에 기록, 효과가 재시작돼도 남음
+            val hadPrevious = previousLatestKey.value != null
+            previousLatestKey.value = latestKey
             when {
-                // 내가 보낸/재시도한 메시지는 항상 맨밑으로 이동
-                latestMessage?.isFromMe == true -> listState.animateScrollToItem(0)
-                // 상대 메시지인데 위로 스크롤된 상태 → 최신 메시지 바 표시
+                // 내가 보내거나 다시 보낸 메시지는 맨 밑으로
+                latestMessage?.isFromMe == true -> listState.animateScrollToBottom()
+                // 위로 올려 둔 상태면 새 메시지 바만 띄움
                 latestMessage != null && showScrollToBottom -> newMessageBarData = latestMessage
-                // 맨 밑에서 보던 중 → 따라 내려감, 목록은 보던 메시지에 붙어 새 메시지가 입력바 뒤로 들어감
-                // 첫 로드는 진입 위치(안 읽은 메시지)를 지키려고 제외
-                latestMessage != null && previousLatestKey.value != null -> listState.animateScrollToItem(0)
+                // 맨 밑에서 보던 중이면 따라 내려감
+                // 첫 로드는 안 읽은 위치를 지키려고 제외
+                latestMessage != null && hadPrevious -> listState.animateScrollToBottom()
             }
         }
         previousLatestKey.value = latestKey
@@ -409,6 +434,12 @@ internal fun ChatRoomScreenContent(
     }
 
     val showNewMessageBar = newMessageBarData != null
+    // 새 메시지 바가 뜬 동안만 블러를 바 위까지 늘림
+    val newMessageBarVisible = (previewNewMessageBar ?: newMessageBarData) != null && !state.isBlocked && !state.isBlockedByOther
+    val inputBlurExtension by animateDpAsState(
+        targetValue = if (newMessageBarVisible) 52.dp else 0.dp,
+        label = "input_blur_extension"
+    )
     val unreadSeparatorIndex = remember(
         state.messages,
         state.unreadStartMessageId,
@@ -452,21 +483,11 @@ internal fun ChatRoomScreenContent(
                             .padding(top = topBarHeight, bottom = bottomBarHeight),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error.orEmpty(),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = { onIntent(ChatRoomIntent.Retry) },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.bounceClick()
-                            ) {
-                                Text("재시도")
-                            }
-                        }
+                        ListErrorState(
+                            title = "메시지를 불러오지 못했습니다",
+                            reason = state.error,
+                            onRetry = { onIntent(ChatRoomIntent.Retry) }
+                        )
                     }
                 }
 
@@ -506,9 +527,7 @@ internal fun ChatRoomScreenContent(
 
                 // 메시지 목록
                 else -> {
-                    // spacer 계산:
-                    // 다 보이면 viewport - 콘텐츠합
-                    // 넘치면 spacer = 0
+                    // 다 보이면 남는 높이, 넘치면 0
                     val spacerHeightPx by remember {
                         derivedStateOf {
                             val info = listState.layoutInfo
@@ -558,73 +577,19 @@ internal fun ChatRoomScreenContent(
                                 key = { _, message -> message.id },
                                 contentType = { _, message -> message.chatMessageType }
                             ) { index, message ->
-                                val messages = state.messages
-
-                                // 마지막이거나 다음 메시지와 발신자·분이 다르면 시간 표시
-                                val showTime = if (message.status != MessageStatus.SENT) {
-                                    false
-                                } else {
-                                    val nextSent = (index - 1 downTo 0).asSequence()
-                                        .map { messages[it] }
-                                        .firstOrNull { it.status == MessageStatus.SENT }
-                                    nextSent == null ||
-                                        message.sender.id != nextSent.sender.id ||
-                                        !message.createdAt.isSameMinute(nextSent.createdAt)
-                                }
-
-                                // 가장 오래된 메시지거나 이전과 날짜 다르면 구분선
-                                val showDateSeparator = index == messages.lastIndex ||
-                                    !message.createdAt.isSameDay(messages[index + 1].createdAt)
-
-                                // 검색 모드에서 현재 메시지가 검색 결과에 포함되면 검색어 전달
-                                val searchQueryForHighlight = if (state.isSearchMode &&
-                                    state.searchResults.any { it.id == message.id }) {
-                                    state.searchQuery
-                                } else ""
-
-                                Column {
-                                    if (showDateSeparator) {
-                                        DateSeparator(timestamp = message.createdAt)
-                                    }
-
-                                    if (index == unreadSeparatorIndex) {
-                                        UnreadSeparator()
-                                    }
-
-                                    val fileUrl = message.mediaAttachments?.firstOrNull() ?: ""
-                                    val downloadProgress = state.downloadingFiles[fileUrl]
-                                    val isDownloading = downloadProgress != null
-
-                                    MessageBubble(
-                                        message = message,
-                                        showTime = showTime,
-                                        searchQuery = searchQueryForHighlight,
-                                        isDownloading = isDownloading,
-                                        downloadProgress = downloadProgress ?: 0f,
-                                        onLongClick = {
-                                            // 실패·전송 중은 서버에 없는 메시지라 삭제 대신 말풍선의 취소
-                                            if (message.isFromMe && message.status == MessageStatus.SENT) {
-                                                onIntent(ChatRoomIntent.ShowDeleteDialog(message))
-                                            }
-                                        },
-                                        onImageClick = onImageClick,
-                                        onVideoClick = onVideoClick,
-                                        onProductClick = onProductClick,
-                                        onPostClick = onPostClick,
-                                        onLockedInfo = { onIntent(ChatRoomIntent.ShowLockedInfo(it)) },
-                                        onFileClick = onFileDownload,
-                                        onRetryFailed = {
-                                            message.clientTempId?.let {
-                                                onIntent(ChatRoomIntent.RetryFailedMessage(it))
-                                            }
-                                        },
-                                        onCancelFailed = {
-                                            message.clientTempId?.let {
-                                                onIntent(ChatRoomIntent.CancelFailedMessage(it))
-                                            }
-                                        }
-                                    )
-                                }
+                                MessageListItem(
+                                    index = index,
+                                    message = message,
+                                    state = state,
+                                    unreadSeparatorIndex = unreadSeparatorIndex,
+                                    highlightProgress = if (message.id == searchHighlightId) searchHighlightAlpha else null,
+                                    onIntent = onIntent,
+                                    onImageClick = onImageClick,
+                                    onVideoClick = onVideoClick,
+                                    onProductClick = onProductClick,
+                                    onPostClick = onPostClick,
+                                    onFileDownload = onFileDownload
+                                )
                             }
 
                             if (state.isLoadingMore) {
@@ -693,10 +658,11 @@ internal fun ChatRoomScreenContent(
 
         // 맨 아래로 버튼, 새 메시지 바 표시 중엔 숨김
         ScrollToBottomFAB(
-            visible = showScrollToBottom && !state.isBlocked && !state.isBlockedByOther && !showNewMessageBar && previewNewMessageBar == null,
+            visible = showScrollToBottom && !state.isBlocked && !state.isBlockedByOther && !showNewMessageBar && previewNewMessageBar == null &&
+                !state.isSearchMode,  // 검색 결과 이동과 헷갈려 숨김
             onClick = {
                 coroutineScope.launch {
-                    listState.animateScrollToItem(0)
+                    listState.animateScrollToBottom()
                 }
             },
             hazeState = hazeState,
@@ -706,23 +672,24 @@ internal fun ChatRoomScreenContent(
                 .padding(bottom = bottomBarHeight)
         )
 
-        // NewMessageBar
+        // 새 메시지 바
         val activeNewMessageBar = previewNewMessageBar ?: newMessageBarData
         NewMessageBar(
-            visible = activeNewMessageBar != null && !state.isBlocked && !state.isBlockedByOther,
+            visible = newMessageBarVisible,
             messageType = activeNewMessageBar?.chatMessageType ?: ChatMessageType.TEXT,
             messageContent = activeNewMessageBar?.content,
             onClick = {
                 newMessageBarData = null
                 coroutineScope.launch {
-                    listState.animateScrollToItem(0)
+                    listState.animateScrollToBottom()
                 }
             },
             hazeState = hazeState,
             backgroundColor = backgroundColor,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = bottomBarHeight + 2.dp)
+                .padding(bottom = bottomBarHeight)
+                .zIndex(1f)  // 입력 바 블러가 바 위까지 늘어나도 그 위에 그려짐
         )
 
         DefaultSnackbarHost(
@@ -763,6 +730,7 @@ internal fun ChatRoomScreenContent(
                         isSending = state.isSending,
                         hazeState = hazeState,
                         backgroundColor = backgroundColor,
+                        blurTopExtension = { inputBlurExtension },
                         isSearchMode = state.isSearchMode,
                         // 시간순 위치
                         searchResultIndex = state.searchTotalCount -
@@ -787,6 +755,121 @@ internal fun ChatRoomScreenContent(
             }
         }
     }
+}
+
+/** 메시지 한 줄 */
+@Composable
+private fun MessageListItem(
+    index: Int,
+    message: Message,
+    state: ChatRoomState,
+    unreadSeparatorIndex: Int?,
+    highlightProgress: (() -> Float)?,  // 검색으로 이동한 메시지만
+    onIntent: (ChatRoomIntent) -> Unit,
+    onImageClick: (List<String>, Int) -> Unit,
+    onVideoClick: (String, String?) -> Unit,
+    onProductClick: (Int, Boolean) -> Unit,
+    onPostClick: (Int, Boolean) -> Unit,
+    onFileDownload: (String, String) -> Unit
+) {
+    val messages = state.messages
+
+    // 마지막이거나 다음 메시지와 발신자·분이 다르면 시간 표시
+    val showTime = if (message.status != MessageStatus.SENT) {
+        false
+    } else {
+        val nextSent = (index - 1 downTo 0).asSequence()
+            .map { messages[it] }
+            .firstOrNull { it.status == MessageStatus.SENT }
+        nextSent == null ||
+            message.sender.id != nextSent.sender.id ||
+            !message.createdAt.isSameMinute(nextSent.createdAt)
+    }
+
+    // 가장 오래된 메시지거나 이전과 날짜 다르면 구분선
+    val showDateSeparator = index == messages.lastIndex ||
+        !message.createdAt.isSameDay(messages[index + 1].createdAt)
+
+    // 검색 결과인 메시지만 검색어 강조
+    val searchHighlightColor = MaterialTheme.colorScheme.primary
+    val searchQueryForHighlight = if (state.isSearchMode &&
+        state.searchResults.any { it.id == message.id }) {
+        state.searchQuery
+    } else ""
+
+    Column {
+        if (showDateSeparator) {
+            DateSeparator(timestamp = message.createdAt)
+        }
+
+        if (index == unreadSeparatorIndex) {
+            UnreadSeparator()
+        }
+
+        val fileUrl = message.mediaAttachments?.firstOrNull() ?: ""
+        val downloadProgress = state.downloadingFiles[fileUrl]
+        val isDownloading = downloadProgress != null
+
+        MessageBubble(
+            message = message,
+            modifier = if (highlightProgress != null) {
+                Modifier.drawBehind {
+                    val alpha = highlightProgress() * 0.08f
+                    if (alpha > 0f) drawRect(searchHighlightColor.copy(alpha = alpha))
+                }
+            } else {
+                Modifier
+            },
+            showTime = showTime,
+            searchQuery = searchQueryForHighlight,
+            isCurrentSearchMatch = searchQueryForHighlight.isNotEmpty() &&
+                state.searchResults.getOrNull(state.currentSearchIndex)?.id == message.id,
+            isDownloading = isDownloading,
+            downloadProgress = downloadProgress ?: 0f,
+            onLongClick = {
+                // 보낸 메시지만 삭제, 실패 · 전송 중은 말풍선에서 취소
+                if (message.isFromMe && message.status == MessageStatus.SENT) {
+                    onIntent(ChatRoomIntent.ShowDeleteDialog(message))
+                }
+            },
+            onImageClick = onImageClick,
+            onVideoClick = onVideoClick,
+            onProductClick = onProductClick,
+            onPostClick = onPostClick,
+            onLockedInfo = { onIntent(ChatRoomIntent.ShowLockedInfo(it)) },
+            onFileClick = onFileDownload,
+            onRetryFailed = {
+                message.clientTempId?.let {
+                    onIntent(ChatRoomIntent.RetryFailedMessage(it))
+                }
+            },
+            onCancelFailed = {
+                message.clientTempId?.let {
+                    onIntent(ChatRoomIntent.CancelFailedMessage(it))
+                }
+            },
+            onFileDownloadCancel = { onIntent(ChatRoomIntent.CancelFileDownload(fileUrl)) }
+        )
+    }
+}
+
+// animateScrollToItem은 평균 높이로 추정해 중간에 멈춤
+// 맨 밑으로 옮겨 실제 거리를 잰 뒤 그만큼만 내려감
+private suspend fun LazyListState.animateScrollToBottom() {
+    val info = layoutInfo
+    val start = info.visibleItemsInfo.firstOrNull()  // reverseLayout이라 화면 맨 아래 메시지
+    if (start == null || info.visibleItemsInfo.any { it.index == 0 }) {
+        animateScrollToItem(0)
+        return
+    }
+    val viewport = info.viewportSize.height - info.beforeContentPadding - info.afterContentPadding
+    scrollToItem(0)
+    // 가까우면 그 자리에서, 멀면 한 화면 위에서 출발
+    val startAtBottom = layoutInfo.visibleItemsInfo.firstOrNull { it.key == start.key }
+    val distance = startAtBottom?.let { it.offset - start.offset } ?: viewport
+    val moved = scrollBy(distance.toFloat())  // reverseLayout이라 양수 = 위로
+    animateScrollBy(-moved)
+    scrollToItem(0)  // 내려가는 동안 높이가 바뀐 메시지가 있으면 남은 만큼 맞춤
 }
 
 private fun findUnreadSeparatorIndex(

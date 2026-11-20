@@ -31,8 +31,8 @@ import com.ninezero.halo.R
 import com.ninezero.halo.core.ui.components.badge.VerifiedBadge
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.explore.domain.model.Creator
-import com.ninezero.halo.ui.theme.HaloTheme
 
 @Composable
 fun CreatorCard(

@@ -1,11 +1,9 @@
 package com.ninezero.halo.core.network.auth
 
-import com.ninezero.halo.core.database.HaloDatabase
+import com.ninezero.halo.core.database.LocalAccountData
 import com.ninezero.halo.core.di.RefreshAuth
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,7 +13,7 @@ import javax.inject.Singleton
 class TokenRefresher @Inject constructor(
     private val tokenProvider: TokenProvider,
     private val sessionEventBus: SessionEventBus,
-    private val database: HaloDatabase,
+    private val localAccountData: LocalAccountData,
     @param:RefreshAuth private val refreshApi: TokenRefreshApi
 ) {
     private val mutex = Mutex()
@@ -72,9 +70,7 @@ class TokenRefresher @Inject constructor(
         tokenProvider.clearUserId()  // userId 남기면 로그인으로 오인
 
         // 현재 계정의 로컬 데이터 정리
-        runCatching {
-            withContext(Dispatchers.IO) { database.clearAllTables() }
-        }
+        localAccountData.clear()
 
         // 로그아웃 뒤 늦은 401 차단
         if (hadSession) {

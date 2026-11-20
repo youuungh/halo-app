@@ -30,7 +30,7 @@ class RegisterViewModel @Inject constructor(
             is RegisterIntent.PasswordChanged -> onPasswordChanged(intent.password)
             is RegisterIntent.ConfirmPasswordChanged -> onConfirmPasswordChanged(intent.confirmPassword)
             is RegisterIntent.TogglePasswordVisibility -> togglePasswordVisibility()
-            is RegisterIntent.ToggleConfirmPwVisibility -> toggleConfirmPwVisibility()
+            is RegisterIntent.ToggleConfirmPasswordVisibility -> toggleConfirmPasswordVisibility()
             is RegisterIntent.RegisterClicked -> register()
             is RegisterIntent.LoginClicked -> navigateToLogin()
             is RegisterIntent.SnackbarDismissed -> dismissSnackbar()
@@ -80,9 +80,9 @@ class RegisterViewModel @Inject constructor(
         }
     }
 
-    private fun toggleConfirmPwVisibility() = intent {
+    private fun toggleConfirmPasswordVisibility() = intent {
         reduce {
-            state.copy(isConfirmPwVisible = !state.isConfirmPwVisible)
+            state.copy(isConfirmPasswordVisible = !state.isConfirmPasswordVisible)
         }
     }
 

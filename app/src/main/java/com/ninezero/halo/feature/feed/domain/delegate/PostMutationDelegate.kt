@@ -78,5 +78,4 @@ class PostMutationDelegate @Inject constructor(  // null 반환은 진행 중 �
     suspend fun blockUser(userId: Int): Result<Boolean> {
         return blockUserUseCase(userId)
     }
-
 }

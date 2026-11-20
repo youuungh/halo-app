@@ -1,8 +1,11 @@
 package com.ninezero.halo.feature.store.presentation.product_detail
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -17,14 +20,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,17 +37,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -51,41 +51,39 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.ninezero.halo.R
 import com.ninezero.halo.core.deeplink.DeepLinks
-import com.ninezero.halo.core.ui.components.button.GlassActionButton
 import com.ninezero.halo.core.ui.components.button.GlassIconButton
-import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerOverlay
-import com.ninezero.halo.core.ui.components.media_viewer.MediaViewerState
-import com.ninezero.halo.core.ui.components.media_viewer.ViewerMediaItem
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.button.PrimaryButton
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
+import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.modifiers.navigationBarsPaddingIgnoringVisibility
 import com.ninezero.halo.core.ui.components.modifiers.statusBarsPaddingIgnoringVisibility
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
-import com.ninezero.halo.core.ui.components.util.rememberKoreanNumberFormat
-import com.ninezero.halo.core.util.Constants
+import com.ninezero.halo.core.ui.components.text.AnimatedCounter
+import com.ninezero.halo.core.ui.components.viewer.MediaViewerOverlay
+import com.ninezero.halo.core.ui.components.viewer.MediaViewerState
+import com.ninezero.halo.core.ui.components.viewer.ViewerMediaItem
+import com.ninezero.halo.core.ui.theme.Like
 import com.ninezero.halo.feature.share.presentation.ShareIntent
 import com.ninezero.halo.feature.share.presentation.ShareSheetHost
+import com.ninezero.halo.feature.store.domain.model.Product
 import com.ninezero.halo.feature.store.domain.model.calcSingleCouponDiscount
-import com.ninezero.halo.feature.store.domain.model.isPurchasable
+import com.ninezero.halo.feature.store.domain.model.canBuy
 import com.ninezero.halo.feature.store.domain.model.purchaseBlockedLabel
 import com.ninezero.halo.feature.store.presentation.product_detail.components.DetailContentSection
 import com.ninezero.halo.feature.store.presentation.product_detail.components.GlassPillActionButtons
 import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductDescriptionSection
 import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductDetailSkeleton
-import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductDetailTabRow
+import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductHeroHeight
+import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductHeroOverlap
 import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductImagePager
 import com.ninezero.halo.feature.store.presentation.product_detail.components.ProductInfoSection
 import com.ninezero.halo.feature.store.presentation.product_detail.components.PurchaseBottomSheet
 import com.ninezero.halo.feature.store.presentation.product_detail.components.RelatedProductsSection
 import com.ninezero.halo.feature.store.presentation.product_detail.components.ReviewEmptySection
 import com.ninezero.halo.feature.store.presentation.product_detail.components.ReviewPreviewSection
-import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
-import com.ninezero.halo.ui.theme.HaloGradient
-import com.ninezero.halo.ui.theme.Like
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.orbitmvi.orbit.compose.collectAsState
@@ -154,34 +152,16 @@ fun ProductDetailScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        when {
-            state.product == null -> {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    ProductDetailSkeleton()
-                    GlassIconButton(
-                        onClick = { viewModel.onIntent(ProductDetailIntent.NavigateBack) },
-                        icon = painterResource(R.drawable.ic_chevron_left),
-                        contentDescription = "뒤로가기",
-                        modifier = Modifier
-                            .statusBarsPaddingIgnoringVisibility()
-                            .padding(horizontal = 8.dp, vertical = 8.dp)
-                    )
-                }
-            }
-
-            else -> {
-                ProductDetailScreenContent(
-                    state = state,
-                    onIntent = viewModel::onIntent,
-                    onNavigateToUserProfile = onNavigateToUserProfile
-                )
-            }
-        }
+        ProductDetailScreenContent(
+            state = state,
+            onIntent = viewModel::onIntent,
+            onNavigateToUserProfile = onNavigateToUserProfile
+        )
 
         DefaultSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
-            bottomBarPadding = if (state.product == null) 0.dp else 64.dp
+            bottomBarPadding = if (state.product == null) 0.dp else 60.dp  // 버튼 48 + 아래 여백 12
         )
 
         // 이미지 뷰어 오버레이
@@ -203,7 +183,7 @@ fun ProductDetailScreen(
 
     ShareSheetHost(
         visible = state.showShareSheet && state.product != null,
-        shareAction = { vm -> vm.onIntent(ShareIntent.ShareProduct(state.product!!.id)) },
+        shareAction = { shareViewModel -> state.product?.let { shareViewModel.onIntent(ShareIntent.ShareProduct(it.id)) } },
         onDismiss = { viewModel.onIntent(ProductDetailIntent.DismissShareSheet) },
         onShareSuccess = { roomIds, count ->
             viewModel.onIntent(
@@ -230,41 +210,22 @@ private fun BoxScope.ProductDetailTopOverlay(  // 스크롤 읽기를 여기 가
     onNavigateToCart: () -> Unit,
     onShare: () -> Unit
 ) {
-    val progress = if (collapseThresholdPx > 0f) {
-        1f - (scrollState.value.toFloat() / collapseThresholdPx).coerceIn(0f, 1f)
-    } else 0f
-
-    val topAppBarAlpha = ((0.7f - progress) / 0.7f).coerceIn(0f, 1f)
     Box(
         modifier = Modifier
             .align(Alignment.TopCenter)
             .fillMaxWidth()
-            .height(statusBarHeight + 80.dp)
-            .graphicsLayer { alpha = topAppBarAlpha }
-            .haloBlur(state = hazeState) {
-                style = HaloBlurStyle(
-                    backgroundColor = Color.Transparent,
-                    tint = HaloBlurTint(backgroundColor.copy(alpha = 0.7f)),
-                    noiseFactor = 0f
-                )
-                progressive = HazeProgressive.verticalGradient(
-                    startIntensity = 0.5f,
-                    endIntensity = 0f
-                )
+            .height(statusBarHeight + 56.dp)
+            // 스크롤 값은 그리기 단계에서만 읽음
+            .graphicsLayer {
+                val progress = if (collapseThresholdPx > 0f) {
+                    1f - (scrollState.value.toFloat() / collapseThresholdPx).coerceIn(0f, 1f)
+                } else 0f
+                alpha = ((0.7f - progress) / 0.7f).coerceIn(0f, 1f)
             }
+            .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))
     )
 
-    // 네비게이션 버튼
-    val buttonBgColor = lerp(
-        start = backgroundColor,
-        stop = Color(0xFFBBBBBB),
-        fraction = progress
-    )
-    val buttonIconTint = lerp(
-        start = MaterialTheme.colorScheme.onSurface,
-        stop = Color.White,
-        fraction = progress
-    )
+    val buttonIconTint = MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
@@ -280,13 +241,13 @@ private fun BoxScope.ProductDetailTopOverlay(  // 스크롤 읽기를 여기 가
             icon = painterResource(R.drawable.ic_chevron_left),
             contentDescription = "뒤로가기",
             hazeState = hazeState,
-            backgroundColor = buttonBgColor,
+            backgroundColor = backgroundColor,
             iconTint = buttonIconTint
         )
 
         GlassPillActionButtons(
             hazeState = hazeState,
-            backgroundColor = buttonBgColor,
+            backgroundColor = backgroundColor,
             iconTint = buttonIconTint,
             cartItemCount = cartItemCount,
             onCartClick = onNavigateToCart,
@@ -301,21 +262,10 @@ internal fun ProductDetailScreenContent(
     onIntent: (ProductDetailIntent) -> Unit,
     onNavigateToUserProfile: (Int) -> Unit
 ) {
-    val product = state.product ?: return
-    val backgroundColor = MaterialTheme.colorScheme.surface
+    val backgroundColor = MaterialTheme.colorScheme.background
     val density = LocalDensity.current
     val hazeState = remember { HazeState() }
     val scrollState = rememberScrollState()
-    val numberFormat = rememberKoreanNumberFormat()
-    val earnPoints = remember(product.price) {
-        (product.price.toIntOrNull() ?: 0) / 100
-    }
-    val couponAppliedPrice = remember(state.bestCoupon, product.price) {
-        val bestCoupon = state.bestCoupon ?: return@remember null
-        val productPrice = product.price.toIntOrNull() ?: return@remember null
-        val discount = calcSingleCouponDiscount(bestCoupon, productPrice.toLong()).toInt()
-        if (discount > 0) productPrice - discount else null
-    }
 
     val statusBarHeight = with(density) {
         // 뷰어가 바를 숨겨도 높이 유지
@@ -323,316 +273,36 @@ internal fun ProductDetailScreenContent(
     }
 
     // 스크롤 값은 오버레이에서만 읽어 recomposition 회피
-    val imageHeightPx = with(density) { 400.dp.toPx() }
+    val imageHeightPx = with(density) { ProductHeroHeight.toPx() }
     val topBarHeightPx = with(density) { (statusBarHeight + 56.dp).toPx() }
     val collapseThresholdPx = imageHeightPx - topBarHeightPx
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeSource(hazeState)
-                .verticalScroll(scrollState)
-        ) {
-            // 이미지 영역
+    // 버튼은 스켈레톤부터 같은 것을 유지하고 내용만 교체
+    // 바탕을 소스 밖에 칠해야 유리 버튼이 빈 곳에 진한 색을 냄
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+    ) {
+        val product = state.product
+        if (product == null) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(400.dp)
-                    .graphicsLayer {
-                        // draw 단계에서 직접 읽음
-                        translationY = scrollState.value * 0.5f
-                    }
+                    .fillMaxSize()
+                    .hazeSource(hazeState)
             ) {
-                ProductImagePager(
-                    imageUrls = product.imageUrls,
-                    onImageClick = { index ->
-                        onIntent(ProductDetailIntent.ShowImageViewer(product.imageUrls, index))
-                    },
-                    viewCount = product.viewCount,
-                    likeCount = product.likeCount,
-                    isWishlisted = state.isWishlisted
-                )
+                ProductDetailSkeleton()
             }
-
-            // 본문
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = backgroundColor
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    ProductInfoSection(
-                        product = product,
-                        reviewSummary = state.reviewSummary,
-                        bestCoupon = state.bestCoupon,
-                        couponAppliedPrice = couponAppliedPrice,
-                        showCouponDetailPopup = state.showCouponDetailDialog,
-                        onCreatorClick = { onNavigateToUserProfile(product.creator.id) },
-                        onReviewClick = {
-                            onIntent(ProductDetailIntent.NavigateToReviewList(product.id))
-                        },
-                        onCouponDetailClick = {
-                            onIntent(ProductDetailIntent.ShowCouponDetailDialog)
-                        },
-                        onDismissCouponDetail = {
-                            onIntent(ProductDetailIntent.DismissCouponDetailDialog)
-                        }
-                    )
-
-                    // 혜택 정보
-                    if (earnPoints > 0) {
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .height(1.dp)
-                                .background(MaterialTheme.colorScheme.outlineVariant)
-                        )
-
-                        val shippingFee = product.shippingFee.toIntOrNull() ?: 0
-                        val freeShippingThreshold = Constants.Commerce.FREE_SHIPPING_THRESHOLD
-                        val benefitTextStyle = MaterialTheme.typography.bodySmall
-                        val benefitIconColor = MaterialTheme.colorScheme.onSurface
-                        val benefitTextColor = MaterialTheme.colorScheme.onSurface
-                        val benefitHighlightColor = MaterialTheme.colorScheme.primary
-                        val userTierInfo = state.userTierInfo
-                        val isSubscribed = userTierInfo?.isSubscribed == true
-                        val tierEarnRate = when (userTierInfo?.tier) {
-                            SubscriptionPlanTier.TIER1 -> 5
-                            SubscriptionPlanTier.TIER2 -> 10
-                            else -> 1
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // 포인트 적립
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_point),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = benefitIconColor
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                if (isSubscribed) {
-                                    val membershipEarnPoints =
-                                        (product.price.toIntOrNull() ?: 0) * tierEarnRate / 100
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            append("구매 시 ")
-                                            withStyle(
-                                                SpanStyle(
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = benefitHighlightColor
-                                                )
-                                            ) {
-                                                append("${numberFormat.format(membershipEarnPoints)}P")
-                                            }
-                                            append(" 적립 (${tierEarnRate}%)")
-                                        },
-                                        style = benefitTextStyle,
-                                        color = benefitTextColor
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                brush = HaloGradient,
-                                                shape = RoundedCornerShape(4.dp)
-                                            )
-                                            .padding(horizontal = 5.dp)
-                                    ) {
-                                        Text(
-                                            text = "멤버십",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                } else {
-                                    Text(
-                                        text = "구매 시 ${numberFormat.format(earnPoints)}P 적립 (1%)",
-                                        style = benefitTextStyle,
-                                        color = benefitTextColor
-                                    )
-                                }
-                            }
-
-                            // 배송비
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_shipping),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = benefitIconColor
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                if (isSubscribed) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            if (shippingFee > 0) {
-                                                withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                                                    append("${numberFormat.format(shippingFee)}원")
-                                                }
-                                                append(" ")
-                                            }
-                                            withStyle(
-                                                SpanStyle(
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = benefitHighlightColor
-                                                )
-                                            ) {
-                                                append("무료배송")
-                                            }
-                                        },
-                                        style = benefitTextStyle,
-                                        color = benefitTextColor
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                brush = HaloGradient,
-                                                shape = RoundedCornerShape(4.dp)
-                                            )
-                                            .padding(horizontal = 5.dp)
-                                    ) {
-                                        Text(
-                                            text = "멤버십",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                } else if (shippingFee > 0) {
-                                    Text(
-                                        text = "배송비 ${numberFormat.format(shippingFee)}원 (${
-                                            numberFormat.format(
-                                                freeShippingThreshold
-                                            )
-                                        }원 이상 무료배송)",
-                                        style = benefitTextStyle,
-                                        color = benefitTextColor
-                                    )
-                                } else {
-                                    Text(
-                                        text = "무료배송",
-                                        style = benefitTextStyle,
-                                        color = benefitTextColor
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // 리뷰 프리뷰
-                    if (state.recentReviews.isNotEmpty()) {
-                        ReviewPreviewSection(
-                            recentReviews = state.recentReviews,
-                            onViewAllClick = {
-                                onIntent(ProductDetailIntent.NavigateToReviewList(product.id))
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    } else if (!state.isLoading) {
-                        // 리뷰 없음, 로딩 끝난 뒤만
-                        ReviewEmptySection()
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    Spacer(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
-
-                    // 상세 탭
-                    ProductDetailTabRow(
-                        selectedTab = state.selectedDetailTab,
-                        onTabSelected = { onIntent(ProductDetailIntent.SelectDetailTab(it)) }
-                    )
-
-                    // 상품 설명
-                    if (product.description.isNotBlank()) {
-                        ProductDescriptionSection(
-                            description = product.description,
-                            isExpanded = state.isInfoExpanded,
-                            onToggleExpanded = { onIntent(ProductDetailIntent.ToggleInfoExpanded) }
-                        )
-                    }
-
-                    // 상세 컨텐츠 블럭
-                    if (product.detailContent.isNotEmpty()) {
-                        DetailContentSection(
-                            detailContent = product.detailContent,
-                            isExpanded = state.isDetailExpanded,
-                            onToggleExpanded = { onIntent(ProductDetailIntent.ToggleDetailExpanded) }
-                        )
-                    }
-
-                    // 크리에이터의 다른 상품
-                    if (state.creatorProducts.isNotEmpty()) {
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        )
-
-                        RelatedProductsSection(
-                            title = "판매자의 다른 상품",
-                            products = state.creatorProducts,
-                            onProductClick = { product ->
-                                if (product.canAccess == false) {
-                                    onIntent(
-                                        ProductDetailIntent.ShowRestrictedContentSnackbar(
-                                            "${product.requiredTier} 멤버십 전용 상품입니다"
-                                        )
-                                    )
-                                } else {
-                                    onIntent(ProductDetailIntent.NavigateToProductDetail(product.id))
-                                }
-                            }
-                        )
-                    }
-
-                    // 연관 상품
-                    if (state.relatedProducts.isNotEmpty()) {
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        )
-
-                        RelatedProductsSection(
-                            title = "연관 상품",
-                            products = state.relatedProducts,
-                            onProductClick = { product ->
-                                if (product.canAccess == false) {
-                                    onIntent(
-                                        ProductDetailIntent.ShowRestrictedContentSnackbar(
-                                            "${product.requiredTier} 멤버십 전용 상품입니다"
-                                        )
-                                    )
-                                } else {
-                                    onIntent(ProductDetailIntent.NavigateToProductDetail(product.id))
-                                }
-                            }
-                        )
-                    }
-
-                    // 하단 바 여백
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
-            }
+        } else {
+            ProductDetailBody(
+                product = product,
+                state = state,
+                hazeState = hazeState,
+                scrollState = scrollState,
+                backgroundColor = backgroundColor,
+                onIntent = onIntent,
+                onNavigateToUserProfile = onNavigateToUserProfile
+            )
         }
 
         ProductDetailTopOverlay(
@@ -644,32 +314,219 @@ internal fun ProductDetailScreenContent(
             cartItemCount = state.cartItemCount,
             onNavigateBack = { onIntent(ProductDetailIntent.NavigateBack) },
             onNavigateToCart = { onIntent(ProductDetailIntent.NavigateToCart) },
-            onShare = { onIntent(ProductDetailIntent.ShareProduct) }
+            // 공유할 상품 정보가 있어야 동작
+            onShare = { if (product != null) onIntent(ProductDetailIntent.ShareProduct) }
         )
+    }
+}
+
+/** 내 찜 상태와 전체 찜 수를 함께 보여주는 버튼 */
+@Composable
+private fun WishlistButton(
+    isWishlisted: Boolean,
+    count: Int,
+    hazeState: HazeState,
+    backgroundColor: Color,
+    onClick: () -> Unit
+) {
+    val contentColor by animateColorAsState(
+        targetValue = if (isWishlisted) Like else MaterialTheme.colorScheme.onSurface,
+        label = "wishlistColor"
+    )
+    Row(
+        modifier = Modifier
+            .bounceClick()
+            .height(48.dp)
+            .clip(CircleShape)
+            .haloBlur(hazeState, HaloBlurs.glassField(backgroundColor))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true),
+                onClick = onClick
+            )
+            .padding(start = 10.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Icon(
+            painter = painterResource(if (isWishlisted) R.drawable.ic_heart_filled else R.drawable.ic_heart),
+            contentDescription = if (isWishlisted) "위시리스트에서 제거" else "위시리스트에 추가",
+            modifier = Modifier.size(22.dp),
+            tint = contentColor
+        )
+        AnimatedCounter(
+            count = count,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = contentColor
+        )
+    }
+}
+
+/** 큰 영역을 나누는 띠 */
+@Composable
+private fun DetailSectionBand() {
+    Spacer(modifier = Modifier.height(28.dp))
+    Spacer(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    )
+    Spacer(modifier = Modifier.height(24.dp))
+}
+
+@Composable
+private fun ProductDetailBody(
+    product: Product,
+    state: ProductDetailState,
+    hazeState: HazeState,
+    scrollState: ScrollState,
+    backgroundColor: Color,
+    onIntent: (ProductDetailIntent) -> Unit,
+    onNavigateToUserProfile: (Int) -> Unit
+) {
+    val couponAppliedPrice = remember(state.bestCoupon, product.price) {
+        val bestCoupon = state.bestCoupon ?: return@remember null
+        val productPrice = product.price.toInt()
+        val discount = calcSingleCouponDiscount(bestCoupon, productPrice.toLong()).toInt()
+        if (discount > 0) productPrice - discount else null
+    }
+
+    val onRelatedProductClick: (Product) -> Unit = { related ->
+        if (related.canAccess == false) {
+            onIntent(
+                ProductDetailIntent.ShowRestrictedContentSnackbar(
+                    "${related.requiredTier.label} 멤버십 전용 상품입니다"
+                )
+            )
+        } else {
+            onIntent(ProductDetailIntent.NavigateToProductDetail(related.id))
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeSource(hazeState)
+                .verticalScroll(scrollState)
+        ) {
+            // 사진 아래쪽이 본문 뒤로 겹치도록 영역을 줄임
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(ProductHeroHeight - ProductHeroOverlap)
+                    .wrapContentHeight(align = Alignment.Top, unbounded = true)
+            ) {
+                ProductImagePager(
+                    imageUrls = product.imageUrls,
+                    onImageClick = { index ->
+                        onIntent(ProductDetailIntent.ShowImageViewer(product.imageUrls, index))
+                    },
+                    parallaxOffset = { scrollState.value * 0.5f }
+                )
+            }
+
+            // 본문
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ProductInfoSection(
+                    product = product,
+                    reviewSummary = state.reviewSummary,
+                    bestCoupon = state.bestCoupon,
+                    couponAppliedPrice = couponAppliedPrice,
+                    isCouponDetailExpanded = state.isCouponDetailExpanded,
+                    userTierInfo = state.userTierInfo,
+                    onCreatorClick = { onNavigateToUserProfile(product.creator.id) },
+                    onReviewClick = {
+                        onIntent(ProductDetailIntent.NavigateToReviewList(product.id))
+                    },
+                    onCouponDetailToggle = {
+                        onIntent(ProductDetailIntent.ToggleCouponDetail)
+                    }
+                )
+
+                DetailSectionBand()
+
+                // 리뷰 프리뷰
+                if (state.recentReviews.isNotEmpty()) {
+                    ReviewPreviewSection(
+                        recentReviews = state.recentReviews,
+                        totalReviews = state.reviewSummary?.totalReviews ?: state.recentReviews.size,
+                        onViewAllClick = {
+                            onIntent(ProductDetailIntent.NavigateToReviewList(product.id))
+                        }
+                    )
+                } else if (!state.isLoading) {
+                    // 리뷰 없음, 로딩 끝난 뒤만
+                    ReviewEmptySection()
+                }
+
+                if (product.description.isNotBlank() || product.detailContent.isNotEmpty()) {
+                    DetailSectionBand()
+                }
+
+                // 상품 설명
+                if (product.description.isNotBlank()) {
+                    ProductDescriptionSection(
+                        description = product.description,
+                        isExpanded = state.isInfoExpanded,
+                        onToggleExpanded = { onIntent(ProductDetailIntent.ToggleInfoExpanded) }
+                    )
+                }
+
+                // 상세 컨텐츠 블럭
+                if (product.detailContent.isNotEmpty()) {
+                    DetailContentSection(
+                        detailContent = product.detailContent,
+                        isExpanded = state.isDetailExpanded,
+                        onToggleExpanded = { onIntent(ProductDetailIntent.ToggleDetailExpanded) }
+                    )
+                }
+
+                // 크리에이터의 다른 상품
+                if (state.creatorProducts.isNotEmpty()) {
+                    DetailSectionBand()
+                    RelatedProductsSection(
+                        title = "판매자의 다른 상품",
+                        products = state.creatorProducts,
+                        onProductClick = onRelatedProductClick
+                    )
+                }
+
+                // 연관 상품
+                if (state.relatedProducts.isNotEmpty()) {
+                    DetailSectionBand()
+                    RelatedProductsSection(
+                        title = "연관 상품",
+                        products = state.relatedProducts,
+                        onProductClick = onRelatedProductClick
+                    )
+                }
+
+                // 하단 바 여백
+                Spacer(
+                    modifier = Modifier
+                        .navigationBarsPaddingIgnoringVisibility()
+                        .height(72.dp)
+                )
+            }
+        }
 
         // 하단 바
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor),
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 0f,
-                        endIntensity = 0.5f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.fadeUp(backgroundColor))
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
                 .navigationBarsPaddingIgnoringVisibility()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            val isAvailable = product.isPurchasable()
+            val isAvailable = product.canBuy()
             val disabledText = product.purchaseBlockedLabel()
 
             Row(
@@ -677,26 +534,17 @@ internal fun ProductDetailScreenContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                GlassIconButton(
-                    onClick = { onIntent(ProductDetailIntent.ToggleWishlist) },
-                    icon = painterResource(
-                        if (state.isWishlisted) R.drawable.ic_heart_filled
-                        else R.drawable.ic_heart
-                    ),
-                    contentDescription = "위시리스트",
+                WishlistButton(
+                    isWishlisted = state.isWishlisted,
+                    count = product.likeCount,
                     hazeState = hazeState,
                     backgroundColor = backgroundColor,
-                    iconTint = if (state.isWishlisted) {
-                        Like
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    size = 40.dp
+                    onClick = { onIntent(ProductDetailIntent.ToggleWishlist) }
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                GlassActionButton(
+                PrimaryButton(
                     onClick = { onIntent(ProductDetailIntent.ShowPurchaseSheet) },
                     enabled = isAvailable,
                     modifier = Modifier.weight(1f)
@@ -715,6 +563,7 @@ internal fun ProductDetailScreenContent(
                 product = product,
                 quantity = state.purchaseQuantity,
                 isAddingToCart = state.isAddingToCart,
+                userTierInfo = state.userTierInfo,
                 onDismiss = { onIntent(ProductDetailIntent.DismissPurchaseSheet) },
                 onQuantityChange = { onIntent(ProductDetailIntent.UpdateQuantity(it)) },
                 onAddToCart = { onIntent(ProductDetailIntent.AddToCart) },

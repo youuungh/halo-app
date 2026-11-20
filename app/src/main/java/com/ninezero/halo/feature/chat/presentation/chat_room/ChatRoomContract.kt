@@ -40,7 +40,6 @@ data class ChatRoomState(
     val isSending: Boolean = false,
     val hasMore: Boolean = true,
     val snackbarState: SnackbarState? = null,
-
     // 검색
     val isSearchMode: Boolean = false,
     val searchQuery: String = "",
@@ -48,13 +47,11 @@ data class ChatRoomState(
     val currentSearchIndex: Int = 0,
     val isSearching: Boolean = false,
     val searchPage: Int = 1,
-    val searchHasMore: Boolean = false,
+    val hasMoreSearchResults: Boolean = false,
     val searchTotalCount: Int = 0,
-
     // 삭제 확인
     val messageToDelete: Message? = null,
     val showDeleteDialog: Boolean = false,
-
     // 차단
     val isBlocked: Boolean = false,  // 차단 해제 버튼 오버레이
     val isBlockedByOther: Boolean = false,  // 안내 문구 오버레이
@@ -62,13 +59,12 @@ data class ChatRoomState(
     val showProfileOptionsSheet: Boolean = false,
     val showBlockConfirmDialog: Boolean = false,
     val showUnblockConfirmDialog: Boolean = false,
-
     // 첨부
     val isAttachmentExpanded: Boolean = false,
     val selectedImages: List<AttachmentState> = emptyList(),
     val selectedVideo: AttachmentState? = null,
     val selectedFile: AttachmentState? = null,
-    val downloadingFiles: Map<String, Float> = emptyMap()  // fileUrl별 진행률
+    val downloadingFiles: Map<String, Float> = emptyMap(),  // fileUrl별 진행률
 ) {
     val hasAttachment: Boolean
         get() = selectedImages.isNotEmpty() || selectedVideo != null || selectedFile != null
@@ -95,7 +91,6 @@ sealed interface ChatRoomIntent {
     data object NavigateBack : ChatRoomIntent
     data class PostLinkClicked(val postId: Int, val canAccess: Boolean) : ChatRoomIntent
     data class ProductLinkClicked(val productId: Int, val canAccess: Boolean) : ChatRoomIntent
-
     // 검색
     data object ToggleSearchMode : ChatRoomIntent
     data class SearchQueryChanged(val query: String) : ChatRoomIntent
@@ -103,7 +98,6 @@ sealed interface ChatRoomIntent {
     data object ClearSearch : ChatRoomIntent
     data object NavigateToPreviousResult : ChatRoomIntent
     data object NavigateToNextResult : ChatRoomIntent
-
     // 차단
     data object ShowProfileOptions : ChatRoomIntent
     data object DismissProfileOptions : ChatRoomIntent
@@ -115,7 +109,6 @@ sealed interface ChatRoomIntent {
     data object ConfirmUnblockUser : ChatRoomIntent
     data class ShowLockedInfo(val message: String) : ChatRoomIntent
     data object SnackbarDismissed : ChatRoomIntent
-
     // 첨부
     data object ToggleAttachmentExpanded : ChatRoomIntent
     data class AddImages(val uris: List<Uri>) : ChatRoomIntent
@@ -125,6 +118,7 @@ sealed interface ChatRoomIntent {
     data class SetFile(val uri: Uri) : ChatRoomIntent
     data object RemoveFile : ChatRoomIntent
     data class DownloadFile(val fileUrl: String, val fileName: String) : ChatRoomIntent
+    data class CancelFileDownload(val fileUrl: String) : ChatRoomIntent
 }
 
 sealed interface ChatRoomSideEffect {

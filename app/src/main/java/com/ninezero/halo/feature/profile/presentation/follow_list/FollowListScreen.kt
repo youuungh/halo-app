@@ -1,5 +1,6 @@
 package com.ninezero.halo.feature.profile.presentation.follow_list
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -28,11 +29,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -46,16 +47,15 @@ import com.ninezero.halo.core.ui.components.button.GlassIconButton
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurStyle
-import com.ninezero.halo.core.ui.components.modifiers.HaloBlurTint
+import com.ninezero.halo.core.ui.components.modifiers.HaloBlurs
 import com.ninezero.halo.core.ui.components.modifiers.haloBlur
 import com.ninezero.halo.core.ui.components.overlay.CenterToast
 import com.ninezero.halo.core.ui.components.snackbar.DefaultSnackbarHost
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.profile.presentation.follow_list.components.FollowListPage
 import com.ninezero.halo.feature.profile.presentation.follow_list.components.FollowTabRow
+import com.ninezero.halo.feature.profile.presentation.follow_list.components.FollowTabSearchRow
 import com.ninezero.halo.feature.profile.presentation.follow_list.components.FollowTabSpec
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
@@ -71,15 +71,10 @@ fun FollowListScreen(
 ) {
     val state by viewModel.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     viewModel.collectSideEffect { sideEffect ->
         when (sideEffect) {
-            is FollowListSideEffect.NavigateBack -> {
-                // 키보드 먼저 닫고 navigation
-                keyboardController?.hide()
-                onNavigateBack()
-            }
+            is FollowListSideEffect.NavigateBack -> onNavigateBack()
             is FollowListSideEffect.NavigateToUserProfile -> onNavigateToUserProfile(sideEffect.userId)
             is FollowListSideEffect.NavigateToNewChat -> onNavigateToNewChat(
                 sideEffect.targetUserId, sideEffect.username, sideEffect.displayName, sideEffect.avatarUrl, sideEffect.role
@@ -113,6 +108,19 @@ internal fun FollowListScreenContent(
     var headerHeightPx by rememberSaveable { mutableFloatStateOf(0f) }
     val headerHeight = with(density) { headerHeightPx.toDp() }
     val focusManager = LocalFocusManager.current
+    val searchFocusRequester = remember { FocusRequester() }
+    val closeSearch = {
+        focusManager.clearFocus()
+        onIntent(FollowListIntent.CloseSearch)
+    }
+
+    BackHandler(enabled = state.isSearchMode, onBack = closeSearch)
+
+    // 화면을 떠나는 클릭은 키보드를 먼저 내리고 이동
+    val navigate = { intent: FollowListIntent ->
+        focusManager.clearFocus()
+        onIntent(intent)
+    }
 
     val pageCount = if (state.showSubscribers) 3 else 2
     val pagerState = rememberPagerState(
@@ -123,6 +131,11 @@ internal fun FollowListScreenContent(
     val followersListState = rememberLazyListState()
     val followingListState = rememberLazyListState()
     val subscribersListState = rememberLazyListState()
+    fun listStateOf(tab: FollowTab) = when (tab) {
+        FollowTab.FOLLOWERS -> followersListState
+        FollowTab.FOLLOWING -> followingListState
+        FollowTab.SUBSCRIBERS -> subscribersListState
+    }
     val coroutineScope = rememberCoroutineScope()
 
     // 탭 선택 시 페이저 동기화
@@ -139,7 +152,6 @@ internal fun FollowListScreenContent(
     }
 
     // 정착했을 때만 탭 동기화
-    // currentPage 기준은 피드백 루프, 금지
     LaunchedEffect(pagerState.settledPage) {
         val newTab = when (pagerState.settledPage) {
             1 -> FollowTab.FOLLOWING
@@ -161,7 +173,7 @@ internal fun FollowListScreenContent(
     }
 
     LaunchedEffect(shouldLoadMoreFollowers) {
-        if (shouldLoadMoreFollowers && !state.isFollowersLoading && state.followersHasMore) {
+        if (shouldLoadMoreFollowers && !state.isFollowersLoading && state.hasMoreFollowers) {
             onIntent(FollowListIntent.LoadMoreFollowers)
         }
     }
@@ -176,7 +188,7 @@ internal fun FollowListScreenContent(
     }
 
     LaunchedEffect(shouldLoadMoreFollowing) {
-        if (shouldLoadMoreFollowing && !state.isFollowingLoading && state.followingHasMore) {
+        if (shouldLoadMoreFollowing && !state.isFollowingLoading && state.hasMoreFollowing) {
             onIntent(FollowListIntent.LoadMoreFollowing)
         }
     }
@@ -191,7 +203,7 @@ internal fun FollowListScreenContent(
     }
 
     LaunchedEffect(shouldLoadMoreSubscribers) {
-        if (shouldLoadMoreSubscribers && !state.isSubscribersLoading && state.subscribersHasMore) {
+        if (shouldLoadMoreSubscribers && !state.isSubscribersLoading && state.hasMoreSubscribers) {
             onIntent(FollowListIntent.LoadMoreSubscribers)
         }
     }
@@ -204,91 +216,45 @@ internal fun FollowListScreenContent(
         // 콘텐츠 - HorizontalPager
         when {
             state.isInitialLoading -> {
+                // 페이저 전에도 블러 원본이 있어야 탭이 그려짐
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazeSource(hazeState),
                     contentAlignment = Alignment.Center
                 ) {
-                    LoadingIndicator(size = LoadingIndicatorSize.ExtraLarge)
+                    LoadingIndicator(size = LoadingIndicatorSize.Large)
                 }
             }
             else -> {
                 HorizontalPager(
                     state = pagerState,
+                    userScrollEnabled = !state.isSearchMode,  // 탭이 가려진 동안 다른 탭으로 넘어가지 않게
                     modifier = Modifier
                         .fillMaxSize()
                         .hazeSource(hazeState)
                 ) { page ->
-                    when (page) {
-                        0 -> FollowListPage(
-                            users = state.followers,
-                            isLoading = state.isFollowersLoading || FollowTab.FOLLOWERS !in state.loadedTabs,
-                            error = state.followersError,
-                            emptyText = if (state.followersSearchQuery.isNotBlank()) "검색 결과가 없습니다" else "팔로워가 없습니다",
-                            isMyProfile = state.isMyProfile,
-                            isFollowingTab = false,
-                            toggleLoadingUserIds = state.toggleLoadingUserIds,
-                            listState = followersListState,
-                            headerHeight = headerHeight,
-                            searchQuery = state.followersSearchQuery,
-                            onSearchQueryChange = { onIntent(FollowListIntent.UpdateSearchQuery(it)) },
-                            onSearch = {
-                                focusManager.clearFocus()
-                                onIntent(FollowListIntent.Search)
-                            },
-                            onClearSearch = { onIntent(FollowListIntent.ClearSearch) },
-                            onRetry = { onIntent(FollowListIntent.Retry) },
-                            onUserClick = { onIntent(FollowListIntent.NavigateToUserProfile(it)) },
-                            onFollowClick = { onIntent(FollowListIntent.ToggleFollow(it)) },
-                            onMessageClick = { onIntent(FollowListIntent.NavigateToMessage(it)) },
-                            onUnfollowClick = { user -> onIntent(FollowListIntent.ShowUnfollowConfirmDialog(user)) }
-                        )
-                        1 -> FollowListPage(
-                            users = state.following,
-                            isLoading = state.isFollowingLoading || FollowTab.FOLLOWING !in state.loadedTabs,
-                            error = state.followingError,
-                            emptyText = if (state.followingSearchQuery.isNotBlank()) "검색 결과가 없습니다" else "팔로잉이 없습니다",
-                            isMyProfile = state.isMyProfile,
-                            isFollowingTab = true,
-                            toggleLoadingUserIds = state.toggleLoadingUserIds,
-                            listState = followingListState,
-                            headerHeight = headerHeight,
-                            searchQuery = state.followingSearchQuery,
-                            onSearchQueryChange = { onIntent(FollowListIntent.UpdateSearchQuery(it)) },
-                            onSearch = {
-                                focusManager.clearFocus()
-                                onIntent(FollowListIntent.Search)
-                            },
-                            onClearSearch = { onIntent(FollowListIntent.ClearSearch) },
-                            onRetry = { onIntent(FollowListIntent.Retry) },
-                            onUserClick = { onIntent(FollowListIntent.NavigateToUserProfile(it)) },
-                            onFollowClick = { onIntent(FollowListIntent.ToggleFollow(it)) },
-                            onMessageClick = { onIntent(FollowListIntent.NavigateToMessage(it)) },
-                            onUnfollowClick = { user -> onIntent(FollowListIntent.ShowUnfollowConfirmDialog(user)) }
-                        )
-                        2 -> FollowListPage(
-                            users = state.subscribers,
-                            isLoading = state.isSubscribersLoading || FollowTab.SUBSCRIBERS !in state.loadedTabs,
-                            error = state.subscribersError,
-                            emptyText = if (state.subscribersSearchQuery.isNotBlank()) "검색 결과가 없습니다" else "구독자가 없습니다",
-                            isMyProfile = state.isMyProfile,
-                            isFollowingTab = false,
-                            toggleLoadingUserIds = state.toggleLoadingUserIds,
-                            listState = subscribersListState,
-                            headerHeight = headerHeight,
-                            searchQuery = state.subscribersSearchQuery,
-                            onSearchQueryChange = { onIntent(FollowListIntent.UpdateSearchQuery(it)) },
-                            onSearch = {
-                                focusManager.clearFocus()
-                                onIntent(FollowListIntent.Search)
-                            },
-                            onClearSearch = { onIntent(FollowListIntent.ClearSearch) },
-                            onRetry = { onIntent(FollowListIntent.Retry) },
-                            onUserClick = { onIntent(FollowListIntent.NavigateToUserProfile(it)) },
-                            onFollowClick = { onIntent(FollowListIntent.ToggleFollow(it)) },
-                            onMessageClick = { onIntent(FollowListIntent.NavigateToMessage(it)) },
-                            onUnfollowClick = { user -> onIntent(FollowListIntent.ShowUnfollowConfirmDialog(user)) }
-                        )
-                    }
+                    val tab = FollowTab.entries[page]
+                    FollowListPage(
+                        hazeState = hazeState,
+                        users = state.usersOf(tab),
+                        isLoading = state.isLoadingOf(tab),
+                        error = state.errorOf(tab),
+                        errorTitle = "${tab.displayName} 목록을 불러오지 못했습니다",
+                        emptyText = if (state.searchQueryOf(tab).isNotBlank()) "검색 결과가 없어요" else tab.emptyText,
+                        isMyProfile = state.isMyProfile,
+                        isFollowingTab = tab == FollowTab.FOLLOWING,
+                        listState = listStateOf(tab),
+                        headerHeight = headerHeight,
+                        onRetry = { onIntent(FollowListIntent.Retry) },
+                        onUserClick = { navigate(FollowListIntent.NavigateToUserProfile(it)) },
+                        onFollowClick = { onIntent(FollowListIntent.ToggleFollow(it)) },
+                        onMessageClick = { navigate(FollowListIntent.NavigateToMessage(it)) },
+                        onUnfollowClick = { user ->
+                            focusManager.clearFocus(force = true)
+                            onIntent(FollowListIntent.ShowUnfollowConfirmDialog(user))
+                        }
+                    )
                 }
             }
         }
@@ -297,18 +263,7 @@ internal fun FollowListScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .haloBlur(state = hazeState) {
-                    style = HaloBlurStyle(
-                        backgroundColor = backgroundColor,
-                        tint = HaloBlurTint(backgroundColor.copy(alpha = 0.85f)),
-                        blurRadius = 25.dp,
-                        noiseFactor = 0f
-                    )
-                    progressive = HazeProgressive.verticalGradient(
-                        startIntensity = 1f,
-                        endIntensity = 0f
-                    )
-                }
+                .haloBlur(hazeState, HaloBlurs.fadeDown(backgroundColor))  // 탭 캡슐이 자기 블러를 가짐
                 .pointerInput(Unit) {
                     detectTapGestures { /* 터치 이벤트 소비 */ }
                 }
@@ -316,7 +271,7 @@ internal fun FollowListScreenContent(
                     headerHeightPx = coordinates.size.height.toFloat()
                 }
         ) {
-            // TopAppBar
+            // 톱바
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -325,7 +280,7 @@ internal fun FollowListScreenContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 GlassIconButton(
-                    onClick = { onIntent(FollowListIntent.NavigateBack) },
+                    onClick = { navigate(FollowListIntent.NavigateBack) },
                     icon = painterResource(R.drawable.ic_close),
                     contentDescription = "닫기",
                     hazeState = hazeState,
@@ -345,33 +300,48 @@ internal fun FollowListScreenContent(
                 )
             }
 
-            FollowTabRow(
-                tabs = buildList {
-                    add(FollowTabSpec(FollowTab.FOLLOWERS, "팔로워", state.followerCount))
-                    add(FollowTabSpec(FollowTab.FOLLOWING, "팔로잉", state.followingCount))
-                    if (state.showSubscribers) {
-                        add(FollowTabSpec(FollowTab.SUBSCRIBERS, "구독자", state.subscriberCount))
-                    }
+            FollowTabSearchRow(
+                isSearchMode = state.isSearchMode,
+                query = state.searchQueryOf(state.selectedTab),
+                placeholder = "${state.selectedTab.displayName} 검색",
+                onQueryChange = { onIntent(FollowListIntent.UpdateSearchQuery(it)) },
+                onSearch = {
+                    focusManager.clearFocus()
+                    onIntent(FollowListIntent.Search)
                 },
-                onTabSelected = { tab ->
-                    val currentPage = pagerState.currentPage
-                    val tappedSamePage = tab.ordinal == currentPage
-                    if (tappedSamePage) {
-                        // 같은 탭 재탭: 해당 리스트만 맨 위로
-                        val listState = when (currentPage) {
-                            1 -> followingListState
-                            2 -> subscribersListState
-                            else -> followersListState
-                        }
-                        coroutineScope.launch {
-                            listState.animateScrollToItem(0)
-                        }
-                    } else {
-                        onIntent(FollowListIntent.SelectTab(tab))
-                    }
+                onToggleSearch = {
+                    if (state.isSearchMode) closeSearch() else onIntent(FollowListIntent.OpenSearch)
                 },
-                scrollFraction = pagerState.currentPage + pagerState.currentPageOffsetFraction
-            )
+                focusRequester = searchFocusRequester,
+                hazeState = hazeState,
+                hazeBackgroundColor = backgroundColor
+            ) {
+                FollowTabRow(
+                    tabs = buildList {
+                        add(FollowTabSpec(FollowTab.FOLLOWERS, state.followerCount))
+                        add(FollowTabSpec(FollowTab.FOLLOWING, state.followingCount))
+                        if (state.showSubscribers) {
+                            add(FollowTabSpec(FollowTab.SUBSCRIBERS, state.subscriberCount))
+                        }
+                    },
+                    onTabSelected = { tab ->
+                        val currentPage = pagerState.currentPage
+                        val tappedSamePage = tab.ordinal == currentPage
+                        if (tappedSamePage) {
+                            // 같은 탭 재탭: 해당 리스트만 맨 위로
+                            val listState = listStateOf(tab)
+                            coroutineScope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        } else {
+                            onIntent(FollowListIntent.SelectTab(tab))
+                        }
+                    },
+                    hazeState = hazeState,
+                    hazeBackgroundColor = backgroundColor,
+                    scrollFraction = { pagerState.currentPage + pagerState.currentPageOffsetFraction }
+                )
+            }
         }
 
         CenterToast(
@@ -404,4 +374,3 @@ internal fun FollowListScreenContent(
         )
     }
 }
-

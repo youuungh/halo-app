@@ -7,16 +7,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ninezero.halo.core.ui.components.section.ProductThumbnailRow
 import com.ninezero.halo.core.ui.preview.HaloLightDarkPreview
 import com.ninezero.halo.core.ui.preview.previewUserSummary
+import com.ninezero.halo.core.ui.theme.HaloTheme
 import com.ninezero.halo.feature.store.domain.model.Product
-import com.ninezero.halo.ui.theme.HaloTheme
+import com.ninezero.halo.feature.store.domain.model.ProductStatus
+import com.ninezero.halo.feature.subscription.domain.model.SubscriptionPlanTier
 
 @Composable
 fun RelatedProductsSection(
@@ -27,15 +27,9 @@ fun RelatedProductsSection(
 ) {
     if (products.isEmpty()) return
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp)
-    ) {
-        Text(
+    Column(modifier = modifier.fillMaxWidth()) {
+        ProductDetailSectionTitle(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
@@ -48,24 +42,24 @@ fun RelatedProductsSection(
     }
 }
 
-private fun previewProduct(id: Int, name: String, price: String, discount: Int? = null) = Product(
+private fun previewProduct(id: Int, name: String, price: Long, discount: Int? = null) = Product(
     id = id,
     name = name,
     description = "",
     price = price,
-    originalPrice = discount?.let { "129000" },
+    originalPrice = discount?.let { 129000L },
     discountRate = discount,
     imageUrls = emptyList(),
     brandName = null,
     tags = emptyList(),
     stock = 10,
-    status = "ACTIVE",
+    status = ProductStatus.ACTIVE,
     isActive = true,
     viewCount = 0,
     likeCount = 0,
     salesCount = 0,
     creator = previewUserSummary(displayName = "크리에이터 샵"),
-    requiredTier = "FREE",
+    requiredTier = SubscriptionPlanTier.FREE,
     canAccess = true
 )
 
@@ -78,9 +72,9 @@ private fun RelatedProductsSectionPreview() {
                 RelatedProductsSection(
                     title = "이 상품과 함께 보면 좋아요",
                     products = listOf(
-                        previewProduct(1, "블루투스 스피커 미니", "45000"),
-                        previewProduct(2, "노이즈캔슬링 헤드폰", "159000", discount = 20),
-                        previewProduct(3, "이름이 아주 긴 상품입니다 줄바꿈 확인용", "29000")
+                        previewProduct(1, "블루투스 스피커 미니", 45000L),
+                        previewProduct(2, "노이즈캔슬링 헤드폰", 159000L, discount = 20),
+                        previewProduct(3, "이름이 아주 긴 상품입니다 줄바꿈 확인용", 29000L)
                     ),
                     onProductClick = {}
                 )

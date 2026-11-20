@@ -4,7 +4,6 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
-import com.ninezero.halo.core.util.MediaUtils
 import com.ninezero.halo.feature.profile.domain.model.UpdateProfileRequest
 import com.ninezero.halo.feature.profile.domain.usecase.GetMyProfileUseCase
 import com.ninezero.halo.feature.profile.domain.usecase.UpdateProfileUseCase
@@ -156,31 +155,21 @@ class EditProfileViewModel @Inject constructor(
         // 아바타 업로드
         var avatarUploadFailed = false
         state.selectedAvatarUri?.let { uri ->
-            val part = MediaUtils.createUploadPart(application, uri, "avatar", "avatar")
-            if (part != null) {
-                uploadAvatarUseCase(part)
-                    .onSuccess { profile ->
-                        // 즉시 navigate back할 거라 state 정리는 불필요
-                        reduce { state.copy(avatarUrl = profile.avatarUrl) }
-                    }
-                    .onFailure { error ->
-                        avatarUploadFailed = true
-                        reduce {
-                            state.copy(
-                                snackbarState = SnackbarState(
-                                    message = error.message ?: "아바타 업로드 실패"
-                                )
-                            )
-                        }
-                    }
-            } else {
-                avatarUploadFailed = true
-                reduce {
-                    state.copy(
-                        snackbarState = SnackbarState(message = "이미지를 읽을 수 없습니다")
-                    )
+            uploadAvatarUseCase(uri)
+                .onSuccess { profile ->
+                    // 즉시 navigate back할 거라 state 정리는 불필요
+                    reduce { state.copy(avatarUrl = profile.avatarUrl) }
                 }
-            }
+                .onFailure { error ->
+                    avatarUploadFailed = true
+                    reduce {
+                        state.copy(
+                            snackbarState = SnackbarState(
+                                message = error.message ?: "아바타 업로드 실패"
+                            )
+                        )
+                    }
+                }
         }
 
         // 아바타가 실패해도 저장, 빈 칸은 서버에서 지움

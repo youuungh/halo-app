@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.ninezero.halo.core.ui.components.dialog.ConfirmDialog
-import com.ninezero.halo.core.ui.components.layout.PagedListScreenShell
+import com.ninezero.halo.core.ui.components.list.PagedListScreenShell
 import com.ninezero.halo.core.ui.components.loading.ListLoadMoreIndicator
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarHandler
 import com.ninezero.halo.feature.feed.presentation.blocked_profiles.components.BlockedUserItem
@@ -65,6 +65,7 @@ internal fun BlockedProfilesScreenContent(
         hasMore = state.hasMore,
         isEmpty = state.blockedUsers.isEmpty(),
         error = state.error,
+        errorTitle = "차단 목록을 불러오지 못했습니다",
         emptyTitle = "차단된 프로필이 없어요",
         emptyDescription = "차단한 사용자가 여기에 표시돼요",
         onNavigateBack = onNavigateBack,

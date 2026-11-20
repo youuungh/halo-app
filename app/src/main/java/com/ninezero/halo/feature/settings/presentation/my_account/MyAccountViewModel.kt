@@ -125,10 +125,10 @@ class MyAccountViewModel @Inject constructor(
             is MyAccountIntent.DismissDeleteDialog -> dismissDeleteDialog()
             is MyAccountIntent.DeleteAgreementChanged -> changeDeleteAgreement(intent.agreed)
             is MyAccountIntent.ConfirmDeleteAccount -> deleteAccount()
-            is MyAccountIntent.RevokeCreatorClick -> showRevokeDialog()
-            is MyAccountIntent.DismissRevokeDialog -> dismissRevokeDialog()
-            is MyAccountIntent.RevokeAgreementChanged -> changeRevokeAgreement(intent.agreed)
-            is MyAccountIntent.ConfirmRevokeCreator -> revokeCreator()
+            is MyAccountIntent.LeaveCreatorClick -> showLeaveDialog()
+            is MyAccountIntent.DismissLeaveDialog -> dismissLeaveDialog()
+            is MyAccountIntent.LeaveAgreementChanged -> changeLeaveAgreement(intent.agreed)
+            is MyAccountIntent.ConfirmLeaveCreator -> leaveCreator()
             is MyAccountIntent.DevicesClick -> navigateToDevices()
             is MyAccountIntent.RetryLoadDevices -> loadDevices()
             is MyAccountIntent.RequestDeviceLogout -> requestDeviceLogout(intent.device)
@@ -162,16 +162,16 @@ class MyAccountViewModel @Inject constructor(
         reduce { state.copy(isDeleteAgreed = agreed) }
     }
 
-    private fun showRevokeDialog() = intent {
-        reduce { state.copy(showRevokeCreatorDialog = true, isRevokeAgreed = false) }
+    private fun showLeaveDialog() = intent {
+        reduce { state.copy(showLeaveCreatorDialog = true, isLeaveAgreed = false) }
     }
 
-    private fun dismissRevokeDialog() = intent {
-        reduce { state.copy(showRevokeCreatorDialog = false) }
+    private fun dismissLeaveDialog() = intent {
+        reduce { state.copy(showLeaveCreatorDialog = false) }
     }
 
-    private fun changeRevokeAgreement(agreed: Boolean) = intent {
-        reduce { state.copy(isRevokeAgreed = agreed) }
+    private fun changeLeaveAgreement(agreed: Boolean) = intent {
+        reduce { state.copy(isLeaveAgreed = agreed) }
     }
 
     private fun dismissSnackbar() = intent {
@@ -335,15 +335,15 @@ class MyAccountViewModel @Inject constructor(
             }
     }
 
-    private fun revokeCreator() = intent {
-        reduce { state.copy(isRevokingCreator = true) }
+    private fun leaveCreator() = intent {
+        reduce { state.copy(isLeavingCreator = true) }
 
-        creatorRepository.revokeCreator()
+        creatorRepository.leaveCreator()
             .onSuccess {
                 reduce {
                     state.copy(
-                        isRevokingCreator = false,
-                        showRevokeCreatorDialog = false,
+                        isLeavingCreator = false,
+                        showLeaveCreatorDialog = false,
                         snackbarState = SnackbarState("크리에이터가 해제되었습니다")
                     )
                 }
@@ -352,8 +352,8 @@ class MyAccountViewModel @Inject constructor(
             .onFailure { error ->
                 reduce {
                     state.copy(
-                        isRevokingCreator = false,
-                        showRevokeCreatorDialog = false,
+                        isLeavingCreator = false,
+                        showLeaveCreatorDialog = false,
                         snackbarState = SnackbarState(error.message ?: "크리에이터 해제에 실패했습니다")
                     )
                 }
