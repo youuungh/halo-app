@@ -183,7 +183,7 @@ internal fun ReplyScreenContent(
                 .imePadding()
                 .verticalScroll(scrollState)
         ) {
-            Spacer(modifier = Modifier.height(headerHeight + 16.dp))
+            Spacer(modifier = Modifier.height(headerHeight + 8.dp))
 
             // 원본 컨텐츠 + 답글 입력
             // CommentDetail에서 이동: 부모 댓글 표시
