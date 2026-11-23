@@ -77,7 +77,8 @@ android {
             buildConfigField("String", "HUB_WS_BASE_URL", "\"wss://api.haloapp.cc/\"")
             manifestPlaceholders["usesCleartextTraffic"] = "false"
             signingConfig = signingConfigs.findByName("release")
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -171,6 +172,9 @@ dependencies {
 
     // Palette
     implementation(libs.palette)
+
+    // ExifInterface
+    implementation(libs.androidx.exifinterface)
 
     // Haze
     implementation(libs.haze)
