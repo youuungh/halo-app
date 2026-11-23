@@ -69,7 +69,7 @@ object HaloBlurs {
     /** 미디어 뷰어 컨트롤 블러 */
     val MediaControl = HaloBlurStyle(
         backgroundColor = Color.Black,
-        tint = Color.White.copy(alpha = 0.1f),
+        tint = Color.Black.copy(alpha = 0.34f),
         blurRadius = 16.dp,
         noiseFactor = 0f
     )
