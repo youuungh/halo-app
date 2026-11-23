@@ -46,6 +46,7 @@ class ChatMediaRepositoryImpl @Inject constructor(
             mediaUris = Json.encodeToString(mediaUris)
         )
         val pendingId = pendingChatMessageDao.insert(pendingMessage)
+        val clientTempId = clientTempIdOf(pendingId, pendingMessage.createdAt)
 
         // content 권한이 사라지기 전에 앱 저장소로 복사
         val copied = mediaCopyStore.copyForOwner(
@@ -66,18 +67,20 @@ class ChatMediaRepositoryImpl @Inject constructor(
             )
         }
 
-        ChatMediaUploadWorker.enqueue(context, pendingId)
-        return MediaUploadHandle(pendingMessageId = pendingId, mediaUris = actualUris)
+        ChatMediaUploadWorker.enqueue(context, pendingId, clientTempId)
+        return MediaUploadHandle(clientTempId = clientTempId, mediaUris = actualUris)
     }
 
-    override suspend fun retryUpload(pendingMessageId: Long): Boolean {
+    override suspend fun retryUpload(clientTempId: String): Boolean {
+        val pendingMessageId = pendingIdOf(clientTempId) ?: return false
         if (pendingChatMessageDao.getById(pendingMessageId) == null) return false
         pendingChatMessageDao.updateStatus(pendingMessageId, UploadStatus.PENDING)
-        ChatMediaUploadWorker.enqueue(context, pendingMessageId)
+        ChatMediaUploadWorker.enqueue(context, pendingMessageId, clientTempId)
         return true
     }
 
-    override suspend fun discardUpload(pendingMessageId: Long) {
+    override suspend fun discardUpload(clientTempId: String) {
+        val pendingMessageId = pendingIdOf(clientTempId) ?: return
         pendingChatMessageDao.deleteById(pendingMessageId)
         mediaCopyStore.cleanupOwner(MediaCopyStore.OwnerType.PENDING_CHAT, pendingMessageId)
     }
@@ -92,5 +95,14 @@ class ChatMediaRepositoryImpl @Inject constructor(
 
     override fun cancelFileDownload(fileUrl: String) {
         ChatFileDownloadWorker.cancel(context, fileUrl)
+    }
+
+    private companion object {
+        /** 만든 시각을 붙여 기기 간에 안 겹치는 임시 id */
+        fun clientTempIdOf(pendingId: Long, createdAt: Long) = "pending-$createdAt-$pendingId"
+
+        /** 임시 id에 담긴 대기 기록 번호 */
+        fun pendingIdOf(clientTempId: String): Long? =
+            clientTempId.takeIf { it.startsWith("pending-") }?.substringAfterLast('-')?.toLongOrNull()
     }
 }

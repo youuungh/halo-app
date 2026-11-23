@@ -101,7 +101,7 @@ class ChatRepositoryImpl @Inject constructor(
         }.map { response ->
             val messages = response.messages.map { it.toDomain() }
             if (messages.isNotEmpty()) {
-                cachedMessageDao.insertMessages(messages.toEntities())
+                cachedMessageDao.upsertServerMessages(messages.toEntities())
             }
         }
     }
@@ -129,7 +129,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     private suspend fun handleIncomingMessage(message: Message) {
-        cachedMessageDao.insertMessage(message.toEntity())
+        cachedMessageDao.upsertServerMessages(listOf(message.toEntity()))
         updateRoomForMessage(message)
     }
 
@@ -165,7 +165,8 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    // 채팅방
+    // ===== 채팅방 =====
+
     override suspend fun getChatRooms(
         page: Int,
         limit: Int,
@@ -235,7 +236,8 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    // 메시지
+    // ===== 메시지 =====
+
     override suspend fun getMessages(
         roomId: Int,
         limit: Int,
@@ -298,12 +300,8 @@ class ChatRepositoryImpl @Inject constructor(
             }.map { it.toDomain() }
 
             result.onSuccess { serverMessage ->
-                if (tempMessage != null) {
-                    cachedMessageDao.replaceTempMessage(tempId, serverMessage.toEntity())
-                    updateRoomForMessage(serverMessage)
-                } else {
-                    handleIncomingMessage(serverMessage)
-                }
+                // 보낸 임시 id로 먼저 띄운 말풍선 교체
+                handleIncomingMessage(serverMessage.copy(clientTempId = tempId))
             }.onFailure {
                 tempMessage?.let {
                     cachedMessageDao.updateStatusByClientTempId(
@@ -344,8 +342,7 @@ class ChatRepositoryImpl @Inject constructor(
             }.map { it.toDomain() }
 
             result.onSuccess { serverMessage ->
-                cachedMessageDao.replaceTempMessage(clientTempId, serverMessage.toEntity())
-                updateRoomForMessage(serverMessage)
+                handleIncomingMessage(serverMessage.copy(clientTempId = clientTempId))
             }.onFailure {
                 cachedMessageDao.updateStatusByClientTempId(clientTempId, MessageStatus.FAILED.name)
             }
@@ -376,7 +373,10 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun deleteMessage(messageId: Int): Result<Unit> {
         return safeApiCallUnit {
             api.deleteMessage(messageId)
-        }.onSuccess { cachedMessageDao.markAsDeleted(messageId) }
+        }.onSuccess {
+            cachedMessageDao.markAsDeleted(messageId)
+            syncChatRooms()  // 마지막 메시지면 목록 미리보기 갱신
+        }
     }
 
     override suspend fun searchMessages(
@@ -398,7 +398,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun cacheMessages(messages: List<Message>) {
         if (messages.isNotEmpty()) {
-            cachedMessageDao.insertMessages(messages.toEntities())
+            cachedMessageDao.upsertServerMessages(messages.toEntities())
         }
     }
 
@@ -417,7 +417,7 @@ class ChatRepositoryImpl @Inject constructor(
         cachedChatRoomDao.setHistoryComplete(roomId, true)
     }
 
-    // 낙관적 갱신
+    // ===== 낙관적 갱신 =====
 
     override suspend fun insertImageMessage(
         roomId: Int,
@@ -470,7 +470,7 @@ class ChatRepositoryImpl @Inject constructor(
             chatMessageType = messageType,
             content = content,
             mediaAttachments = listOf(localUri),
-            thumbnailUrl = null,
+            thumbnailUrl = localUri.takeIf { messageType == ChatMessageType.VIDEO },  // 업로드 중에도 첫 장면 표시
             duration = duration,
             mediaWidth = mediaWidth,
             mediaHeight = mediaHeight,
@@ -493,8 +493,8 @@ class ChatRepositoryImpl @Inject constructor(
         cachedMessageDao.updateUploadProgressByClientTempId(clientTempId, progress)
     }
 
-    override suspend fun markMediaMessageSent(clientTempId: String) {
-        cachedMessageDao.deleteByClientTempId(clientTempId)
+    override suspend fun removeMediaPlaceholder(clientTempId: String) {
+        cachedMessageDao.deleteUnsentByClientTempIds(listOf(clientTempId))
     }
 
     override suspend fun markMediaMessageFailed(clientTempId: String) {
@@ -532,7 +532,6 @@ class ChatRepositoryImpl @Inject constructor(
         cachedMessageDao.insertMessage(placeholder.toEntity())
         return placeholder
     }
-
 
     override suspend fun prepareUpload(
         roomId: Int,

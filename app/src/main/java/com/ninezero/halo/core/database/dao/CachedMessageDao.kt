@@ -32,6 +32,13 @@ interface CachedMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: CachedMessageEntity)
 
+    /** 서버 메시지 저장, 같은 임시 id로 먼저 띄운 말풍선은 교체 */
+    @Transaction
+    suspend fun upsertServerMessages(messages: List<CachedMessageEntity>) {
+        deleteUnsentByClientTempIds(messages.mapNotNull { it.clientTempId })
+        insertMessages(messages)
+    }
+
     @Query("UPDATE cached_messages SET isDeleted = 1 WHERE id = :messageId")
     suspend fun markAsDeleted(messageId: Int)
 
@@ -58,16 +65,16 @@ interface CachedMessageDao {
     @Query("DELETE FROM cached_messages WHERE roomId = :roomId AND status = 'SENT' AND id < :messageId")
     suspend fun deleteSentBefore(roomId: Int, messageId: Int)  // SENDING·FAILED는 보존
 
-    @Query("DELETE FROM cached_messages WHERE clientTempId = :clientTempId")
-    suspend fun deleteByClientTempId(clientTempId: String)
+    @Query("DELETE FROM cached_messages WHERE clientTempId IN (:clientTempIds) AND status != 'SENT'")
+    suspend fun deleteUnsentByClientTempIds(clientTempIds: List<String>)  // 같은 임시 id의 서버 메시지는 보존
 
     @Query("SELECT * FROM cached_messages WHERE clientTempId = :clientTempId LIMIT 1")
     suspend fun getByClientTempId(clientTempId: String): CachedMessageEntity?
 
-    @Query("UPDATE cached_messages SET uploadProgress = :progress WHERE clientTempId = :clientTempId")
+    @Query("UPDATE cached_messages SET uploadProgress = :progress WHERE clientTempId = :clientTempId AND status != 'SENT'")
     suspend fun updateUploadProgressByClientTempId(clientTempId: String, progress: Float)
 
-    @Query("UPDATE cached_messages SET status = :status WHERE clientTempId = :clientTempId")
+    @Query("UPDATE cached_messages SET status = :status WHERE clientTempId = :clientTempId AND status != 'SENT'")
     suspend fun updateStatusByClientTempId(clientTempId: String, status: String)
 
     @Query("DELETE FROM cached_messages WHERE clientTempId = :clientTempId AND status = 'FAILED'")
@@ -79,10 +86,4 @@ interface CachedMessageDao {
             AND clientTempId NOT IN (:activeTempIds)
     """)
     suspend fun failStuckSendingText(roomId: Int, activeTempIds: List<String>)  // 미디어는 워커가 상태 관리
-
-    @Transaction
-    suspend fun replaceTempMessage(clientTempId: String, message: CachedMessageEntity) {
-        deleteByClientTempId(clientTempId)
-        insertMessage(message)
-    }
 }

@@ -469,8 +469,7 @@ class ChatRoomViewModel @Inject constructor(
             // 미디어는 워커 재enqueue
             type != null && type != ChatMessageType.TEXT && !localUris.isNullOrEmpty() -> {
                 // 대기 기록·사본 재사용, 워커만 재시작
-                val pendingId = clientTempId.toLongOrNull()
-                if (pendingId != null && chatMediaRepository.retryUpload(pendingId)) {
+                if (chatMediaRepository.retryUpload(clientTempId)) {
                     chatRepository.markMediaMessageSending(clientTempId)
                     return@intent
                 }
@@ -483,7 +482,7 @@ class ChatRoomViewModel @Inject constructor(
                     messageType = type,
                     mediaUris = localUris
                 )
-                val newClientTempId = handle.pendingMessageId.toString()
+                val newClientTempId = handle.clientTempId
                 when (type) {
                     ChatMessageType.IMAGE -> chatRepository.insertImageMessage(
                         roomId = roomId,
@@ -523,7 +522,7 @@ class ChatRoomViewModel @Inject constructor(
     private fun cancelFailedMessage(clientTempId: String) = intent {
         chatRepository.cancelFailedMessage(clientTempId)
         // 미디어 업로드면 pending 레코드·스테이징 파일도 파기
-        clientTempId.toLongOrNull()?.let { chatMediaRepository.discardUpload(it) }
+        chatMediaRepository.discardUpload(clientTempId)
     }
 
     private fun sendMessage() = intent {
@@ -824,10 +823,9 @@ class ChatRoomViewModel @Inject constructor(
                 mediaUris = imageUris
             )
 
-            // DB에 임시 메시지를 먼저 넣음
-            // clientTempId는 워커가 찾는 대기 id
+            // DB에 임시 메시지를 먼저 넣음, 임시 id는 워커·서버와 같은 값
             // 스테이징 URI로 표시, 재시작 후에도 유효
-            val clientTempId = handle.pendingMessageId.toString()
+            val clientTempId = handle.clientTempId
             chatRepository.insertImageMessage(
                 roomId = roomId,
                 localUris = handle.mediaUris,
@@ -862,7 +860,7 @@ class ChatRoomViewModel @Inject constructor(
             )
 
             // 임시 영상 메시지, 스테이징 URI·파일명 보존
-            val clientTempId = handle.pendingMessageId.toString()
+            val clientTempId = handle.clientTempId
             chatRepository.insertMediaMessage(
                 roomId = roomId,
                 messageType = ChatMessageType.VIDEO,
@@ -899,7 +897,7 @@ class ChatRoomViewModel @Inject constructor(
             )
 
             // 임시 파일 메시지, 스테이징 URI·파일명 보존
-            val clientTempId = handle.pendingMessageId.toString()
+            val clientTempId = handle.clientTempId
             chatRepository.insertMediaMessage(
                 roomId = roomId,
                 messageType = ChatMessageType.FILE,
@@ -1242,7 +1240,8 @@ class ChatRoomViewModel @Inject constructor(
         reduce { state.copy(snackbarState = null) }
     }
 
-    // 차단
+    // ===== 차단 =====
+
     private fun showProfileOptions() = intent {
         reduce { state.copy(showProfileOptionsSheet = true) }
     }

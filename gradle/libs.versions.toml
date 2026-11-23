@@ -29,6 +29,7 @@ navigationCompose = "2.10.0"
 # Image
 coil = "3.6.0"
 palette = "1.0.0"
+exifinterface = "1.4.2"
 
 # Utilities
 haze = "2.1.0"
@@ -126,6 +127,9 @@ coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil"
 
 # Palette
 palette = { group = "androidx.palette", name = "palette-ktx", version.ref = "palette" }
+
+# ExifInterface
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 # Haze
 haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }

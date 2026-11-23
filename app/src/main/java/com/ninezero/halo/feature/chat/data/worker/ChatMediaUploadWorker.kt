@@ -74,18 +74,20 @@ class ChatMediaUploadWorker @AssistedInject constructor(
     private var lastNotifyAt = 0L
     private var notificationId = 0
     private var notificationTitle = "미디어 전송 중"
+    private var clientTempId = ""
 
     override suspend fun doWork(): Result {
         val pendingMessageId = inputData.getLong(KEY_PENDING_MESSAGE_ID, -1)
-        if (pendingMessageId == -1L) {
-            Timber.e("ChatMediaUploadWorker: 유효하지 않은 pending message ID")
+        clientTempId = inputData.getString(KEY_CLIENT_TEMP_ID).orEmpty()
+        if (pendingMessageId == -1L || clientTempId.isEmpty()) {
+            Timber.e("ChatMediaUploadWorker: 유효하지 않은 작업 입력")
             return Result.failure()
         }
 
         val pendingMessage = pendingChatMessageDao.getById(pendingMessageId)
         if (pendingMessage == null) {
             Timber.e("ChatMediaUploadWorker: pending message를 찾을 수 없음: $pendingMessageId")
-            chatRepository.markMediaMessageSent(pendingMessageId.toString())
+            chatRepository.removeMediaPlaceholder(clientTempId)
             return Result.failure()
         }
 
@@ -129,9 +131,9 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             val content = pendingMessage.content
 
             val uploadResult: kotlin.Result<MediaUploadData> = when (messageType) {
-                ChatMessageType.IMAGE -> uploadImages(roomId, mediaUris, pendingMessageId)
-                ChatMessageType.VIDEO -> uploadVideo(roomId, mediaUris.first(), pendingMessageId)
-                ChatMessageType.FILE -> uploadFile(roomId, mediaUris.first(), pendingMessageId)
+                ChatMessageType.IMAGE -> uploadImages(roomId, mediaUris)
+                ChatMessageType.VIDEO -> uploadVideo(roomId, mediaUris.first())
+                ChatMessageType.FILE -> uploadFile(roomId, mediaUris.first())
                 else -> kotlin.Result.failure(Exception("Unknown message type: $messageType"))
             }
 
@@ -149,14 +151,12 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                         mediaHeight = uploadData.mediaHeight,
                         fileSize = uploadData.fileSize,
                         fileName = uploadData.fileName,
-                        // 재시도엔 같은 값, 다른 기기와는 시각으로 구분
-                        clientTempId = "pending-${pendingMessage.createdAt}-$pendingMessageId",
+                        clientTempId = clientTempId,
                         uploadId = uploadData.uploadId
                     ).fold(
                         onSuccess = { message ->
                             Timber.d("ChatMediaUploadWorker: 메시지 전송 성공: ${message.id}")
                             pendingChatMessageDao.deleteById(pendingMessageId)
-                            chatRepository.markMediaMessageSent(pendingMessageId.toString())
                             mediaCopyStore.cleanupOwner(
                                 MediaCopyStore.OwnerType.PENDING_CHAT,
                                 pendingMessageId
@@ -187,9 +187,9 @@ class ChatMediaUploadWorker @AssistedInject constructor(
     }
 
     /** 진행률을 placeholder에 기록 */
-    private suspend fun publishProgress(pendingMessageId: Long, fraction: Float) {
+    private suspend fun publishProgress(fraction: Float) {
         val clampedFraction = fraction.coerceIn(0f, 1f)
-        chatRepository.updateUploadProgress(pendingMessageId.toString(), clampedFraction)
+        chatRepository.updateUploadProgress(clientTempId, clampedFraction)
         if (foregroundActive) {
             val now = System.currentTimeMillis()
             if (now - lastNotifyAt >= 500) {
@@ -202,7 +202,6 @@ class ChatMediaUploadWorker @AssistedInject constructor(
     }
 
     private suspend fun <T> uploadWithProgress(  // fromFraction~1.0 구간에 매핑
-        pendingMessageId: Long,
         sentBytes: MutableStateFlow<Long>,
         totalBytes: Long,
         fromFraction: Float,
@@ -212,7 +211,6 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             if (totalBytes <= 0) return@launch
             sentBytes.collect { sent ->
                 publishProgress(
-                    pendingMessageId,
                     fromFraction + (1f - fromFraction) * (sent.toFloat() / totalBytes)
                 )
                 // 긴 대화방 버벅임 방지 간격
@@ -228,8 +226,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
     private suspend fun uploadImages(
         roomId: Int,
-        mediaUris: List<String>,
-        pendingMessageId: Long
+        mediaUris: List<String>
     ): kotlin.Result<MediaUploadData> {
         return try {
             val totalCount = mediaUris.size
@@ -239,15 +236,15 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
             mediaUris.forEachIndexed { index, uriString ->
                 val uri = uriString.toUri()
-                val compressedBytes = MediaUtils.compressImage(context, uri)
-                val part = if (compressedBytes != null) {
-                    totalUploadBytes += compressedBytes.size
+                val payload = MediaUtils.readForUpload(context, uri)
+                val part = if (payload != null) {
+                    totalUploadBytes += payload.bytes.size
                     val requestBody = ProgressRequestBody(
-                        compressedBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
+                        payload.bytes.toRequestBody(payload.mimeType.toMediaTypeOrNull())
                     ) { delta -> sentBytes.value += delta }
                     MultipartBody.Part.createFormData(
                         "images",
-                        "image_${System.currentTimeMillis()}_$index.jpg",
+                        "image_${System.currentTimeMillis()}_$index.${payload.extension}",
                         requestBody
                     )
                 } else {
@@ -258,7 +255,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                 if (part != null) {
                     parts.add(part)
                     // 준비
-                    publishProgress(pendingMessageId, (index + 1).toFloat() / totalCount * 0.3f)
+                    publishProgress((index + 1).toFloat() / totalCount * 0.3f)
                 }
             }
 
@@ -267,11 +264,10 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             }
 
             suspend fun upload() = uploadWithProgress(
-                pendingMessageId = pendingMessageId,
                 sentBytes = sentBytes,
                 totalBytes = totalUploadBytes,
                 fromFraction = 0.3f
-            ) { uploadImages(roomId, parts) }
+            ) { uploadImageParts(roomId, parts) }
 
             var result = upload()
             // 본문 1회 요청이라 401 뒤 직접 한 번 더
@@ -281,7 +277,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             }
 
             if (result.isSuccess) {
-                publishProgress(pendingMessageId, 1f)
+                publishProgress(1f)
             }
 
             // 단일 이미지면 원본 크기 추출
@@ -307,21 +303,20 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
     private suspend fun uploadVideo(
         roomId: Int,
-        uriString: String,
-        pendingMessageId: Long
+        uriString: String
     ): kotlin.Result<MediaUploadData> {
         return try {
             val uri = uriString.toUri()
             val fileInfo = MediaUtils.getFileInfo(context, uri)
             val fileSize = fileInfo?.fileSize ?: 0L
             // 원본 이름은 placeholder에서
-            val fileName = cachedMessageDao.getByClientTempId(pendingMessageId.toString())?.fileName
+            val fileName = cachedMessageDao.getByClientTempId(clientTempId)?.fileName
                 ?: fileInfo?.fileName
 
             val duration = MediaUtils.getVideoDuration(context, uri)
             val (videoWidth, videoHeight) = MediaUtils.getVideoDimensions(context, uri)
 
-            publishProgress(pendingMessageId, 0.05f)
+            publishProgress(0.05f)
 
             var thumbnailUrl: String? = null
             val thumbnail = MediaUtils.extractVideoThumbnail(context, uri)
@@ -339,9 +334,9 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                 )
 
                 // 썸네일 업로드
-                publishProgress(pendingMessageId, 0.1f)
+                publishProgress(0.1f)
 
-                uploadImages(roomId, listOf(thumbnailPart)).onSuccess { uploaded ->
+                uploadImageParts(roomId, listOf(thumbnailPart)).onSuccess { uploaded ->
                     thumbnailUrl = uploaded.urls.firstOrNull()
                 }
             }
@@ -353,7 +348,6 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
             val sentBytes = MutableStateFlow(0L)
             val result = uploadWithProgress(
-                pendingMessageId = pendingMessageId,
                 sentBytes = sentBytes,
                 totalBytes = fileSize,
                 fromFraction = 0.1f
@@ -362,7 +356,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             }
 
             if (result.isSuccess) {
-                publishProgress(pendingMessageId, 1f)
+                publishProgress(1f)
             }
 
             result.map {
@@ -386,15 +380,14 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
     private suspend fun uploadFile(
         roomId: Int,
-        uriString: String,
-        pendingMessageId: Long
+        uriString: String
     ): kotlin.Result<MediaUploadData> {
         return try {
             val uri = uriString.toUri()
             val fileInfo = MediaUtils.getFileInfo(context, uri)
             val fileSize = fileInfo?.fileSize ?: 0L
             // 원본 이름은 placeholder에서
-            val fileName = cachedMessageDao.getByClientTempId(pendingMessageId.toString())?.fileName
+            val fileName = cachedMessageDao.getByClientTempId(clientTempId)?.fileName
                 ?: fileInfo?.fileName
 
             // 샌드박스 사본은 확장자가 bin이라 원래 파일명으로 형식 판정
@@ -406,7 +399,6 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
             val sentBytes = MutableStateFlow(0L)
             val result = uploadWithProgress(
-                pendingMessageId = pendingMessageId,
                 sentBytes = sentBytes,
                 totalBytes = fileSize,
                 fromFraction = 0f
@@ -415,7 +407,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
             }
 
             if (result.isSuccess) {
-                publishProgress(pendingMessageId, 1f)
+                publishProgress(1f)
             }
 
             result.map {
@@ -464,7 +456,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
     private suspend fun handleFailure(pendingMessageId: Long, roomId: Int, errorMessage: String) {
         pendingChatMessageDao.updateStatus(pendingMessageId, UploadStatus.FAILED)
-        chatRepository.markMediaMessageFailed(pendingMessageId.toString())
+        chatRepository.markMediaMessageFailed(clientTempId)
         uploadEventBus.emitResult(
             ChatUploadEvent.Failure(
                 pendingMessageId = pendingMessageId,
@@ -476,9 +468,10 @@ class ChatMediaUploadWorker @AssistedInject constructor(
 
     companion object {
         const val KEY_PENDING_MESSAGE_ID = "pending_message_id"
+        const val KEY_CLIENT_TEMP_ID = "client_temp_id"
         private const val LOCAL_FILE_MESSAGE = "첨부 파일을 읽지 못했습니다"
 
-        fun createWorkRequest(pendingMessageId: Long) =
+        fun createWorkRequest(pendingMessageId: Long, clientTempId: String) =
             OneTimeWorkRequestBuilder<ChatMediaUploadWorker>()
                 .setConstraints(
                     Constraints.Builder()
@@ -488,13 +481,14 @@ class ChatMediaUploadWorker @AssistedInject constructor(
                 .setInputData(
                     Data.Builder()
                         .putLong(KEY_PENDING_MESSAGE_ID, pendingMessageId)
+                        .putString(KEY_CLIENT_TEMP_ID, clientTempId)
                         .build()
                 )
                 .addTag("chat_upload_$pendingMessageId")
                 .build()
 
-        fun enqueue(context: Context, pendingMessageId: Long): String {
-            val workRequest = createWorkRequest(pendingMessageId)
+        fun enqueue(context: Context, pendingMessageId: Long, clientTempId: String): String {
+            val workRequest = createWorkRequest(pendingMessageId, clientTempId)
             // 같은 pending에 워커 둘 방지
             WorkManager.getInstance(context).enqueueUniqueWork(
                 "chat_upload_$pendingMessageId",
@@ -505,7 +499,7 @@ class ChatMediaUploadWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun uploadImages(roomId: Int, images: List<MultipartBody.Part>): kotlin.Result<ChatImageUpload> =
+    private suspend fun uploadImageParts(roomId: Int, images: List<MultipartBody.Part>): kotlin.Result<ChatImageUpload> =
         safeApiCall { chatApi.uploadImages(roomId, images) }.map { response ->
             val urls = response["imageUrls"] ?: emptyList()
             val thumbnails = response["thumbnailUrls"] ?: urls

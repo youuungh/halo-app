@@ -107,8 +107,8 @@ interface ChatRepository {  // observe*는 로컬 DB 관찰, sync*는 서버 동
     )
     /** 업로드 진행률 갱신 */
     suspend fun updateUploadProgress(clientTempId: String, progress: Float)
-    /** 미디어 메시지 전송 완료 표시 */
-    suspend fun markMediaMessageSent(clientTempId: String)
+    /** 남은 미디어 임시 말풍선 삭제 */
+    suspend fun removeMediaPlaceholder(clientTempId: String)
     /** 미디어 메시지 실패 표시 */
     suspend fun markMediaMessageFailed(clientTempId: String)
     /** 미디어 메시지 전송 중 표시 */

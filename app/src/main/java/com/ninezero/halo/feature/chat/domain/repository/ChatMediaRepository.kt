@@ -13,10 +13,10 @@ interface ChatMediaRepository {
     suspend fun enqueueUpload(roomId: Int, content: String?, messageType: ChatMessageType, mediaUris: List<String>): MediaUploadHandle
 
     /** 실패한 업로드 재시도 */
-    suspend fun retryUpload(pendingMessageId: Long): Boolean
+    suspend fun retryUpload(clientTempId: String): Boolean
 
     /** 실패한 업로드 파기 */
-    suspend fun discardUpload(pendingMessageId: Long)
+    suspend fun discardUpload(clientTempId: String)
 
     /** 첨부파일 다운로드 예약 */
     fun enqueueFileDownload(fileUrl: String, fileName: String)

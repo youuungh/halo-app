@@ -1,6 +1,5 @@
 package com.ninezero.halo.feature.chat.presentation.chat_room.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -48,7 +47,6 @@ import com.ninezero.halo.feature.chat.domain.model.MessageStatus
 import com.ninezero.halo.feature.chat.domain.model.PostMessageInfo
 import com.ninezero.halo.feature.chat.domain.model.ProductMessageInfo
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBubble(
     message: Message,
@@ -84,7 +82,7 @@ fun MessageBubble(
         ChatMessageType.PRODUCT_LINK
     )
 
-    // 미디어+캡션이면 시각·안읽음을 캡션 옆에
+    // 미디어 + 캡션이면 시각·안읽음을 캡션 옆에
     val caption = message.content
     val showCaption = !needsBubble && !caption.isNullOrBlank() &&
             message.chatMessageType in listOf(
@@ -169,7 +167,7 @@ fun MessageBubble(
                 }
             }
         } else {
-            // 미디어+텍스트면 아래에 캡션 말풍선
+            // 미디어 + 텍스트면 아래에 캡션 말풍선
             Column(
                 horizontalAlignment = if (isFromMe) Alignment.End else Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -196,11 +194,10 @@ fun MessageBubble(
                                     },
                                     mediaWidth = message.mediaWidth,
                                     mediaHeight = message.mediaHeight,
-                                    onClick = { index -> onImageClick(originals, index) }
+                                    onClick = { index -> onImageClick(originals, index) },
+                                    onLongClick = { if (isFromMe && !message.isDeleted) onLongClick() }
                                 )
-                                if (message.status != MessageStatus.SENT) {
-                                    MediaUploadOverlay(message = message)
-                                }
+                                MediaUploadOverlay(message = message)
                             }
                         }
 
@@ -218,11 +215,10 @@ fun MessageBubble(
                                             message.mediaAttachments?.firstOrNull() ?: "",
                                             message.thumbnailUrl
                                         )
-                                    }
+                                    },
+                                    onLongClick = { if (isFromMe && !message.isDeleted) onLongClick() }
                                 )
-                                if (message.status != MessageStatus.SENT) {
-                                    MediaUploadOverlay(message = message)
-                                }
+                                MediaUploadOverlay(message = message)
                             }
                         }
 
@@ -238,11 +234,10 @@ fun MessageBubble(
                                     // 업로드 전 파일은 아직 서버에 없음
                                     enabled = message.status == MessageStatus.SENT,
                                     onDownload = { onFileClick(fileUrl, fileName) },
-                                    onCancel = onFileDownloadCancel
+                                    onCancel = onFileDownloadCancel,
+                                    onLongClick = { if (isFromMe && !message.isDeleted) onLongClick() }
                                 )
-                                if (message.status != MessageStatus.SENT) {
-                                    MediaUploadOverlay(message = message)
-                                }
+                                MediaUploadOverlay(message = message)
                             }
                         }
 
@@ -285,7 +280,7 @@ fun MessageBubble(
                         bottomStart = if (isFromMe) 16.dp else 4.dp,
                         bottomEnd = if (isFromMe) 4.dp else 16.dp
                     )
-                    // 시각/안읽음 캡션
+                    // 시각·안읽음 캡션
                     Row(verticalAlignment = Alignment.Bottom) {
                         if (isFromMe && showTime && message.status == MessageStatus.SENT) {
                             Column(horizontalAlignment = Alignment.End) {
@@ -1158,7 +1153,8 @@ private fun FileDownloadingPreview() {
                 isDownloading = true,
                 downloadProgress = 0.45f,
                 onDownload = {},
-                onCancel = {}
+                onCancel = {},
+                onLongClick = {}
             )
             FileMessageContent(
                 fileName = "report.pdf",
@@ -1166,20 +1162,23 @@ private fun FileDownloadingPreview() {
                 isDownloading = true,
                 downloadProgress = 0.8f,
                 onDownload = {},
-                onCancel = {}
+                onCancel = {},
+                onLongClick = {}
             )
             FileMessageContent(
                 fileName = "document.pdf",
                 fileSize = 1024 * 500,
                 isDownloading = false,
                 onDownload = {},
-                onCancel = {}
+                onCancel = {},
+                onLongClick = {}
             )
             FileMessageContent(
                 fileName = "회원목록_2026.csv",
                 fileSize = 1024 * 1024 * 14,
                 onDownload = {},
-                onCancel = {}
+                onCancel = {},
+                onLongClick = {}
             )
         }
     }

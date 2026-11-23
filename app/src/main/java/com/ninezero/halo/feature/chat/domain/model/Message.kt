@@ -25,7 +25,7 @@ data class Message(
     val isFromMe: Boolean,
     val isDeleted: Boolean = false,
     val status: MessageStatus = MessageStatus.SENT,
-    val clientTempId: String? = null,  // 임시 id, null이면 서버 메시지
+    val clientTempId: String? = null,
     val uploadProgress: Float = 1f  // 0~1, 텍스트는 항상 1
 )
 

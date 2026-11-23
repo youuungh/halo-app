@@ -239,9 +239,13 @@ fun ChatRoomScreen(
     }
 
     if (state.showDeleteDialog) {
+        // 묶어 보낸 사진은 한 메시지라 함께 삭제
+        val photoCount = state.messageToDelete
+            ?.takeIf { it.chatMessageType == ChatMessageType.IMAGE }
+            ?.mediaAttachments?.size ?: 0
         ConfirmDialog(
             title = "메시지 삭제",
-            message = "이 메시지를 삭제하시겠습니까?",
+            message = if (photoCount > 1) "사진 ${photoCount}장을 모두 삭제하시겠습니까?" else "이 메시지를 삭제하시겠습니까?",
             confirmText = "삭제",
             dismissText = "취소",
             confirmColor = MaterialTheme.colorScheme.error,
@@ -403,7 +407,7 @@ internal fun ChatRoomScreenContent(
     // 위로 올려 보던 중 도착한 새 메시지
     var newMessageBarData by remember { mutableStateOf<Message?>(null) }
     // 맨 밑 메시지 키
-    val latestKey = state.messages.firstOrNull()?.let { it.clientTempId ?: "id_${it.id}" }
+    val latestKey = state.messages.firstOrNull()?.listKey
     val previousLatestKey = remember { mutableStateOf(latestKey) }
 
     // 맨 밑 메시지가 바뀔 때만 실행
@@ -574,7 +578,7 @@ internal fun ChatRoomScreenContent(
                         ) {
                             itemsIndexed(
                                 items = state.messages,
-                                key = { _, message -> message.id },
+                                key = { _, message -> message.listKey },
                                 contentType = { _, message -> message.chatMessageType }
                             ) { index, message ->
                                 MessageListItem(
@@ -827,7 +831,7 @@ private fun MessageListItem(
             isDownloading = isDownloading,
             downloadProgress = downloadProgress ?: 0f,
             onLongClick = {
-                // 보낸 메시지만 삭제, 실패 · 전송 중은 말풍선에서 취소
+                // 보낸 메시지만 삭제, 실패·전송 중은 말풍선에서 취소
                 if (message.isFromMe && message.status == MessageStatus.SENT) {
                     onIntent(ChatRoomIntent.ShowDeleteDialog(message))
                 }
@@ -852,6 +856,10 @@ private fun MessageListItem(
         )
     }
 }
+
+/** 전송 전후로 같은 말풍선 키 */
+private val Message.listKey: String
+    get() = clientTempId ?: "id_$id"
 
 // animateScrollToItem은 평균 높이로 추정해 중간에 멈춤
 // 맨 밑으로 옮겨 실제 거리를 잰 뒤 그만큼만 내려감

@@ -53,10 +53,8 @@ data class SendMessageRequest(
     val mediaHeight: Int? = null,
     val fileSize: Long? = null,
     val fileName: String? = null,
-    // 재전송 중복 방지용 클라이언트 생성 식별자
-    val clientTempId: String? = null,
-    // 직접 업로드한 영상·파일
-    val uploadId: Int? = null
+    val clientTempId: String? = null,  // 재전송 중복 방지용 클라이언트 생성 식별자
+    val uploadId: Int? = null  // 직접 업로드한 영상·파일
 )
 
 @Serializable
@@ -88,7 +86,8 @@ data class MessageDto(
     val readAt: String? = null,
     val createdAt: String,
     val isFromMe: Boolean = false,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val clientTempId: String? = null
 )
 
 @Serializable
@@ -195,7 +194,8 @@ fun MessageDto.toDomain() = Message(
     readAt = readAt?.parseTimestamp(),
     createdAt = createdAt.parseTimestamp(),
     isFromMe = isFromMe,
-    isDeleted = isDeleted
+    isDeleted = isDeleted,
+    clientTempId = clientTempId
 )
 
 fun ProductMessageInfoDto.toDomain() = ProductMessageInfo(

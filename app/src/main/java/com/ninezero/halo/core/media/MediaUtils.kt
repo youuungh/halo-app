@@ -7,6 +7,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
+import androidx.exifinterface.media.ExifInterface
 import coil3.imageLoader
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
@@ -32,6 +33,16 @@ object MediaUtils {
     private const val IMAGE_QUALITY = 80
     // 이보다 긴 사진은 글자 보존으로 원본
     private const val MAX_COMPRESS_ASPECT_RATIO = 3
+
+    // 원본 업로드 때 지우는 촬영 위치 태그
+    private val LOCATION_TAGS = listOf(
+        ExifInterface.TAG_GPS_LATITUDE,
+        ExifInterface.TAG_GPS_LATITUDE_REF,
+        ExifInterface.TAG_GPS_LONGITUDE,
+        ExifInterface.TAG_GPS_LONGITUDE_REF,
+        ExifInterface.TAG_GPS_ALTITUDE,
+        ExifInterface.TAG_GPS_ALTITUDE_REF
+    )
 
     // 파일 크기 제한
     const val MAX_CHAT_IMAGE_SIZE = 10 * 1024 * 1024L  // 10MB
@@ -131,7 +142,7 @@ object MediaUtils {
         return (context.imageLoader.execute(request) as? SuccessResult)?.image?.toBitmap()
     }
 
-    suspend fun compressImage(context: Context, uri: Uri): ByteArray? = withContext(Dispatchers.IO) {  // 최대 1920px JPEG 80%
+    private suspend fun compressImage(context: Context, uri: Uri): ByteArray? = withContext(Dispatchers.IO) {  // 최대 1920px JPEG 80%
         try {
             val bitmap = decodeScaledBitmap(context, uri, MAX_IMAGE_DIMENSION, Scale.FIT)
                 ?: return@withContext null
@@ -158,22 +169,42 @@ object MediaUtils {
         )
     }
 
-    private class UploadPayload(val bytes: ByteArray, val mimeType: String, val extension: String)
+    class UploadPayload(val bytes: ByteArray, val mimeType: String, val extension: String)
 
-    private suspend fun readForUpload(context: Context, uri: Uri): UploadPayload? = withContext(Dispatchers.IO) {  // 카메라 사진만 압축 JPEG, 나머지는 원본
+    suspend fun readForUpload(context: Context, uri: Uri): UploadPayload? = withContext(Dispatchers.IO) {  // 카메라 사진만 압축 JPEG, 나머지는 원본
         val mimeType = resolveMimeType(context, uri)
         if (shouldCompressForUpload(context, uri, mimeType)) {
             compressImage(context, uri)?.let { return@withContext UploadPayload(it, "image/jpeg", "jpg") }
         }
         try {
             context.contentResolver.openInputStream(uri)?.use { input ->
-                UploadPayload(input.readBytes(), mimeType, mimeType.substringAfter("/"))
+                val bytes = input.readBytes()
+                val cleaned = if (mimeType == "image/jpeg") removeLocationTags(context, bytes) else bytes
+                UploadPayload(cleaned, mimeType, mimeType.substringAfter("/"))
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Timber.e(e, "업로드 파일 읽기 실패: $uri")
             null
+        }
+    }
+
+    /** 촬영 위치 태그를 지운 원본 JPEG */
+    private fun removeLocationTags(context: Context, bytes: ByteArray): ByteArray {
+        val temp = File.createTempFile("upload_", ".jpg", context.cacheDir)
+        return try {
+            temp.writeBytes(bytes)
+            val exif = ExifInterface(temp)
+            if (exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE) == null) return bytes
+            LOCATION_TAGS.forEach { exif.setAttribute(it, null) }
+            exif.saveAttributes()  // 다시 압축하지 않아 화질 그대로
+            temp.readBytes()
+        } catch (e: Exception) {
+            Timber.w(e, "위치 태그 제거 실패")
+            bytes
+        } finally {
+            temp.delete()
         }
     }
 

@@ -1,7 +1,11 @@
 package com.ninezero.halo.feature.chat.presentation.chat_room.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -26,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,10 +47,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.memory.MemoryCache
+import coil3.request.ImageRequest
 import com.ninezero.halo.R
 import com.ninezero.halo.core.media.MediaUtils
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicator
 import com.ninezero.halo.core.ui.components.loading.LoadingIndicatorSize
+import com.ninezero.halo.core.ui.components.media.rememberAnimatedImage
 import com.ninezero.halo.core.ui.components.modifiers.bounceClick
 import com.ninezero.halo.core.ui.components.modifiers.cardBorder
 import com.ninezero.halo.core.util.toReadableFileSize
@@ -79,6 +89,7 @@ private fun calcChatSingleMediaSize(
 internal fun ImageMessageContent(
     displayUrls: List<String>,
     onClick: (Int) -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     mediaWidth: Int? = null,
     mediaHeight: Int? = null
@@ -92,6 +103,7 @@ internal fun ImageMessageContent(
             SingleImageMessageItem(
                 url = displayUrls[0],
                 onClick = { onClick(0) },
+                onLongClick = onLongClick,
                 width = mediaWidth,
                 height = mediaHeight
             )
@@ -110,6 +122,7 @@ internal fun ImageMessageContent(
                             ImageGridItem(
                                 url = url,
                                 onClick = { onClick(index) },
+                                onLongClick = onLongClick,
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
@@ -129,6 +142,7 @@ internal fun ImageMessageContent(
                         ImageGridItem(
                             url = displayUrls[0],
                             onClick = { onClick(0) },
+                            onLongClick = onLongClick,
                             modifier = Modifier
                                 .weight(2f)
                                 .fillMaxHeight()
@@ -143,6 +157,7 @@ internal fun ImageMessageContent(
                                 ImageGridItem(
                                     url = displayUrls[index],
                                     onClick = { onClick(index) },
+                                    onLongClick = onLongClick,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxWidth()
@@ -165,6 +180,7 @@ internal fun ImageMessageContent(
                                 ImageGridItem(
                                     url = url,
                                     onClick = { onClick(index) },
+                                    onLongClick = onLongClick,
                                     modifier = Modifier
                                         .weight(1f)
                                         .aspectRatio(1f)
@@ -178,6 +194,7 @@ internal fun ImageMessageContent(
                             ImageGridItem(
                                 url = displayUrls[2],
                                 onClick = { onClick(2) },
+                                onLongClick = onLongClick,
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
@@ -188,6 +205,7 @@ internal fun ImageMessageContent(
                                 ImageGridItem(
                                     url = displayUrls[3],
                                     onClick = { onClick(3) },
+                                    onLongClick = onLongClick,
                                     modifier = Modifier.fillMaxSize()
                                 )
                                 if (extraCount > 0) {
@@ -195,7 +213,7 @@ internal fun ImageMessageContent(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(Color.Black.copy(alpha = 0.5f))
-                                            .clickable { onClick(3) },
+                                            .combinedClickable(onClick = { onClick(3) }, onLongClick = onLongClick),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -219,6 +237,7 @@ internal fun ImageMessageContent(
 private fun SingleImageMessageItem(
     url: String,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     width: Int? = null,
     height: Int? = null
@@ -229,6 +248,8 @@ private fun SingleImageMessageItem(
     } else CHAT_SINGLE_IMAGE_DEFAULT_RATIO
     // 알게 된 비율은 화면 밖에 나갔다 와도 유지
     var aspectRatio by rememberSaveable(url) { mutableFloatStateOf(initialRatio) }
+    // 전송 뒤 서버 주소로 바뀌어도 띄우던 사진 유지
+    var shownKey by remember { mutableStateOf<MemoryCache.Key?>(null) }
 
     BoxWithConstraints(
         modifier = modifier.widthIn(max = CHAT_SINGLE_MEDIA_MAX_WIDTH)
@@ -245,15 +266,16 @@ private fun SingleImageMessageItem(
                 .height(targetHeight)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { onClick() },
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = url,
+                model = rememberAnimatedImage(url, placeholderKey = shownKey),
                 contentDescription = "이미지",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
                 onSuccess = { success ->
+                    shownKey = success.result.memoryCacheKey
                     val image = success.result.image
                     val width = image.width
                     val height = image.height
@@ -279,19 +301,24 @@ private fun SingleImageMessageItem(
 private fun ImageGridItem(
     url: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
+    // 전송 뒤 서버 주소로 바뀌어도 띄우던 사진 유지
+    var shownKey by remember { mutableStateOf<MemoryCache.Key?>(null) }
+
     Box(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onClick() },
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
-            model = url,
+            model = rememberAnimatedImage(url, placeholderKey = shownKey),
             contentDescription = "이미지",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            onSuccess = { shownKey = it.result.memoryCacheKey }
         )
 
         if (url.isBlank() || url.startsWith("https://example.com")) {
@@ -313,7 +340,8 @@ internal fun VideoMessageContent(
     width: Int? = null,
     height: Int? = null,
     showPlayButton: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     // 서버가 준 크기가 있으면 로드 전부터 정확한 비율로 자리 예약
     val initialRatio = if (width != null && height != null && width > 0 && height > 0) {
@@ -321,6 +349,12 @@ internal fun VideoMessageContent(
     } else CHAT_SINGLE_VIDEO_DEFAULT_RATIO
     // 알게 된 비율은 화면 밖에 나갔다 와도 유지
     var aspectRatio by rememberSaveable(thumbnailUrl) { mutableFloatStateOf(initialRatio) }
+    // 전송 뒤 서버 썸네일로 바뀌어도 띄우던 장면 유지
+    val context = LocalPlatformContext.current
+    var shownKey by remember { mutableStateOf<MemoryCache.Key?>(null) }
+    val thumbnailRequest = remember(thumbnailUrl) {
+        ImageRequest.Builder(context).data(thumbnailUrl).placeholderMemoryCacheKey(shownKey).build()
+    }
 
     BoxWithConstraints(
         modifier = modifier.widthIn(max = CHAT_SINGLE_MEDIA_MAX_WIDTH)
@@ -337,15 +371,16 @@ internal fun VideoMessageContent(
                 .height(targetHeight)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { onClick() }
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
         ) {
             if (thumbnailUrl != null) {
                 AsyncImage(
-                    model = thumbnailUrl,
+                    model = thumbnailRequest,
                     contentDescription = "비디오 썸네일",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     onSuccess = { success ->
+                        shownKey = success.result.memoryCacheKey
                         val image = success.result.image
                         val width = image.width
                         val height = image.height
@@ -404,6 +439,7 @@ internal fun FileMessageContent(
     fileName: String,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     fileSize: Long = 0L,
@@ -420,7 +456,7 @@ internal fun FileMessageContent(
             .background(MaterialTheme.colorScheme.surface)
             .cardBorder(shape)
             // 카드를 눌러도 받기, 받을 때마다 새로 저장
-            .clickable(enabled = enabled && !isDownloading) { onDownload() }
+            .combinedClickable(enabled = enabled && !isDownloading, onClick = onDownload, onLongClick = onLongClick)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -482,7 +518,6 @@ internal fun FileMessageContent(
                 .bounceClick(enabled = enabled)
                 .size(36.dp)
                 .clip(CircleShape)
-                // 받는 중엔 바탕 대신 둘레 링이 진행을 보여줌
                 .background(if (isDownloading) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant)
                 .clickable(enabled = enabled) { if (isDownloading) onCancel() else onDownload() },
             contentAlignment = Alignment.Center
@@ -510,29 +545,37 @@ internal fun FileMessageContent(
 
 @Composable
 internal fun BoxScope.MediaUploadOverlay(message: Message) {
-    UploadOverlay(
-        uploadStatus = if (message.status == MessageStatus.FAILED) {
-            AttachmentUploadStatus.FAILED
-        } else {
-            AttachmentUploadStatus.UPLOADING
-        },
+    // 전송이 완료되면 흐려지며 사라짐
+    AnimatedVisibility(
+        visible = message.status != MessageStatus.SENT,
+        enter = fadeIn(),
+        exit = fadeOut(),
         modifier = Modifier.matchParentSize()
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        UploadOverlay(
+            uploadStatus = if (message.status == MessageStatus.FAILED) {
+                AttachmentUploadStatus.FAILED
+            } else {
+                AttachmentUploadStatus.UPLOADING
+            },
+            modifier = Modifier.fillMaxSize()
         ) {
-            LoadingIndicator(
-                size = LoadingIndicatorSize.Medium,
-                color = Color.White
-            )
-            if (message.uploadProgress > 0f) {
-                Text(
-                    text = "${(message.uploadProgress * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Medium
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                LoadingIndicator(
+                    size = LoadingIndicatorSize.Medium,
+                    color = Color.White
                 )
+                if (message.uploadProgress > 0f) {
+                    Text(
+                        text = "${(message.uploadProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
