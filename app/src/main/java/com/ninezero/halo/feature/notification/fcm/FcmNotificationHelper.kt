@@ -106,7 +106,7 @@ object FcmNotificationHelper {
         }
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
@@ -187,7 +187,7 @@ object FcmNotificationHelper {
         )
 
         val summary = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(summaryTitleOf(groupKey, senderUsername))
             .setGroup(groupKey)
             .setGroupSummary(true)
@@ -295,7 +295,7 @@ object FcmNotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID_CHAT)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setStyle(style)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

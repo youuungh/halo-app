@@ -75,7 +75,7 @@ object ChatTransferNotifications {
         percent: Int
     ): Notification =
         NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(title)
             .apply { text?.let { setContentText(it) } }
             .setProgress(100, percent.coerceAtLeast(0), percent < 0)
@@ -92,7 +92,7 @@ object ChatTransferNotifications {
     ) {
         ensureChannel(context)
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle("다운로드 완료")
             .setContentText(fileName)
             .setAutoCancel(true)
@@ -117,7 +117,7 @@ object ChatTransferNotifications {
     fun notifyDownloadFailed(context: Context, fileUrl: String, fileName: String) {
         ensureChannel(context)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle("다운로드 실패")
             .setContentText(fileName)
             .setAutoCancel(true)
