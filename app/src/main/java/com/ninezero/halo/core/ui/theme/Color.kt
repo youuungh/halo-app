@@ -94,7 +94,7 @@ val GlassAccentBlue = Color(0xFF0088FF)
 val PagerGlassTint = Color(0xFF1E1E24)
 
 // 다크 메뉴 칸
-val DarkMenuTile = Color(0xFF1C1C1E)
+val DarkMenuTile = Color(0xFF2C2C2E)
 val DarkExpandText = Color(0xFF4DA3FF)
 
 // 사진 없는 프로필 회색

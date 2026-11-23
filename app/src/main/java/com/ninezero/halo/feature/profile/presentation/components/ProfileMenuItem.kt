@@ -30,7 +30,7 @@ import com.ninezero.halo.core.ui.theme.DarkMenuTile
 import com.ninezero.halo.core.ui.theme.LocalIsDarkTheme
 
 private val LightTileOutline = Shadow(radius = 0.dp, spread = 0.5.dp, color = Color.Black.copy(alpha = 0.05f))
-private val DarkTileOutline = Shadow(radius = 0.dp, spread = 0.5.dp, color = Color.White.copy(alpha = 0.06f))
+private val DarkTileOutline = Shadow(radius = 0.dp, spread = 0.5.dp, color = Color.White.copy(alpha = 0.10f))
 private val LightTileShadow = Shadow(radius = 4.dp, color = Color.Black.copy(alpha = 0.08f))
 private val DarkTileShadow = Shadow(radius = 4.dp, color = Color.Black.copy(alpha = 0.5f))
 
