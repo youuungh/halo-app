@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -409,6 +410,9 @@ internal fun ChatRoomScreenContent(
     // 맨 밑 메시지 키
     val latestKey = state.messages.firstOrNull()?.listKey
     val previousLatestKey = remember { mutableStateOf(latestKey) }
+    // 새 메시지가 그려지기 전 위치, 그려지면 보던 메시지에 붙어 한 칸 밀림
+    // 스크롤마다 다시 그리지 않게 읽기만 함
+    val wasScrolledUp = remember(latestKey) { Snapshot.withoutReadObservation { showScrollToBottom } }
 
     // 맨 밑 메시지가 바뀔 때만 실행
     LaunchedEffect(latestKey) {
@@ -421,7 +425,7 @@ internal fun ChatRoomScreenContent(
                 // 내가 보내거나 다시 보낸 메시지는 맨 밑으로
                 latestMessage?.isFromMe == true -> listState.animateScrollToBottom()
                 // 위로 올려 둔 상태면 새 메시지 바만 띄움
-                latestMessage != null && showScrollToBottom -> newMessageBarData = latestMessage
+                latestMessage != null && wasScrolledUp -> newMessageBarData = latestMessage
                 // 맨 밑에서 보던 중이면 따라 내려감
                 // 첫 로드는 안 읽은 위치를 지키려고 제외
                 latestMessage != null && hadPrevious -> listState.animateScrollToBottom()
