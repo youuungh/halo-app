@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.aboutlibraries)
+    alias(libs.plugins.baselineprofile)
 }
 
 val localProps = Properties().apply {
@@ -110,6 +111,11 @@ kotlin {
     }
 }
 
+baselineProfile {
+    // 시작 프로필로 시작 코드를 첫 DEX에 모음
+    dexLayoutOptimization = true
+}
+
 dependencies {
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
@@ -175,6 +181,10 @@ dependencies {
 
     // ExifInterface
     implementation(libs.androidx.exifinterface)
+
+    // Baseline Profile
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     // Haze
     implementation(libs.haze)

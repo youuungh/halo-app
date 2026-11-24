@@ -32,3 +32,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Halo"
 include(":app")
+include(":baselineprofile")
