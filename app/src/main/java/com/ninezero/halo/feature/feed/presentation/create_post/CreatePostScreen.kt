@@ -604,7 +604,7 @@ private fun CreatePostHeader(
             }
 
             // 게시 버튼
-            val isEnabled = state.content.isNotBlank() && !state.isSubmitting
+            val isEnabled = (state.content.isNotBlank() || state.selectedMediaUris.isNotEmpty()) && !state.isSubmitting
             GlassActionButton(
                 onClick = onSubmitClick,
                 hazeState = hazeState,

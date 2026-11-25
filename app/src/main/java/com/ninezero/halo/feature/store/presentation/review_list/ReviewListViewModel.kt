@@ -158,6 +158,10 @@ class ReviewListViewModel @Inject constructor(
                 )
             }
         }
+        // 지워진 리뷰
+        if (state.reviews.none { it.id == targetId } && !state.hasMore) {
+            reduce { state.copy(snackbarState = SnackbarState("볼 수 없는 리뷰입니다")) }
+        }
     }
 
     private fun loadMore(): Job = intent {  // 자기를 다시 불러 타입 명시

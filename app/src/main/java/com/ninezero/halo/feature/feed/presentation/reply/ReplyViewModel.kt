@@ -175,7 +175,7 @@ class ReplyViewModel @Inject constructor(
         if (state.isSubmitting) return@intent
 
         val content = state.replyContent.trim()
-        if (content.isBlank()) return@intent
+        if (content.isBlank() && state.selectedMediaUris.isEmpty()) return@intent
 
         if (content.length > MAX_COMMENT_CONTENT_LENGTH) {
             reduce {

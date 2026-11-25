@@ -171,16 +171,19 @@ fun PostCard(
                     if (post.isSecret) SecretPostBadge()
                 }
 
-                val tagColor = MaterialTheme.colorScheme.onSurfaceVariant
-                val annotatedContent = remember(post.content, tagColor) {
-                    buildHashtagAnnotatedString(post.content, tagColor)
+                // 미디어만 있는 글은 본문 줄 없음
+                if (post.content.isNotBlank() || post.mediaAttachments.isEmpty()) {
+                    val tagColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    val annotatedContent = remember(post.content, tagColor) {
+                        buildHashtagAnnotatedString(post.content, tagColor)
+                    }
+                    Text(
+                        text = annotatedContent,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
-                Text(
-                    text = annotatedContent,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
             }
 
             // 더보기 버튼 또는 업로드 중 표시

@@ -137,19 +137,21 @@ fun PostContentSection(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        // 본문, 미디어만 있는 글은 본문 줄 없음
+        if (post.content.isNotBlank() || post.mediaAttachments.isEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // 본문
-        val tagColor = MaterialTheme.colorScheme.onSurfaceVariant
-        val annotatedContent = remember(post.content, tagColor) {
-            buildHashtagAnnotatedString(post.content, tagColor)
+            val tagColor = MaterialTheme.colorScheme.onSurfaceVariant
+            val annotatedContent = remember(post.content, tagColor) {
+                buildHashtagAnnotatedString(post.content, tagColor)
+            }
+            Text(
+                text = annotatedContent,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = horizontalPadding)
+            )
         }
-        Text(
-            text = annotatedContent,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = horizontalPadding)
-        )
 
         // 미디어 첨부
         if (post.mediaAttachments.isNotEmpty()) {

@@ -194,12 +194,14 @@ fun ParentCommentSection(
                         // 오버레이 꺼져도 블러 소스 유지
                         .then(if (comment.isBlinded) Modifier.hazeSource(state = hazeState) else Modifier)
                 ) {
-                    // 본문
-                    Text(
-                        text = comment.content,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // 본문, 미디어만 있는 댓글은 본문 줄 없음, 가림 자리는 높이 유지
+                    if (comment.content.isNotBlank() || comment.mediaAttachments.isEmpty() || isBlindCovered) {
+                        Text(
+                            text = comment.content,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
                     // 미디어
                     if (comment.mediaAttachments.isNotEmpty() && !isBlindCovered) {

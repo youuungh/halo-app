@@ -3,6 +3,7 @@ package com.ninezero.halo.feature.feed.presentation.comment_detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ninezero.halo.core.network.ApiException
 import com.ninezero.halo.core.ui.components.snackbar.SnackbarState
 import com.ninezero.halo.feature.feed.domain.delegate.PostMutationDelegate
 import com.ninezero.halo.feature.feed.domain.model.Comment
@@ -292,10 +293,14 @@ class CommentDetailViewModel @Inject constructor(
                 loadReplies(id)
             }
             .onFailure { error ->
+                val message = when {
+                    (error as? ApiException)?.code == 404 -> "볼 수 없는 댓글입니다"  // 지워졌거나 가려진 댓글
+                    else -> error.message ?: "댓글을 불러올 수 없습니다"
+                }
                 reduce {
                     state.copy(
                         isParentLoading = false,
-                        snackbarState = SnackbarState(error.message ?: "댓글을 불러올 수 없습니다")
+                        snackbarState = SnackbarState(message)
                     )
                 }
             }
@@ -395,6 +400,10 @@ class CommentDetailViewModel @Inject constructor(
                 )
             }
             attempts++
+        }
+        // 지워졌거나 가려진 답글
+        if (state.replies.none { it.id == targetId } && !state.hasMoreReplies) {
+            reduce { state.copy(snackbarState = SnackbarState("볼 수 없는 댓글입니다")) }
         }
     }
 

@@ -221,11 +221,11 @@ class CreatePostViewModel @Inject constructor(
         if (state.isSubmitting) return@intent  // 연타·중복 제출 가드
 
         val content = state.content.trim()
-        if (content.isBlank()) return@intent
+        if (content.isBlank() && state.selectedMediaUris.isEmpty()) return@intent
 
         val contentWithTags = if (state.tags.isNotEmpty()) {
             val hashTags = state.tags.joinToString(" ") { "#$it" }
-            "$content\n\n$hashTags"
+            "$content\n\n$hashTags".trimStart()
         } else {
             content
         }

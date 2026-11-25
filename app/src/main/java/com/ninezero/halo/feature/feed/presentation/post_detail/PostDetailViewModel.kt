@@ -531,6 +531,10 @@ class PostDetailViewModel @Inject constructor(
                 )
             }
         }
+        // 지워졌거나 가려진 댓글
+        if (state.comments.none { it.id == targetId } && !state.hasMoreComments) {
+            reduce { state.copy(snackbarState = SnackbarState("볼 수 없는 댓글입니다")) }
+        }
     }
 
     private fun loadMoreComments() = intent {

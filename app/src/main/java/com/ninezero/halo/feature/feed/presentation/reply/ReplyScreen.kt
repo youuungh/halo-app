@@ -128,6 +128,7 @@ internal fun ReplyScreenContent(
     var headerHeight by rememberSaveableDp()
     var showClearDialog by remember { mutableStateOf(false) }
     val hasContent = state.replyContent.isNotBlank()
+    val hasAnyContent = state.replyContent.isNotBlank() || state.selectedMediaUris.isNotEmpty()
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val profilePopupState = rememberProfilePopupHostState()
@@ -316,7 +317,7 @@ internal fun ReplyScreenContent(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                val isEnabled = state.replyContent.isNotBlank() && !state.isSubmitting
+                val isEnabled = hasAnyContent && !state.isSubmitting
                 GlassActionButton(
                     onClick = { onIntent(ReplyIntent.SubmitReply) },
                     hazeState = hazeState,

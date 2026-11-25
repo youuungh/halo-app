@@ -255,13 +255,16 @@ fun CommentItem(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    // 미디어만 있는 댓글은 본문 줄 없음, 가림 자리는 높이 유지
+                    if (content.isNotBlank() || !hasMedia) {
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = content,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                        Text(
+                            text = content,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
                     // 이미지·버튼 없을 때만 버튼, 업로드 중 숨김
                     if (!hasMedia && !isUploading) {
@@ -278,7 +281,7 @@ fun CommentItem(
                     }
                 }
 
-                // 차단/삭제/블라인드 댓글 오버레이
+                // 차단·삭제·블라인드 댓글 오버레이
                 if (isCovered) {
                     CoverOverlay(
                         hazeState = hazeState,
