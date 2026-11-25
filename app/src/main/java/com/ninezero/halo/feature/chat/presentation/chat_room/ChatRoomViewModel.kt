@@ -1307,7 +1307,8 @@ class ChatRoomViewModel @Inject constructor(
             .onEach { event ->
                 when (event) {
                     is ChatEvent.MessageReceived -> {
-                        if (event.message.roomId == roomId && isRoomVisible()) markAsRead()
+                        // 내 다른 기기에서 보낸 메시지는 읽을 게 없음
+                        if (event.message.roomId == roomId && !event.message.isFromMe && isRoomVisible()) markAsRead()
                     }
 
                     is ChatEvent.Connected -> {

@@ -5,6 +5,9 @@ import com.ninezero.halo.core.network.websocket.RealtimeSocket
 import com.ninezero.halo.feature.chat.data.remote.dto.MessageDeletedEventDto
 import com.ninezero.halo.feature.chat.data.remote.dto.MessageDto
 import com.ninezero.halo.feature.chat.data.remote.dto.MessageReadEventDto
+import com.ninezero.halo.feature.chat.data.remote.dto.RoomArchivedEventDto
+import com.ninezero.halo.feature.chat.data.remote.dto.RoomClearedEventDto
+import com.ninezero.halo.feature.chat.data.remote.dto.RoomReadEventDto
 import com.ninezero.halo.feature.chat.data.remote.dto.toDomain
 import com.ninezero.halo.feature.chat.domain.model.ChatEvent
 import com.ninezero.halo.feature.chat.domain.repository.ChatEventRepository
@@ -41,6 +44,19 @@ class ChatEventRepositoryImpl @Inject constructor(
                 RealtimeFrameType.MESSAGE_DELETED -> frame.data?.let {
                     val dto = json.decodeFromJsonElement<MessageDeletedEventDto>(it)
                     ChatEvent.MessageDeleted(dto.roomId, dto.messageId)
+                }
+
+                RealtimeFrameType.ROOM_READ -> frame.data?.let {
+                    ChatEvent.RoomRead(json.decodeFromJsonElement<RoomReadEventDto>(it).roomId)
+                }
+
+                RealtimeFrameType.ROOM_ARCHIVED -> frame.data?.let {
+                    val dto = json.decodeFromJsonElement<RoomArchivedEventDto>(it)
+                    ChatEvent.RoomArchived(dto.roomId, dto.archived)
+                }
+
+                RealtimeFrameType.ROOM_CLEARED -> frame.data?.let {
+                    ChatEvent.RoomCleared(json.decodeFromJsonElement<RoomClearedEventDto>(it).roomId)
                 }
 
                 RealtimeFrameType.CONNECTED -> ChatEvent.Connected

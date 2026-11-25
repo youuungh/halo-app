@@ -156,6 +156,25 @@ data class MessageDeletedEventDto(
     val messageId: Int
 )
 
+/** 내 다른 기기의 방 읽음 이벤트 */
+@Serializable
+data class RoomReadEventDto(
+    val roomId: Int
+)
+
+/** 내 다른 기기의 방 보관 이벤트 */
+@Serializable
+data class RoomArchivedEventDto(
+    val roomId: Int,
+    val archived: Boolean
+)
+
+/** 내 다른 기기의 방 비우기 이벤트 */
+@Serializable
+data class RoomClearedEventDto(
+    val roomId: Int
+)
+
 typealias ChatRoomListResponseDto = PagedDto<ChatDto>
 
 fun ChatDto.toDomain() = Chat(

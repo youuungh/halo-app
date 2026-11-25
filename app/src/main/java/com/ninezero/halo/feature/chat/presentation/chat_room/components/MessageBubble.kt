@@ -128,7 +128,7 @@ fun MessageBubble(
         // SENT에만 우측 unread + 시간
         if (isFromMe && showTime && message.status == MessageStatus.SENT && !showCaption) {
             Column(horizontalAlignment = Alignment.End) {
-                if (!message.isRead) UnreadIndicator()
+                if (!message.isRead && !message.isDeleted) UnreadIndicator()  // 삭제 메시지는 읽음 처리 대상에서 제외
                 MessageTime(timestamp = message.createdAt)
             }
             Spacer(modifier = Modifier.width(4.dp))
@@ -284,7 +284,7 @@ fun MessageBubble(
                     Row(verticalAlignment = Alignment.Bottom) {
                         if (isFromMe && showTime && message.status == MessageStatus.SENT) {
                             Column(horizontalAlignment = Alignment.End) {
-                                if (!message.isRead) UnreadIndicator()
+                                if (!message.isRead && !message.isDeleted) UnreadIndicator()
                                 MessageTime(timestamp = message.createdAt)
                             }
                             Spacer(modifier = Modifier.width(4.dp))
@@ -624,7 +624,7 @@ private fun MessageBubbleTextStatusPreview() {
                     clientTempId = "preview-sending-1"
                 )
             )
-            // FAILED: 좌측 재시도/취소 아이콘 + 전송 실패 라벨
+            // FAILED: 좌측 재시도·취소 아이콘 + 전송 실패 라벨
             MessageBubble(
                 onFileDownloadCancel = {},
                 message = Message(

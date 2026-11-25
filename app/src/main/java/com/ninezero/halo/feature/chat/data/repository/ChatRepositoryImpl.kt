@@ -32,6 +32,7 @@ import com.ninezero.halo.feature.chat.domain.model.MessageSearchResult
 import com.ninezero.halo.feature.chat.domain.model.MessageStatus
 import com.ninezero.halo.feature.chat.domain.repository.ChatEventRepository
 import com.ninezero.halo.feature.chat.domain.repository.ChatRepository
+import com.ninezero.halo.feature.notification.fcm.TrayNotifications
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +51,7 @@ class ChatRepositoryImpl @Inject constructor(
     private val cachedMessageDao: CachedMessageDao,
     private val cachedChatRoomDao: CachedChatRoomDao,
     private val chatEventRepository: ChatEventRepository,
+    private val trayNotifications: TrayNotifications,
     @param:ApplicationScope private val sendScope: CoroutineScope  // 방을 나가도 텍스트 전송은 끝까지 진행
 ) : ChatRepository {
 
@@ -121,6 +123,19 @@ class ChatRepositoryImpl @Inject constructor(
                 is ChatEvent.MessageDeleted -> {
                     cachedMessageDao.markAsDeleted(event.messageId)
                     syncChatRooms()  // 마지막 메시지가 지워지면 목록 미리보기 갱신
+                }
+                is ChatEvent.RoomRead -> {
+                    cachedChatRoomDao.updateUnreadCount(event.roomId, 0)
+                    cachedMessageDao.markIncomingMessagesAsRead(event.roomId, System.currentTimeMillis())
+                    trayNotifications.cancelChatRoom(event.roomId)  // 읽은 방 알림도 정리
+                }
+                is ChatEvent.RoomArchived -> {
+                    cachedChatRoomDao.setArchived(event.roomId, event.archived)
+                    if (!event.archived) syncChatRoom(event.roomId)
+                }
+                is ChatEvent.RoomCleared -> {
+                    cachedMessageDao.deleteByRoomId(event.roomId)  // 열린 방은 연 채로 비움
+                    cachedChatRoomDao.delete(event.roomId)
                 }
                 is ChatEvent.Connected -> syncChatRooms()  // 끊긴 동안 놓친 방·미리보기·안 읽음 수
                 is ChatEvent.Error -> Timber.e("채팅 실시간 오류: ${event.error}")
