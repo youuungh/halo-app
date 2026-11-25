@@ -52,7 +52,7 @@
                 <data android:pathPrefix="/profile/" />
             </intent-filter>
 
-            <!-- halo:// 딥링크, 바운서 페이지가 앱을 여는 데 쓴다 -->
+            <!-- halo:// 딥링크 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 

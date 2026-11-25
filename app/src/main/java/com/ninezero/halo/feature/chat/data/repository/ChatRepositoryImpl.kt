@@ -52,7 +52,7 @@ class ChatRepositoryImpl @Inject constructor(
     private val cachedChatRoomDao: CachedChatRoomDao,
     private val chatEventRepository: ChatEventRepository,
     private val trayNotifications: TrayNotifications,
-    @param:ApplicationScope private val sendScope: CoroutineScope  // 방을 나가도 텍스트 전송은 끝까지 진행
+    @param:ApplicationScope private val sendScope: CoroutineScope
 ) : ChatRepository {
 
     private val inFlightTempIds: MutableSet<String> = ConcurrentHashMap.newKeySet()

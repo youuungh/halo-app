@@ -55,7 +55,7 @@ fun CodeInputField(
             keyboardType = KeyboardType.Ascii
         ),
         interactionSource = interactionSource,
-        // 실제 텍스트/커서는 숨기고 칸 UI로만 표시
+        // 실제 텍스트·커서는 숨기고 칸 UI로만 표시
         textStyle = TextStyle(color = Color.Transparent),
         cursorBrush = SolidColor(Color.Transparent),
         decorationBox = { innerTextField ->

@@ -201,7 +201,7 @@ class AuthRepositoryImpl @Inject constructor(
         }.map { }
     }
 
-    // FcmRegistrationRepository
+    // ===== FcmRegistrationRepository =====
 
     override suspend fun registerFid(fid: String): Result<Unit> {
         return safeApiCallNoData {
@@ -218,7 +218,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    // DeviceRepository
+    // ===== DeviceRepository =====
 
     override suspend fun getActiveDevices(): Result<List<Device>> {
         return safeApiCall {
